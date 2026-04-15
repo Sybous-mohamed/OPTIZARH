@@ -1,23 +1,21 @@
+import React from 'react';
 import { Outlet } from "react-router-dom";
 import Sidebar from "../lib/components/superadmin/Sidebar";
 import Header from "../lib/components/superadmin/Header";
 
 export default function Layout() {
     return (
-        <div style={{ display: "flex", minHeight: "100vh", background: "#f8f9fa" }}>
-
+        <div className="flex min-h-screen bg-[#F9FAFB]">
             <Sidebar />
-
-            <div style={{ 
-                flex: 1, 
-                display: "flex", 
-                flexDirection: "column", 
-                marginLeft: 200, // Bach n-khlliw blast Sidebar (200px)
-                minWidth: 0 
-            }}>
+            
+            <div className="flex-1 ml-[240px] flex flex-col min-w-0">
                 <Header />
-                <main style={{ flex: 1, padding: "24px", marginTop: 56 }}>
-                    <Outlet /> 
+                
+                <main className="flex-1 p-8 mt-14">
+                    {/* Hna fin kiban l-content dyal kol page */}
+                    <div className="animate-in fade-in duration-500">
+                        <Outlet />
+                    </div>
                 </main>
             </div>
         </div>

@@ -32,7 +32,7 @@ const RoleSelection = () => {
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl w-full">
                 {roles.map(role => (
-                    <Link key={role.id} to={`/register/${role.id}`} className="group">
+                    <Link key={role.id} to={`/auth/register/${role.id}`} className="group">
                         <div className={`h-full p-10 rounded-[2.5rem] bg-gradient-to-br ${role.color} text-white shadow-2xl transition-all duration-300 group-hover:-translate-y-3 group-hover:scale-[1.02] active:scale-95 flex flex-col justify-between`}>
                             <div>
                                 <div className="bg-white/20 w-12 h-12 rounded-2xl flex items-center justify-center mb-6 backdrop-blur-md">

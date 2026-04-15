@@ -1,45 +1,44 @@
+import React from 'react';
 import { icons } from "../../icons/icons";
+import { Bell, Moon, Search } from 'lucide-react';
 
 export default function Header() {
     return (
-        <header style={{
-            height: 56, 
-            background: "#fff", 
-            borderBottom: "1px solid rgba(0,0,0,0.05)",
-            display: "flex", 
-            alignItems: "center", 
-            padding: "0 24px", 
-            position: "fixed", // Fixed bach i-bqa dima l-foq
-            top: 0,
-            right: 0,
-            left: 200, // Bach may-ghthach Sidebar
-            zIndex: 10,
-            justifyContent: "space-between"
-        }}>
-            {/* Search Bar /}
-            <div style={{ flex: 1, maxWidth: 340, position: "relative" }}>
-                <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#aaa", display: "flex" }}>
-                    {icons.search}
+        <header className="h-14 bg-white border-b border-gray-100 flex items-center justify-between px-6 fixed top-0 right-0 left-[240px] z-10">
+            {/* Search Bar */}
+            <div className="flex-1 max-w-sm relative group">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-indigo-600 transition-colors">
+                    <Search size={18} />
                 </span>
-                <input type="text" placeholder="Rechercher..." style={searchInputStyle} />
+                <input 
+                    type="text" 
+                    placeholder="Rechercher un dossier, un employé..." 
+                    className="w-full h-10 bg-gray-50 border-none rounded-lg pl-10 pr-4 text-sm outline-none focus:ring-2 focus:ring-indigo-500/10 focus:bg-white transition-all"
+                />
             </div>
 
-            {/ Right Icons */}
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <button style={btnStyle}>{icons.bell}</button>
-                <button style={btnStyle}>{icons.moon}</button>
-                <div style={userChipStyle}>
-                    <div style={{ textAlign: "right", lineHeight: 1.2 }}>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: "#333" }}>Admin Principal</div>
-                        <div style={{ fontSize: 11, color: "#888" }}>Super Utilisateur</div>
+            {/* Right Side Icons & Profile */}
+            <div className="flex items-center gap-4">
+                <button className="p-2 text-gray-500 hover:bg-gray-50 rounded-full transition-colors relative">
+                    <Bell size={20} />
+                    <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
+                </button>
+                <button className="p-2 text-gray-500 hover:bg-gray-50 rounded-full transition-colors">
+                    <Moon size={20} />
+                </button>
+                
+                <div className="h-8 w-[1px] bg-gray-100 mx-2"></div>
+
+                <div className="flex items-center gap-3 cursor-pointer group">
+                    <div className="text-right hidden sm:block">
+                        <p className="text-sm font-bold text-gray-900 leading-none">Admin Principal</p>
+                        <p className="text-[11px] text-gray-500 font-medium mt-1">Super Utilisateur</p>
                     </div>
-                    <div style={avatarStyle}>AP</div>
+                    <div className="w-10 h-10 rounded-full bg-indigo-600 border-2 border-white shadow-sm flex items-center justify-center text-white font-bold text-xs group-hover:scale-105 transition-transform">
+                        AP
+                    </div>
                 </div>
             </div>
         </header>
     );
 }
-const searchInputStyle = { width: "100%", height: 36, border: "1px solid #eee", borderRadius: 20, background: "#f5f5f5", fontSize: 13, padding: "0 12px 0 40px", outline: "none" };
-const btnStyle = { width: 34, height: 34, border: "none", background: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#666" };
-const userChipStyle = { display: "flex", alignItems: "center", gap: 10, padding: "4px 4px 4px 12px", borderRadius: 25, border: "1px solid #eee", cursor: "pointer", background: "#fff" };
-const avatarStyle = { width: 32, height: 32, borderRadius: "50%", background: "#4B42C8", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 600, color: "#fff" };

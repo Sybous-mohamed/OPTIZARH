@@ -2,8 +2,11 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../../lib/apis/axiosConfig'; 
 import loginImg from "/LoginImg.jpg";
+import { useNotification } from '../../context/NotificationContext';
 
 const Login = () => {
+    const { showNotification } = useNotification();
+
     const navigate = useNavigate();
     const [credentials, setCredentials] = useState({ email: '', password: '' });
     const [loading, setLoading] = useState(false);
@@ -34,7 +37,8 @@ const Login = () => {
             }
 
         } catch (error) {
-            alert(error.response?.data?.message || "Erreur de connexion");
+            const errorMsg = error.response?.data?.message || "Erreur de connexion";
+            showNotification(errorMsg, "error");
         } finally {
             setLoading(false);
         }
@@ -164,7 +168,7 @@ const Login = () => {
                     </div>
 
                     <p className="mt-8 text-center text-[13px] text-gray-500 font-medium">
-                        Nouvelle entreprise ? <Link to="/register" className="text-[#4F46E5] font-black hover:underline">Créer un compte</Link>
+                        Nouvelle entreprise ? <Link to="/auth/register" className="text-[#4F46E5] font-black hover:underline">Créer un compte</Link>
                     </p>
                 </div>
             </div>
