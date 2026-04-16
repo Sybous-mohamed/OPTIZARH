@@ -11,7 +11,7 @@ export default function Sidebar() {
         { key: "dashboard", label: "Tableau de bord", icon: icons.dashboard, path: "/dashboard" },
         { key: "users", label: "Utilisateurs", icon: icons.users, path: "/users" },
         { key: "rcar", label: "RCAR", icon: icons.rcar, path: "/rcar" },
-        { key: "salary", label: "Salaire et Indemnités", icon: icons.salary, path: "/salaires" },
+        { key: "salary", label: "Salaire et Indemnités", icon: icons.salary, path: "/indementes" },
         { key: "cotisation", label: "Cotisation", icon: icons.cotisation, path: "/cotisation" },
         { key: "retraite", label: "Retraite & Tamdid", icon: icons.retraite, path: "/retraite" },
         { key: "credit", label: "Crédit", icon: icons.credit, path: "/credit" },

@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Employee;
 
+use Barryvdh\DomPDF\Facade\Pdf;
+
 class EmployeeController extends Controller{
     //
     public function store(Request $request) {
@@ -24,7 +26,7 @@ class EmployeeController extends Controller{
     public function index(Request $request) {
         $query = Employee::query();
 
-        // 1. Search b smya wla email
+        
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
@@ -34,17 +36,14 @@ class EmployeeController extends Controller{
             });
         }
 
-        // 2. Filter b Département
+        
         if ($request->filled('departement') && $request->departement !== 'Tous') {
             $query->where('departement', $request->departement);
         }
 
-        // 3. Filter b Statut
         if ($request->filled('statut') && $request->statut !== 'Tous') {
             $query->where('statut', $request->statut);
         }
-
-        // 4. Sort o Pagination (ila bghiti)
         return response()->json($query->orderBy('created_at', 'desc')->paginate(5));
     }
 
@@ -79,13 +78,42 @@ class EmployeeController extends Controller{
         $actifs = Employee::where('statut', 'ACTIF')->count();
         $conge = Employee::where('statut', 'CONGÉ')->count();
         
-        // Ghadi n-rj3ou l-format li ghadi i-ji s-hel f React
+        
         return response()->json([
             'total' => $total,
             'actifs' => $actifs,
             'conge' => $conge,
-            'departs' => 0 // Hna logic dyal départs (ila kanti kat-khzenha)
+            'departs' => 0 
         ]);
+    }
+
+
+
+    public function exportPDF(Request $request){
+        $query = Employee::query();
+
+        if ($request->has('departement') && $request->departement !== 'Tous') {
+            $query->where('departement', $request->departement);
+        }
+
+        if ($request->has('statut') && $request->statut !== 'Tous') {
+            $query->where('statut', $request->statut);
+        }
+
+        if ($request->has('search') && $request->search !== '') {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('nom', 'like', "%{$search}%")
+                ->orWhere('prenom', 'like', "%{$search}%")
+                ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        $employees = $query->get()->toArray();
+
+        $pdf = Pdf::loadView('pdf.employees', ['employees' => $employees]);
+
+        return $pdf->download('liste-employes-filtree.pdf');
     }
 
 

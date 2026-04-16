@@ -1,11 +1,10 @@
 import axios from 'axios';
 
 const axiosClient = axios.create({
-    baseURL: 'http://localhost:8000', // Bla /api
+    baseURL: 'http://localhost:8000', 
     withCredentials: true,
 });
 
-// Had l'interceptor darori bach i-sifet l'header X-XSRF-TOKEN
 axiosClient.interceptors.request.use((config) => {
     const token = document.cookie
         .split('; ')

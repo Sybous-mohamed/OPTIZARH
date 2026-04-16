@@ -1,6 +1,6 @@
 import React, { useState , useEffect} from "react";
 import { icons } from "../assets/icons";
-import axiosClient from "../api/axios"; // Imporit dak l-client li l-code dyalo l-foq
+import axiosClient from "../api/axios"; 
 
 export default function Users() {
     const [showModal, setShowModal] = useState(false);
@@ -13,7 +13,7 @@ export default function Users() {
     const [currentPage, setCurrentPage] = useState(1);
     const [paginationData, setPaginationData] = useState({});
 
-    // 1. State bach n-chedo l-data dyal l-form
+    
     const [formData, setFormData] = useState({
         prenom: "", nom: "", email: "", telephone: "",
         date_naissance: "", adresse: "", situation_familiale: "",
@@ -28,7 +28,7 @@ export default function Users() {
 
     const fetchEmployees = async (page = 1) => {
         try {
-            // Hna l-page kat-tsift ghir f l-back-end via Axios
+            
             const res = await axiosClient.get(`/api/employees?page=${page}`, { params: filters });
             
             setEmployeesList(res.data.data || []); 
@@ -44,14 +44,14 @@ export default function Users() {
     }, [filters, currentPage]);
 
     const handleEdit = (emp) => {
-        setFormData(emp); // kat-3mer l-form b l-qdim
+        setFormData(emp); 
         setCurrentId(emp.id);
         setIsEdit(true);
         setShowModal(true);
     };
 
     const handleDelete = async (id) => {
-        if (window.confirm("Wash mtyeqen bghiti t-msseh had l-employé?")) {
+        if (window.confirm("Êtes-vous sûr de vouloir supprimer cet employé ?")) {
             try {
                 await axiosClient.delete(`/api/employees/${id}`);
                 alert("Employé supprimé !");
@@ -63,18 +63,15 @@ export default function Users() {
         }
     };
 
-
-    // 3. Handler bach n-updatiw l-formData m3a kul tghyira f l-input
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData((prev) => ({
             ...prev,
             [name]: value
         }));
-    }; // Had [] kat-3ni khedemha ghir mra whda fach t-loadi l-page
+    }; 
 
-    // 4. Fonction dyal Submit
-const handleSubmit = async (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
         try {
@@ -82,10 +79,8 @@ const handleSubmit = async (e) => {
             
             let response;
             if (isEdit) {
-                // UPDATE (PUT)
                 response = await axiosClient.put(`/api/employees/${currentId}`, formData);
             } else {
-                // CREATE (POST)
                 response = await axiosClient.post('/api/employees', formData);
             }
 
@@ -108,6 +103,34 @@ const handleSubmit = async (e) => {
         }
     };
 
+    const handleExportPDF = async () => {
+        try {
+            setLoading(true);
+            
+            const response = await axiosClient.get('/api/employees/export-pdf', {
+                params: filters, 
+                responseType: 'blob',
+            });
+
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', 'liste-employes.pdf'); 
+            
+            document.body.appendChild(link);
+            link.click();
+
+            link.parentNode.removeChild(link);
+            window.URL.revokeObjectURL(url);
+            
+        } catch (error) {
+            console.error("Erreur PDF:", error);
+            alert("Erreur lors de la génération du PDF");
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
         <div style={{ padding: "10px 0" }}>
             {/* Header Section */}
@@ -117,7 +140,12 @@ const handleSubmit = async (e) => {
                     <p style={{ color: "#666", fontSize: 14, marginTop: 4 }}>Gérez les effectifs et organisez les départements.</p>
                 </div>
                 <div style={{ display: "flex", gap: 12 }}>
-                    <button style={secondaryBtnStyle}>{icons.export} Exporter</button>
+                    <button 
+                        style={secondaryBtnStyle} 
+                        onClick={handleExportPDF} 
+                        disabled={loading}>
+                        {loading ? "Génération..." : <>{icons.export} Exporter</>}
+                    </button>
                     <button style={primaryBtnStyle} onClick={() => setShowModal(true)}>
                         {icons.plus} Ajouter un Employé
                     </button>
@@ -156,7 +184,7 @@ const handleSubmit = async (e) => {
                 </div>
             </div>
 
-            {/* Stats & Table (Makaynch tghyir kbir f l-UI) */}
+            {/* Stats & Table */}
             <div style={tableContainerStyle}>
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                     <thead>
@@ -168,7 +196,6 @@ const handleSubmit = async (e) => {
                             <th style={thStyle}>ACTIONS</th>
                         </tr>
                     </thead>
-                    {/* Bla t-bedel l-header dyal l-table, sir direct l-tbody */}
                     <tbody>
                         {employeesList.length > 0 ? (
                             employeesList.map((emp) => (
@@ -177,7 +204,7 @@ const handleSubmit = async (e) => {
                                         <div style={{ fontWeight: 600 }}>{emp.prenom} {emp.nom}</div>
                                         <div style={{ fontSize: 11, color: "#888" }}>{emp.email}</div>
                                     </td>
-                                    <td style={tdStyle}>{emp.id}</td> {/* Hna matricule wla ID */}
+                                    <td style={tdStyle}>{emp.id}</td> 
                                     <td style={tdStyle}>{emp.poste || "Non spécifié"}</td>
                                     <td style={tdStyle}>
                                         <span style={activeBadgeStyle}>ACTIF</span>
@@ -225,7 +252,7 @@ const handleSubmit = async (e) => {
                         {icons.chevronLeft || "<"}
                     </button>
 
-                    {/* Reqm dyal l-page l-haliya */}
+                    {/* numero de page */}
                     <button style={activePageBtnStyle}>
                         {currentPage}
                     </button>
@@ -362,7 +389,6 @@ const handleSubmit = async (e) => {
     );
 }
 
-// --- Styles (Same as yours, just kept for completeness) ---
 const primaryBtnStyle = { background: "#4B42C8", color: "#fff", border: "none", padding: "10px 18px", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 };
 const secondaryBtnStyle = { background: "#EEEDFE", color: "#4B42C8", border: "none", padding: "10px 18px", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 };
 const tableContainerStyle = { background: "#fff", borderRadius: 12, border: "1px solid #eee", overflow: "hidden" };

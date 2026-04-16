@@ -13,17 +13,17 @@ export default function Login() {
     const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-        // 1. Jib l'cookie (mn web middleware)
+        
         await axiosClient.get('/sanctum/csrf-cookie');
         
-        // 2. Login (hadi ghadi tmchi l' web.php routes)
+        
         const response = await axiosClient.post('/login', formData);
         if (response.status === 204 || response.status === 200) {
                 console.log("Connecté!");
-                // Daba redirecti l'user l'Dashboard
+                
                 navigate("/dashboard"); 
         }
-        // 3. Jib ma3loumat l'user (hadi ghadi tmchi l' api.php)
+        
         const user = await axiosClient.get('/api/user');
         console.log("User data:", user.data);
 
