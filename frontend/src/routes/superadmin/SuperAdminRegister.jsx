@@ -6,7 +6,6 @@ import { useNotification } from '../../context/NotificationContext';
 
 const SuperAdminRegister = () => {
     const { showNotification } = useNotification();
-
     const [form, setForm] = useState({ 
         full_name: '', 
         email: '', 
@@ -17,30 +16,50 @@ const SuperAdminRegister = () => {
     const [showPassword, setShowPassword] = useState(false);
 
     const handleRegister = async (e) => {
-        e.preventDefault();
+    e.preventDefault();
+
+    // --- VALIDATION REGEX  ---
+        // 1. Regex l-Nom Complet 
+        const nameRegex = /^[a-zA-Z\s]+$/;
+        if (!nameRegex.test(form.full_name)) {
+            showNotification("Le nom ne doit pas contenir de chiffres.", "error");
+            return;
+        }
+
+        // 2. Regex l-Mot de passe 
+        // const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,}$/;
+        // if (!passwordRegex.test(form.password)) {
+            // showNotification("Le mot de passe doit contenir au moins 8 caractères, une majuscule, une minuscule et un chiffre.", "error");
+            // return;
+        // }
+
+        if (form.password !== form.password_confirmation) {
+            showNotification("Les mots de passe ne correspondent pas !", "error");
+            return; 
+        }
         setLoading(true);
-        
         try {
             const res = await superAdminApi.setup(form);
             if (res.data && res.data.token) {
+
                 localStorage.setItem('token', res.data.token);
                 localStorage.setItem('role', 'superadmin'); 
                 localStorage.setItem('user_name', res.data.user.full_name);
                 localStorage.setItem('user', JSON.stringify(res.data.user));
-                window.location.href = '/superadmin/dashboard';
+                window.location.href = '/SuperAdmin/Dashboard';
             }
         } catch (err) {
             if (err.response?.status === 403) {
-               showNotification("Le système est déjà configuré !", "error");
+                showNotification("Le système est déjà configuré !", "error");
                 setTimeout(() => {
-                    window.location.href = '/login';
+                    window.location.href = '/auth/login';
                 }, 2000);
             } else if (err.response?.status === 422) {
                 const errors = err.response.data.errors;
                 const fullMessage = Object.values(errors).flat().join(' | ');
                 showNotification(fullMessage, "error");
             } else {
-                const errorMsg = err.response?.data?.message || "Erreur technique: Check l-console";
+                const errorMsg = err.response?.data?.message || "Erreur technique";
                 showNotification(errorMsg, "error");
                 console.error(err);
             }
@@ -51,10 +70,8 @@ const SuperAdminRegister = () => {
 
     return (
         <div className="flex flex-col lg:flex-row h-screen w-full bg-white font-sans overflow-y-auto lg:overflow-hidden">
-            
             <div className="flex flex-col w-full lg:w-[55%] bg-gradient-to-br from-[#4F46E5] via-[#111248] to-[#8B5CF6] p-6 text-white justify-between shrink-0 relative overflow-hidden">
                 <div className="absolute top-[-10%] left-[-10%] w-64 h-64 bg-white/5 rounded-full blur-3xl"></div>
-                
                 <div className='flex flex-col justify-center lg:pl-11 relative z-10'>
                     <div className="flex items-center gap-1.5 mb-10 group cursor-default">
                         <div className="bg-white/10 p-1.5 rounded-xl border border-white/20 backdrop-blur-sm group-hover:scale-110 transition-transform">

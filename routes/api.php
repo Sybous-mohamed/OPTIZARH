@@ -2,21 +2,98 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\SuperAdminController;
-use App\Http\Controllers\AuthController;
 
+use App\Http\Controllers\API\SuperAdminController;
+use App\Http\Controllers\API\RCARController;
+use App\Http\Controllers\API\EmployeeController;
+use App\Http\Controllers\API\IndemniteController;
+
+use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\Auth\PasswordResetLinkController;
+use App\Http\Controllers\Auth\NewPasswordController;
+use App\Http\Controllers\Auth\VerifyEmailController;
+
+/*
+|--------------------------------------------------------------------------
+| Public Routes (Guest)
+|--------------------------------------------------------------------------
+*/
 Route::get('/check-setup', [SuperAdminController::class, 'checkStatus']);
 Route::post('/setup-superadmin', [SuperAdminController::class, 'setup']);
-Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
+Route::post('/register', [AuthController::class, 'register']);
+Route::post('/forgot-password', [PasswordResetLinkController::class, 'store'])->name('password.email');
+Route::post('/reset-password', [NewPasswordController::class, 'store'])->name('password.store');
 
+Route::get('/verify-email/{id}/{hash}', VerifyEmailController::class)
+    ->middleware(['signed', 'throttle:6,1'])
+    ->name('verification.verify');
 
+/*
+|--------------------------------------------------------------------------
+| Protected Routes (Auth:Sanctum)
+|--------------------------------------------------------------------------
+*/
 Route::middleware('auth:sanctum')->group(function () {
-    Route::post('/logout', [AuthController::class, 'logout']);
     
+    // Account & Status
+    Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', function (Request $request) {
         return $request->user();
     });
+    Route::get('/auth/user-status', [AuthController::class, 'userStatus']);
 
-    // Ghadi t-zid hna l-routes dyal Employees o l-Gestion RH mn ba3d
+    // Verification Notification
+    Route::post('/email/verification-notification', [AuthController::class, 'sendVerificationEmail'])
+        ->middleware(['throttle:6,1'])
+        ->name('verification.send');
+
+    /*
+    |----------------------------------------------------------------------
+    | 1. SuperAdmin: Access WITHOUT Email Verification
+    |----------------------------------------------------------------------
+    */
+    Route::middleware('role:superadmin')->group(function () {
+        
+        // Employees Management
+        Route::prefix('employees')->group(function () {
+            Route::get('/stats', [EmployeeController::class, 'stats']); 
+            Route::get('/export-pdf', [EmployeeController::class, 'exportPDF']);
+            Route::get('/', [EmployeeController::class, 'index']);          
+            Route::post('/', [EmployeeController::class, 'store']);         
+            Route::get('/{id}', [EmployeeController::class, 'show']);      
+            Route::put('/{id}', [EmployeeController::class, 'update']);    
+            Route::delete('/{id}', [EmployeeController::class, 'destroy']);
+        });
+
+        // RCAR Management
+        Route::prefix('rcar')->group(function () {
+            Route::get('/', [RCARController::class, 'index']);
+                Route::get('/', [RCARController::class, 'index']);
+                Route::post('/', [RCARController::class, 'store']);
+                Route::put('/{id}', [RCARController::class, 'update']);
+                Route::delete('/{id}/{user_id?}', [RCARController::class, 'destroy']);
+        });
+
+        // Indemnites
+        Route::apiResource('indemnites', IndemniteController::class);
+    });
+
+    /*
+    |----------------------------------------------------------------------
+    | 2. Other Roles: Access ONLY IF Verified
+    |----------------------------------------------------------------------
+    */
+    Route::middleware(['verified'])->group(function () {
+        
+        // Role: Admin
+        Route::middleware('role:admin')->group(function () {
+            // Dir hna l-routes li khass l-Admin idirhom
+        });
+
+        // Role: RH
+        Route::middleware('role:rh')->group(function () {
+            // Dir hna l-routes li khass l-RH idirhom
+        });
+    });
 });

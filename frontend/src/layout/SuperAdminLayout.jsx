@@ -7,13 +7,10 @@ export default function Layout() {
     return (
         <div className="flex min-h-screen bg-[#F9FAFB]">
             <Sidebar />
-            
-            <div className="flex-1 ml-[240px] flex flex-col min-w-0">
+            <div className="flex flex-col flex-1 min-w-0 ml-[240px]">
                 <Header />
-                
-                <main className="flex-1 p-8 mt-14">
-                    {/* Hna fin kiban l-content dyal kol page */}
-                    <div className="animate-in fade-in duration-500">
+                <main className="flex-1 p-6 mt-16 overflow-y-auto">
+                    <div className="max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-2 duration-500">
                         <Outlet />
                     </div>
                 </main>

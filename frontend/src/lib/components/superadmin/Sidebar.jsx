@@ -11,12 +11,12 @@ export default function Sidebar() {
   const location = useLocation();
   const active = location.pathname;
 
-  // Paths m-updatiyin 3la 7sab l-prefix jdid /SuperAdmin
   const navItems = [
     { label: "Tableau de bord", icon: <LayoutGrid size={18} />, path: "/SuperAdmin/Dashboard" },
     { label: "Utilisateurs", icon: <Users size={18} />, path: "/SuperAdmin/users" },
     { label: "RCAR", icon: <Shield size={18} />, path: "/SuperAdmin/rcar" },
-    { label: "Indemnités", icon: <Banknote size={18} />, path: "/SuperAdmin/indemnites" },
+    { label: "Indemnités", icon: <Banknote size={18} />, path: "/SuperAdmin/Indementes" },
+
     { label: "Cotisation", icon: <Wallet size={18} />, path: "/SuperAdmin/cotisation" },
     { label: "Retraite & Tamdid", icon: <FileText size={18} />, path: "/SuperAdmin/retraite" },
     { label: "Crédit", icon: <CreditCard size={18} />, path: "/SuperAdmin/credit" },
@@ -36,7 +36,6 @@ export default function Sidebar() {
     } catch (err) {
       console.error("Logout error:", err);
     } finally {
-      // Nettoyage kaml bach l-ProtectedRoute t-mne3 l-access
       localStorage.clear();
       window.location.href = "/auth/login";
     }
@@ -85,8 +84,7 @@ export default function Sidebar() {
       <div className="p-4 border-t border-gray-50 bg-gray-50/30">
         <button
           onClick={handleLogout}
-          className="flex items-center gap-3 w-full px-4 py-3 text-[#C0392B] font-bold text-sm hover:bg-red-50 rounded-xl transition-all duration-200 group"
-        >
+          className="flex items-center gap-3 w-full px-4 py-3 text-[#C0392B] font-bold text-sm hover:bg-red-50 rounded-xl transition-all duration-200 group cursor-pointer">
           <LogOut size={18} className="group-hover:-translate-x-1 transition-transform" />
           Déconnexion
         </button>

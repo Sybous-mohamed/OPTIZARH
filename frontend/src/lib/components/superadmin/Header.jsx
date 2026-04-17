@@ -1,5 +1,4 @@
-import React from 'react';
-import { icons } from "../../icons/icons";
+import React from 'react';;
 import { Bell, Moon, Search } from 'lucide-react';
 
 export default function Header() {
@@ -19,11 +18,11 @@ export default function Header() {
 
             {/* Right Side Icons & Profile */}
             <div className="flex items-center gap-4">
-                <button className="p-2 text-gray-500 hover:bg-gray-50 rounded-full transition-colors relative">
+                <button className="p-2 text-gray-500 hover:bg-gray-50 rounded-full transition-colors relative cursor-pointer">
                     <Bell size={20} />
                     <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
                 </button>
-                <button className="p-2 text-gray-500 hover:bg-gray-50 rounded-full transition-colors">
+                <button className="p-2 text-gray-500 hover:bg-gray-50 rounded-full transition-colors cursor-pointer">
                     <Moon size={20} />
                 </button>
                 
