@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Http\Controllers\API;
+namespace App\Http\Controllers\SuperAdmin;
 
-use App\Models\ActivityLog;
+use App\Models\SuperAdmin\ActivityLog;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller; 
 

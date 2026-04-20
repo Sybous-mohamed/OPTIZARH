@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Http\Controllers\API;
+namespace App\Http\Controllers\SuperAdmin;
 
 use Illuminate\Http\Request;
-use App\Models\Indemnite;
-use App\Models\ActivityLog;
+use App\Models\SuperAdmin\Indemnite;
+use App\Models\SuperAdmin\ActivityLog;
 use App\Http\Controllers\Controller; 
 
 class IndemniteController extends Controller

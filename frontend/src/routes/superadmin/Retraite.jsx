@@ -68,16 +68,14 @@ const Retraite = () => {
     );
 
     return (
-        <div className="space-y-5 max-w-6xl mx-auto p-4">
+        <div className="space-y-5 max-w-6xl mx-auto ">
             <div>
                 <h1 className="text-xl font-bold text-slate-900">Configuration Retraite & Tamdid</h1>
                 <p className="text-slate-500 text-sm">Gérez les paramètres légaux et les règles de prolongation de service.</p>
             </div>
 
-            {/* --- Section 1: Retraite & Résumé --- */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-                
-                {/* Paramètres de Retraite Card */}
+
                 <div className="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-slate-100 relative">
                     <div className="flex items-center gap-3 mb-6">
                         <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
@@ -90,29 +88,23 @@ const Retraite = () => {
                         <div className="space-y-1.5">
                             <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Âge légal de retraite</label>
                             <div className="relative">
-                                <input 
-                                    type="number" 
-                                    value={ageLegal} 
-                                    onChange={(e) => setAgeLegal(e.target.value)}
-                                    className="w-full p-2.5 bg-indigo-50/50 border border-indigo-100 rounded-xl focus:ring-2 focus:ring-indigo-500/20 outline-none font-semibold text-slate-700 transition-all text-sm" 
-                                />
+                                <input type="number" value={ageLegal} onChange={(e) => setAgeLegal(e.target.value)}
+                                    className="w-full p-2.5 bg-indigo-50/50 border border-indigo-100 rounded-xl focus:ring-2 focus:ring-indigo-500/20 outline-none font-semibold text-slate-700 transition-all text-sm" />
                                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 font-medium text-xs">ans</span>
                             </div>
                         </div>
 
                         <div className="space-y-1.5">
                             <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Notification avant retraite</label>
-                            <select 
-                                value={notification}
-                                onChange={(e) => setNotification(e.target.value)}
-                                className="w-full p-2.5 bg-indigo-50/50 border border-indigo-100 rounded-xl outline-none font-semibold text-slate-700 text-sm cursor-pointer appearance-none"
-                            >
+                            <select value={notification} onChange={(e) => setNotification(e.target.value)}
+                                className="w-full p-2.5 bg-indigo-50/50 border border-indigo-100 rounded-xl outline-none font-semibold text-slate-700 text-sm cursor-pointer appearance-none">
                                 <option value="6 mois avant">6 mois avant</option>
                                 <option value="1 an avant">1 an avant</option>
                                 <option value="2 ans avant">2 ans avant</option>
                             </select>
                         </div>
                     </div>
+
 
                     <div className="flex justify-end">
                         <button 
@@ -125,7 +117,7 @@ const Retraite = () => {
                     </div>
                 </div>
 
-                {/* Info Card (Blue) */}
+
                 <div className="bg-indigo-600 text-white p-6 rounded-2xl shadow-lg relative overflow-hidden flex flex-col">
                     <h3 className="flex items-center gap-2 font-bold text-sm mb-4">
                         <Info size={16} className="opacity-80" />
@@ -140,7 +132,11 @@ const Retraite = () => {
                     
                     <div className="absolute -bottom-6 -right-6 w-24 h-24 bg-white/10 rounded-full blur-xl"></div>
                 </div>
+
             </div>
+
+
+
 
             {/* --- Section 2: Prolongation & Cotisations --- */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">

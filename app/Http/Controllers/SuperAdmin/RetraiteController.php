@@ -1,8 +1,8 @@
 <?php
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers\SuperAdmin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Retraite;
+use App\Models\SuperAdmin\Retraite;
 use Illuminate\Http\Request;
 
 class RetraiteController extends Controller

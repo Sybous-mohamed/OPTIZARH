@@ -22,7 +22,8 @@ export default function Sidebar() {
     { label: "Crédit", icon: <CreditCard size={18} />, path: "/SuperAdmin/credit" },
     { label: "SNTL", icon: <Truck size={18} />, path: "/SuperAdmin/sntl" },
     { label: "Social", icon: <Users2 size={18} />, path: "/SuperAdmin/social" },
-    { label: "IR", icon: <Percent size={18} />, path: "/SuperAdmin/ir" },
+    
+    { label: "IR", icon: <Percent size={18} />, path: "/SuperAdmin/GesionIR" },
   ];
 
   const adminItems = [

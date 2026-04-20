@@ -24,6 +24,8 @@ import Indemente from './routes/superadmin/Indementes';
 import Cotisation from './routes/superadmin/Cotisation';
 import Retraite from './routes/superadmin/Retraite';
 
+import IR from './routes/superadmin/GestionIR';
+
 //Admin 
 import AdminDashboard from './routes/Admin/Dashboard';
 
@@ -168,6 +170,8 @@ function App() {
                             <Route path="Indementes" element={<Indemente/>} />
                             <Route path="Cotisation" element={<Cotisation/>} />
                             <Route path="Retraite" element={<Retraite/>} />
+
+                            <Route path="GesionIR" element={<IR/>}/>
                         </Route>
                     </Route>
 

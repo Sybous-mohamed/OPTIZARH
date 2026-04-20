@@ -1,7 +1,7 @@
 <?php
-namespace App\Http\Controllers\API;
+namespace App\Http\Controllers\SuperAdmin;
 
-use App\Models\ParametrageRCAR;
+use App\Models\SuperAdmin\ParametrageRCAR;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller; 
 

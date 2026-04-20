@@ -1,5 +1,5 @@
 <?php
-namespace App\Models;
+namespace App\Models\SuperAdmin;
 use Illuminate\Database\Eloquent\Model;
 
 class ParametrageRCAR extends Model {

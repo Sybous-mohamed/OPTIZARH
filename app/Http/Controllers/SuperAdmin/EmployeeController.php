@@ -1,9 +1,9 @@
 <?php
 
-namespace App\Http\Controllers\API;
+namespace App\Http\Controllers\SuperAdmin;
 
 use Illuminate\Http\Request;
-use App\Models\Employee;
+use App\Models\SuperAdmin\Employee;
 use App\Http\Controllers\Controller; 
 use Barryvdh\DomPDF\Facade\Pdf;
 

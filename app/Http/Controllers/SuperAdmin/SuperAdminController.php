@@ -1,7 +1,7 @@
 <?php
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers\SuperAdmin;
 use App\Http\Controllers\Controller;
-use App\Models\User;
+use App\Models\Auth\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
