@@ -16,7 +16,7 @@
 <body>
     <div class="header">
         <div class="title">Paramétrage de l'Impôt sur le Revenu (IR)</div>
-        <p>Exercice Fiscal : <strong>{{ $annee }}</strong></p>
+        <p>Annee Fiscal : <strong>{{ $annee }}</strong></p>
     </div>
 
     <table>
@@ -25,9 +25,9 @@
                 <th>Min (DH)</th>
                 <th>Max (DH)</th>
                 <th>Taux (%)</th>
-                <th>Abat. Marié</th>
-                <th>Abat. Enfant 1</th>
-                <th>Abat. Enfant 2</th>
+                <th>Marié</th>
+                <th>Enfant 1</th>
+                <th>Enfant 2</th>
             </tr>
         </thead>
         <tbody>
