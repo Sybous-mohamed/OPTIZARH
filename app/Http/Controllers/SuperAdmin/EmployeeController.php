@@ -4,6 +4,7 @@ namespace App\Http\Controllers\SuperAdmin;
 
 use Illuminate\Http\Request;
 use App\Models\SuperAdmin\Employee;
+use App\Models\SuperAdmin\ActivityLog;
 use App\Http\Controllers\Controller; 
 use Barryvdh\DomPDF\Facade\Pdf;
 
@@ -18,6 +19,12 @@ class EmployeeController extends Controller{
         'statut' => 'nullable|string', 
         'departement' => 'nullable|string',
         'poste' => 'nullable|string'
+    ]);
+    ActivityLog::create([
+        'user_id'     => auth()->id(),
+        'titre'       => 'Ajout',
+        'action_type' => 'CREATE',
+        'description' => "Ajoute Nouvelle employée : " . $request->prenom . " " . $request->nom,
     ]);
 
     $employee = Employee::create($request->all());
@@ -61,6 +68,12 @@ class EmployeeController extends Controller{
         if (!$employee) {
             return response()->json(['message' => 'Employee not found'], 404);
         }
+        ActivityLog::create([
+            'user_id'     => auth()->id(),
+            'titre'       => 'Modification',
+            'action_type' => 'UPDATE',
+            'description' => "Modifier l'employé : " . $employee->prenom . " " . $employee->nom,
+        ]);
         $employee->update($request->all());
         return response()->json($employee);
     }
@@ -70,6 +83,12 @@ class EmployeeController extends Controller{
         if (!$employee) {
             return response()->json(['message' => 'Employee not found'], 404);
         }
+        ActivityLog::create([
+            'user_id'     => auth()->id(),
+            'titre'       => 'Suppression',
+            'action_type' => 'DELETE',
+            'description' => "Supprimer l'employé : " . $employee->prenom . " " . $employee->nom,
+        ]);
         $employee->delete();
         return response()->json(['message' => 'Employee deleted']);
     }
@@ -109,6 +128,12 @@ class EmployeeController extends Controller{
                 ->orWhere('email', 'like', "%{$search}%");
             });
         }
+        ActivityLog::create([
+            'user_id'     => auth()->id(),
+            'titre'       => 'Export PDF',
+            'action_type' => 'EXPORT',
+            'description' => "A généré la liste des employés en PDF",
+        ]);
 
         $employees = $query->get()->toArray();
 

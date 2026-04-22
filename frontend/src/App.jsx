@@ -3,6 +3,10 @@ import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-
 import { superAdminApi } from './lib/apis/superadmin';
 
 import { AuthProvider } from './context/AuthContext';
+import { ThemeProvider } from "./context/ThemeContext";
+
+import { LoadingProvider, useLoading } from "./context/LoadingContext";
+import { attachLoadingHandler } from "./lib/apis/axiosConfig";
 
 // Auth Components
 import Login from './routes/auth/login';
@@ -16,15 +20,18 @@ import VerifyNotice from './routes/auth/VerifyNotice';
 
 
 // SuperAdmin
-import SuperAdminLayout from '../src/layout/SuperAdminLayout';
-import SuperAdminDashboard from './routes/superadmin/Dashboard'; 
-import Users from './routes/superadmin/users';
-import RCAR from './routes/superadmin/ParametrageRCAR';
-import Indemente from './routes/superadmin/Indementes';
-import Cotisation from './routes/superadmin/Cotisation';
-import Retraite from './routes/superadmin/Retraite';
-
-import IR from './routes/superadmin/GestionIR';
+import SuperAdminLayout from "../src/layout/SuperAdminLayout";
+import SuperAdminDashboard from "./routes/superadmin/Dashboard";
+import Users from "./routes/superadmin/users";
+import RCAR from "./routes/superadmin/ParametrageRCAR";
+import Indemente from "./routes/superadmin/Indementes";
+import Cotisation from "./routes/superadmin/Cotisation";
+import Retraite from "./routes/superadmin/Retraite";
+import Credit from "./routes/superadmin/Credit";
+import SNTL from "./routes/superadmin/SNTL";
+import Social from "./routes/superadmin/Social";
+import IR from "./routes/superadmin/GestionIR";
+import Logs from "./routes/superadmin/Logs";
 
 //Admin 
 import AdminDashboard from './routes/Admin/Dashboard';
@@ -34,6 +41,8 @@ import RHDashboard from './routes/Rh/Dashboard';
 
 // Employee
 import EmployeeDashboard from './routes/employee/Dashboard';
+
+
 
 /*
 |--------------------------------------------------------------------------
@@ -99,8 +108,17 @@ const PublicRoute = ({ children, isFirstRun }) => {
     return children;
 };
 
-function App() {
+
+
+
+function AppContent() {
+    const { setLoading } = useLoading();
     const [isFirstRun, setIsFirstRun] = useState(null);
+
+    useEffect(() => {
+        attachLoadingHandler(setLoading);
+    }, [setLoading]);
+
 
     useEffect(() => {
         const checkStatus = async () => {
@@ -117,15 +135,13 @@ function App() {
 
     if (isFirstRun === null) {
         return (
-            <div className="h-screen w-full flex items-center justify-center bg-white">
-                <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-indigo-600"></div>
+            <div className="h-screen flex items-center justify-center">
+                <div className="animate-spin h-10 w-10 border-t-2 border-blue-600 rounded-full"></div>
             </div>
         );
     }
 
     return (
-        <AuthProvider>
-
             <Router>
                 <Routes>
                     {/* 1. Root logic */}
@@ -133,29 +149,18 @@ function App() {
                         isFirstRun ? <Navigate to="/auth/setup" replace /> : <Navigate to="/auth/login" replace />
                     } />
 
-                    {/* 2. Group dyal Auth Routes */}
+                    {/* 2.Auth Routes */}
                     <Route path="/auth">
-
                         <Route index element={<Navigate to="/auth/login" replace />} />
                         <Route path="setup" element={
-                            isFirstRun ? <SuperAdminRegister /> : <Navigate to="/auth/login" replace />
-                        } />
-
-                        {/* Login: Public */}
+                            isFirstRun ? <SuperAdminRegister /> : <Navigate to="/auth/login" replace />} />
                         <Route path="login" element={<PublicRoute isFirstRun={isFirstRun}><Login /></PublicRoute>} />
-
-                        {/* Register  Public */}
                         <Route path="register" element={<PublicRoute isFirstRun={isFirstRun}><RoleSelection /></PublicRoute>} />
                         <Route path="register/:role" element={<PublicRoute isFirstRun={isFirstRun}><Register /></PublicRoute>} />
-                        
-                        {/* Forgot/Reset: Public */}
                         <Route path="forgot-password" element={<PublicRoute isFirstRun={isFirstRun}><ForgotPassword /></PublicRoute>} />
                         <Route path="reset-password/:token" element={<ResetPassword />} />
-
-                        {/* Verification Pages*/}
                         <Route path="verify-notice" element={<VerifyNotice />} />
                         <Route path="verify-email" element={<VerifyEmail />} />
-
                         <Route path="*" element={<Navigate to="/auth/login" replace />} />
                     </Route>
 
@@ -170,8 +175,11 @@ function App() {
                             <Route path="Indementes" element={<Indemente/>} />
                             <Route path="Cotisation" element={<Cotisation/>} />
                             <Route path="Retraite" element={<Retraite/>} />
-
+                            <Route path="Credit" element={<Credit />} />
+                            <Route path="SNTL" element={<SNTL />} />
+                            <Route path="Social" element={<Social />} />
                             <Route path="GesionIR" element={<IR/>}/>
+                            <Route path="Logs" element={<Logs/>}/>
                         </Route>
                     </Route>
 
@@ -203,8 +211,17 @@ function App() {
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
             </Router>
-        </AuthProvider>
     );
 }
 
-export default App;
+export default function App(){
+    return(
+         <AuthProvider>
+            <ThemeProvider>
+                <LoadingProvider>
+                    <AppContent />
+                </LoadingProvider>
+            </ThemeProvider>
+        </AuthProvider>
+    );
+}

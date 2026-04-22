@@ -4,12 +4,14 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\SuperAdmin\SuperAdminController;
+use App\Http\Controllers\SuperAdmin\DashboardController;
 use App\Http\Controllers\SuperAdmin\RCARController;
 use App\Http\Controllers\SuperAdmin\EmployeeController;
 use App\Http\Controllers\SuperAdmin\IndemniteController;
 use App\Http\Controllers\SuperAdmin\ActivityLogController;
 use App\Http\Controllers\SuperAdmin\RetraiteController;
 use App\Http\Controllers\SuperAdmin\CotisationController;
+use App\Http\Controllers\SuperAdmin\CreditController;
 use App\Http\Controllers\SuperAdmin\IrController;
 
 use App\Http\Controllers\Auth\AuthController;
@@ -55,7 +57,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::middleware(['verified'])->group(function () {
         Route::middleware('role:superadmin')->group(function () {
-        
+            Route::get('/superadmin/dashboard-stats', [DashboardController::class, 'getStats']);
             Route::prefix('employees')->group(function () {
                 Route::get('/stats', [EmployeeController::class, 'stats']);
                 Route::get('/export-pdf', [EmployeeController::class, 'exportPDF']);
@@ -80,6 +82,14 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('/retraite/update', [RetraiteController::class, 'update']);
 
             Route::apiResource('cotisations', CotisationController::class);
+
+            Route::prefix('credits')->group(function () {
+                Route::get('/', [CreditController::class, 'index']);
+                Route::post('/', [CreditController::class, 'store']);
+                Route::put('/{id}', [CreditController::class, 'update']);
+                Route::delete('/{id}', [CreditController::class, 'destroy']);
+                Route::patch('/{id}/toggle', [CreditController::class, 'toggleStatus']);
+            });
 
             Route::prefix('ir')->group(function () {
                 Route::get('/annees', [IrController::class, 'getAnnees']);

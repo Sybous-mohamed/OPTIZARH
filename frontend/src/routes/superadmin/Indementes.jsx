@@ -63,11 +63,11 @@ export default function Indementes() {
         fetchActivities(10);
     }, []);
 
-    const filteredIndemnites = indemnites.filter(item => 
-        item.annee.toString() === selectedYear
+    const filteredIndemnites = (indemnites || []).filter(item => 
+        item?.annee?.toString() === selectedYear
     );
 
-    const totalMasse = filteredIndemnites
+    const totalMasse = (filteredIndemnites || [])
         .filter(item => item.statut && item.type === 'FIXE')
         .reduce((sum, item) => sum + parseFloat(item.valeur || 0), 0);
 
@@ -116,23 +116,38 @@ export default function Indementes() {
     };
 
     const handleSave = async () => {
-        try {
-            if (isEditing) {
-                await api.put(`/api/indemnites/${currentId}`, formData);
-            } else {
-                await api.post('/api/indemnites', formData);
-            }
-            setIsModalOpen(false);
-            fetchIndemnites();
-            fetchActivities(limit);
-            setFormData({
-                nom: "", type: "FIXE", valeur: "", annee: new Date().getFullYear(),
-                tous_employes: false, grade: "", echelle: "", echelon: "", statut: true
-            });
-        } catch (error) {
-            console.error("Erreur Save:", error);
+    try {
+        // N-ndfou l-data qbel matsifetha
+        const dataToSend = {
+            ...formData,
+            // Ila kant l-coche dial "tous_employes", n-rdou hado null bach mat-traich erreur
+            grade: formData.tous_employes ? null : formData.grade,
+            echelle: formData.tous_employes ? null : formData.echelle,
+            echelon: formData.tous_employes ? null : formData.echelon,
+        };
+
+        if (isEditing) {
+            await api.put(`/api/indemnites/${currentId}`, dataToSend);
+        } else {
+            await api.post('/api/indemnites', dataToSend);
         }
-    };
+
+        setIsModalOpen(false);
+        fetchIndemnites();
+        fetchActivities(limit);
+        
+        // Reset form
+        setFormData({
+            nom: "", type: "FIXE", valeur: "", annee: new Date().getFullYear(),
+            tous_employes: false, grade: "", echelle: "", echelon: "", statut: true
+        });
+    } catch (error) {
+        // Hna ghadi i-biyen lik l-erreur b-debt f l-console
+        console.error("Erreur Save:", error.response?.data || error.message);
+        alert("Erreur lors de l'enregistrement: " + (error.response?.data?.error || "Erreur serveur"));
+    }
+};
+
 
     return (
         <div className="p-8 bg-gray-50 min-h-screen font-sans">
@@ -391,7 +406,7 @@ export default function Indementes() {
                                         {log.created_at ? new Date(log.created_at).toLocaleDateString('fr-FR') : 'Date inconnue'}
                                     </p>
                                     <p className="text-[10px] text-gray-300 uppercase font-bold mt-1">
-                                        Par {log.user ? log.user.name : 'Admin'}
+                                        Par {log.user ? log.user.full_name : 'Admin'}
                                     </p>
                                 </div>
                             </div>

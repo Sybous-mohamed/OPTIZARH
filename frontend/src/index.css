@@ -1,1 +1,8 @@
 @import "tailwindcss";
+@theme{}
+@variant dark (&:where(.dark, .dark *));
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}

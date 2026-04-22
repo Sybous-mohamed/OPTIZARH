@@ -26,6 +26,7 @@ const Login = () => {
         try {
             const response = await api.post('/api/login', credentials);
             const { access_token, user } = response.data;
+            localStorage.setItem("token", access_token);
             login(user, access_token); 
             if (user.email_verified_at === null) {
                 showNotification("Veuillez vérifier votre email avant de continuer.", "warning");
