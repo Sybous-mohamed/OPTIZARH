@@ -9,11 +9,17 @@ use Illuminate\Validation\ValidationException;
 
 class CreditController extends Controller
 {
+    /**
+     * Afficher la liste des produits de crédit.
+     */
     public function index()
     {
         return response()->json(Credit::latest()->get());
     }
 
+    /**
+     * Enregistrer un nouveau produit de crédit.
+     */
     public function store(Request $request)
     {
         try {
@@ -27,6 +33,13 @@ class CreditController extends Controller
             ]);
 
             $credit = Credit::create($validated);
+
+            // --- LOGS ACTIVITÉ ---
+            $this->logActivity(
+                "Crédit", 
+                "CREATE", 
+                "Ajout du produit de crédit : " . $credit->name . " (Type: " . $credit->type . ")"
+            );
 
             return response()->json([
                 'message' => "Le produit de crédit a été créé avec succès !",
@@ -44,6 +57,9 @@ class CreditController extends Controller
         }
     }
 
+    /**
+     * Mettre à jour un produit de crédit existant.
+     */
     public function update(Request $request, $id)
     {
         try {
@@ -60,6 +76,14 @@ class CreditController extends Controller
             ]);
 
             $credit->update($validated);
+
+            // --- LOGS ACTIVITÉ ---
+            $this->logActivity(
+                "Crédit", 
+                "UPDATE", 
+                "Modification des paramètres du crédit : " . $credit->name
+            );
+
             return response()->json([
                 'message' => "Modifications enregistrées !",
                 'data' => $credit
@@ -70,21 +94,53 @@ class CreditController extends Controller
         }
     }
 
+    /**
+     * Supprimer un produit de crédit.
+     */
     public function destroy($id)
     {
-        $credit = Credit::findOrFail($id);
-        $credit->delete();
-        return response()->json(['message' => 'Le produit a été supprimé']);
+        try {
+            $credit = Credit::findOrFail($id);
+            $creditName = $credit->name;
+            
+            $credit->delete();
+
+            // --- LOGS ACTIVITÉ ---
+            $this->logActivity(
+                "Crédit", 
+                "DELETE", 
+                "Suppression définitive du produit : " . $creditName
+            );
+
+            return response()->json(['message' => 'Le produit a été supprimé']);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Erreur lors de la suppression'], 500);
+        }
     }
 
+    /**
+     * Activer/Désactiver le statut d'un crédit.
+     */
     public function toggleStatus($id)
     {
-        $credit = Credit::findOrFail($id);
-        $credit->status = ($credit->status === 'Actif') ? 'Inactif' : 'Actif';
-        $credit->save();
-        return response()->json([
-            'message' => "Le statut est maintenant: " . $credit->status,
-            'data' => $credit
-        ]);
+        try {
+            $credit = Credit::findOrFail($id);
+            $credit->status = ($credit->status === 'Actif') ? 'Inactif' : 'Actif';
+            $credit->save();
+
+            // --- LOGS ACTIVITÉ ---
+            $this->logActivity(
+                "Crédit", 
+                "UPDATE", 
+                "Changement de statut vers '" . $credit->status . "' pour le crédit : " . $credit->name
+            );
+
+            return response()->json([
+                'message' => "Le statut est maintenant: " . $credit->status,
+                'data' => $credit
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Erreur lors du changement de statut'], 500);
+        }
     }
 }

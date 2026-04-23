@@ -5,7 +5,7 @@ namespace App\Http\Controllers\SuperAdmin;
 use App\Http\Controllers\Controller;
 use App\Models\SuperAdmin\Organisme;
 use App\Models\SuperAdmin\CotisationRule;
-
+use App\Models\SuperAdmin\ActivityLog; 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -49,6 +49,15 @@ class CotisationController extends Controller
                 'derniere_maj' => now()
             ]);
 
+            // --- ZID LOG HNA ---
+            ActivityLog::create([
+                'user_id'     => auth()->id(),
+                'titre'       => 'Cotisation',
+                'action_type' => 'CREATE',
+                'description' => "Ajout de l'organisme de cotisation : " . $validated['nom'] . " pour l'année " . $validated['year'],
+                'annee'       => date('Y'),
+            ]);
+
             return response()->json(['message' => 'تم الحفظ بنجاح'], 201);
         });
     }
@@ -76,12 +85,35 @@ class CotisationController extends Controller
             ]
         );
 
+        ActivityLog::create([
+            'user_id'     => auth()->id(),
+            'titre'       => 'Cotisation',
+            'action_type' => 'UPDATE',
+            'description' => "Mise à jour des règles de cotisation pour : " . $organisme->nom . " (Année: " . $validated['year'] . ")",
+            'annee'       => date('Y'),
+        ]);
+
         return response()->json(['message' => 'تم التحديث بنجاح']);
     }
 
     public function destroy($id)
     {
-        Organisme::destroy($id);
-        return response()->json(['message' => 'تم الحذف']);
+        $organisme = Organisme::find($id);
+        
+        if ($organisme) {
+            $nomOrganisme = $organisme->nom;
+            
+            ActivityLog::create([
+                'user_id'     => auth()->id(),
+                'titre'       => 'Cotisation',
+                'action_type' => 'DELETE',
+                'description' => "Suppression de l'organisme de cotisation : " . $nomOrganisme,
+                'annee'       => date('Y'),
+            ]);
+
+            $organisme->delete();
+        }
+
+        return response()->json(['message' => 'La suppression est valide']);
     }
 }

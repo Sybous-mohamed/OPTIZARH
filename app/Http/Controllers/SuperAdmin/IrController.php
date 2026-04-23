@@ -49,7 +49,7 @@ class IrController extends Controller{
                 ['annee' => $annee],
                 ['data_rows' => $request->data_rows] 
             );
-
+            $this->logActivity("Paramétrage IR", "UPDATE", "Mise à jour de la grille IR pour l'exercice : " . $annee);
             return response()->json([
                 'status' => 'success',
                 'message' => 'Configuration mise à jour',
@@ -68,6 +68,7 @@ class IrController extends Controller{
                 return response()->json(['message' => 'Année introuvable'], 404);
             }
             $setting->delete();
+            $this->logActivity("Paramétrage IR", "DELETE", "Suppression de la configuration IR de l'année : " . $annee);
             return response()->json(['message' => 'L’exercice ' . $annee . ' a été supprimé avec succès']);
         } catch (\Exception $e) {
             return response()->json(['message' => 'Erreur lors de la suppression'], 500);
@@ -82,6 +83,7 @@ class IrController extends Controller{
             'annee' => $annee,
             'rows' => $settings->data_rows
         ]);
+        $this->logActivity("Export", "EXPORT", "Génération PDF de la configuration IR " . $annee);
         return $pdf->setPaper('a4')->stream("Configuration_IR_$annee.pdf");
     }
 }

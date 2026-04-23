@@ -1,12 +1,49 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Bell, Moon, Sun, Search } from 'lucide-react';
 import { useTheme } from '../../../context/ThemeContext';
 
 export default function Header() {
     const theme = useTheme();
-    // Safety check bach may-trahch l-error f l-console
     const darkMode = theme?.darkMode;
     const toggleDarkMode = theme?.toggleDarkMode;
+    const [user, setUser] = useState({
+        name: "Chargement...",
+        role: "Utilisateur"
+    });
+
+    useEffect(() => {
+        const savedName = localStorage.getItem('user_name');
+        const savedRole = localStorage.getItem('role');
+
+        if (savedName || savedRole) {
+            setUser({
+                name: savedName || "Utilisateur",
+                role: savedRole || "Personnel"
+            });
+        } else {
+            const savedUserObj = localStorage.getItem('user');
+            if (savedUserObj) {
+                try {
+                    const parsed = JSON.parse(savedUserObj);
+                    setUser({
+                        name: parsed.full_name || "Admin",
+                        role: savedRole || "Super User"
+                    });
+                } catch (e) {
+                    console.error("Error parsing user object");
+                }
+            }
+        }
+    }, []);
+
+    const getInitials = (name) => {
+        if (!name || name === "Chargement...") return "AD";
+        const parts = name.split(' ');
+        if (parts.length >= 2) {
+            return (parts[0][0] + parts[1][0]).toUpperCase();
+        }
+        return name[0].toUpperCase();
+    };
 
     return (
         <header className="h-14 bg-white/80 dark:bg-[#121212]/80 backdrop-blur-md border-b border-gray-100 dark:border-[#262626] flex items-center justify-between px-6 fixed top-0 right-0 left-[240px] z-10 transition-colors duration-300">
@@ -24,7 +61,7 @@ export default function Header() {
             </div>
 
             <div className="flex items-center gap-4">
-                {/* Dark Mode Toggle Button */}
+                {/* Dark Mode Toggle */}
                 <button 
                     onClick={toggleDarkMode}
                     className="p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#262626] rounded-full transition-all cursor-pointer"
@@ -40,14 +77,18 @@ export default function Header() {
 
                 <div className="h-8 w-[1px] bg-gray-100 dark:bg-[#262626] mx-2"></div>
 
-                {/* Profile Section */}
+                {/* Profile Section - Daba Dynamic */}
                 <div className="flex items-center gap-3 cursor-pointer group">
                     <div className="text-right hidden sm:block">
-                        <p className="text-sm font-bold text-gray-900 dark:text-gray-100 leading-none">Admin Principal</p>
-                        <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium mt-1">Super Utilisateur</p>
+                        <p className="text-sm font-bold text-gray-900 dark:text-gray-100 leading-none">
+                            {user.name}
+                        </p>
+                        <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium mt-1 uppercase tracking-tighter">
+                            {user.role}
+                        </p>
                     </div>
-                    <div className="w-10 h-10 rounded-full bg-indigo-600 border-2 border-white dark:border-[#262626] shadow-sm flex items-center justify-center text-white font-bold text-xs group-hover:scale-105 transition-transform">
-                        AP
+                    <div className="w-10 h-10 rounded-full bg-indigo-600 border-2 border-white dark:border-[#262626] shadow-sm flex items-center justify-center text-white font-bold text-[11px] group-hover:scale-105 transition-transform">
+                        {getInitials(user.name)}
                     </div>
                 </div>
             </div>

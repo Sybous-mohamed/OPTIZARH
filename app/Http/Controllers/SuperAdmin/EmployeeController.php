@@ -11,24 +11,30 @@ use Barryvdh\DomPDF\Facade\Pdf;
 
 class EmployeeController extends Controller{
     //
-    public function store(Request $request) {
-    $validated = $request->validate([
-        'prenom' => 'required|string',
-        'nom' => 'required|string',
-        'email' => 'required|email|unique:employees',
-        'statut' => 'nullable|string', 
-        'departement' => 'nullable|string',
-        'poste' => 'nullable|string'
-    ]);
-    ActivityLog::create([
-        'user_id'     => auth()->id(),
-        'titre'       => 'Ajout',
-        'action_type' => 'CREATE',
-        'description' => "Ajoute Nouvelle employée : " . $request->prenom . " " . $request->nom,
-    ]);
+   public function store(Request $request) {
+        $validated = $request->validate([
+            'prenom' => 'required|string',
+            'nom' => 'required|string',
+            'email' => 'required|email|unique:employees',
+        ]);
 
-    $employee = Employee::create($request->all());
-    return response()->json($employee, 201);
+        $employee = Employee::create($request->all());
+
+        if ($employee) {
+            try {
+                ActivityLog::create([
+                    'user_id'     => auth()->id(),
+                    'titre'       => 'Ajout',
+                    'action_type' => 'CREATE',
+                    'description' => "Ajout de l'employé : " . $employee->prenom . " " . $employee->nom,
+                    'annee'       => date('Y')
+                ]);
+            } catch (\Exception $e) {
+                \Log::error("Erreur Log: " . $e->getMessage());
+            }
+        }
+
+        return response()->json($employee, 201);
     }
 
     public function index(Request $request) {

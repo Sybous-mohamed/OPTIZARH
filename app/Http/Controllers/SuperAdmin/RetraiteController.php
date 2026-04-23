@@ -39,6 +39,7 @@ class RetraiteController extends Controller{
         $settings = Retraite::first();
         if ($settings) {
             $settings->update($request->only(array_keys($rules)));
+            $this->logActivity("Retraite", "UPDATE", "Mise à jour des paramètres généraux de retraite (Âge: " . $request->age_legal_retraite . ")");
             return response()->json([
                 'status' => 'success',
                 'message' => 'Configuration mise à jour',
