@@ -1,10 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { superAdminApi } from './lib/apis/superadmin';
-
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from "./context/ThemeContext";
-
 import { LoadingProvider, useLoading } from "./context/LoadingContext";
 import { attachLoadingHandler } from "./lib/apis/axiosConfig";
 
@@ -18,11 +16,16 @@ import ResetPassword from './routes/auth/ResetPassword';
 import VerifyEmail from './routes/auth/VerifyEmail';
 import VerifyNotice from './routes/auth/VerifyNotice';
 
-
 // SuperAdmin
 import SuperAdminLayout from "../src/layout/SuperAdminLayout";
 import SuperAdminDashboard from "./routes/superadmin/Dashboard";
 import Users from "./routes/superadmin/users";
+import Parametrages from './routes/superadmin/Prametrages/Parmetrages';
+import GestionEtat from "./routes/superadmin/GestionEtat";
+import GestionIndemenitee from "./routes/superadmin/GestionIndementee";
+
+
+
 import RCAR from "./routes/superadmin/ParametrageRCAR";
 import Indemente from "./routes/superadmin/Indementes";
 import Cotisation from "./routes/superadmin/Cotisation";
@@ -33,6 +36,8 @@ import Social from "./routes/superadmin/Social";
 import IR from "./routes/superadmin/GestionIR";
 import Logs from "./routes/superadmin/Logs";
 import Parametres from './routes/superadmin/Settings'
+
+
 
 //Admin 
 import AdminDashboard from './routes/Admin/Dashboard';
@@ -169,6 +174,18 @@ function AppContent() {
                             <Route index element={<Navigate to="/SuperAdmin/Dashboard" replace />} />
                             <Route path="Dashboard" element={<SuperAdminDashboard />} />
                             <Route path="Users" element={<Users/>}/>
+                            <Route path="Parametrages">
+                                <Route index element={<Parametrages />} />
+                                <Route path="GestionEtat" element={<GestionEtat/>}/>
+                                <Route path="GestionIndemenitee" element={<GestionIndemenitee/>} />
+
+
+                            </Route>
+
+
+
+
+                            
                             <Route path="RCAR" element={<RCAR/>} />
                             <Route path="Indementes" element={<Indemente/>} />
                             <Route path="Cotisation" element={<Cotisation/>} />

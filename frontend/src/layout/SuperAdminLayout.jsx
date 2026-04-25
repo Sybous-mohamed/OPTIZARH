@@ -6,8 +6,6 @@ import { useTheme } from '../context/ThemeContext';
 
 export default function Layout() {
     const theme = useTheme();
-
-    // Safety check bach may-trahch l-error dial 'undefined'
     if (!theme) {
         return (
             <div className="flex min-h-screen bg-[#050505] items-center justify-center">
@@ -15,17 +13,13 @@ export default function Layout() {
             </div>
         );
     }
-
     return (
-        /* Dark mode ghadi i-welli k7el m9ed (#050505) */
         <div className="flex min-h-screen bg-[#F9FAFB] dark:bg-[#050505] transition-colors duration-300">
             <Sidebar />
-            
             <div className="flex flex-col flex-1 min-w-0 ml-[240px]">
                 <Header />
-                
-                <main className="flex-1 p-6 mt-14 overflow-y-auto">
-                    <div className="max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-2 duration-500">
+                <main className="flex-1 overflow-y-auto" style={{ paddingTop: '56px' }}>
+                    <div className="p-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
                         <Outlet />
                     </div>
                 </main>

@@ -3,6 +3,12 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
+
+use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\Auth\PasswordResetLinkController;
+use App\Http\Controllers\Auth\NewPasswordController;
+use App\Http\Controllers\Auth\VerifyEmailController;
+
 use App\Http\Controllers\SuperAdmin\SuperAdminController;
 use App\Http\Controllers\SuperAdmin\DashboardController;
 use App\Http\Controllers\SuperAdmin\RCARController;
@@ -13,11 +19,9 @@ use App\Http\Controllers\SuperAdmin\RetraiteController;
 use App\Http\Controllers\SuperAdmin\CotisationController;
 use App\Http\Controllers\SuperAdmin\CreditController;
 use App\Http\Controllers\SuperAdmin\IrController;
+use App\Http\Controllers\SuperAdmin\GestionEtatController;
+use App\Http\Controllers\SuperAdmin\GestionIndemniteController;
 
-use App\Http\Controllers\Auth\AuthController;
-use App\Http\Controllers\Auth\PasswordResetLinkController;
-use App\Http\Controllers\Auth\NewPasswordController;
-use App\Http\Controllers\Auth\VerifyEmailController;
 
 /*
 |--------------------------------------------------------------------------
@@ -57,16 +61,50 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::middleware(['verified'])->group(function () {
         Route::middleware('role:superadmin')->group(function () {
+
+            Route::prefix('gestionEtat')->group(function () {
+                Route::get('/years', [GestionEtatController::class, 'getYears']);
+
+                Route::post('/store', [GestionEtatController::class, 'store']);
+
+                Route::get('/get-by-year/{year}', [GestionEtatController::class, 'getByYear']);
+                Route::get('/roles/{yearId}', [GestionEtatController::class, 'getRoles']);
+                Route::get('/grades/{roleId}', [GestionEtatController::class, 'getGrades']);
+                Route::get('/echelles/{gradeId}', [GestionEtatController::class, 'getEchelles']);
+                Route::get('/echelons/{echelleId}', [GestionEtatController::class, 'getEchelons']);
+                Route::get('/role-details/{roleId}', [GestionEtatController::class, 'getRoleDetails']);
+                Route::get('/grade-details/{gradeId}', [GestionEtatController::class, 'getGradeDetails']);
+                Route::get('/echelon-details/{id}', [GestionEtatController::class, 'getEchelonDetails']);
+
+                Route::delete('/role/{id}', [GestionEtatController::class, 'destroyRole']);
+                Route::delete('/grade/{id}', [GestionEtatController::class, 'destroyGrade']);
+                Route::delete('/echelle/{id}', [GestionEtatController::class, 'destroyEchelle']);
+                Route::delete('/echelon/{id}', [GestionEtatController::class, 'destroyEchelon']);
+
+                Route::get('/export-pdf/{year}', [GestionEtatController::class, 'exportPDF']);
+
+
+                Route::get('/gestionindemnites/{yearId}', [GestionIndemniteController::class, 'index']);
+                Route::post('/gestionindemnites', [GestionIndemniteController::class, 'store']);
+                Route::delete('/gestionindemnites/{id}', [GestionIndemniteController::class, 'destroy']);
+            });
+
+
+
             Route::get('/superadmin/dashboard-stats', [DashboardController::class, 'getStats']);
+
             Route::prefix('employees')->group(function () {
                 Route::get('/stats', [EmployeeController::class, 'stats']);
                 Route::get('/export-pdf', [EmployeeController::class, 'exportPDF']);
-                Route::get('/', [EmployeeController::class, 'index']);          
-                Route::post('/', [EmployeeController::class, 'store']);         
-                Route::get('/{id}', [EmployeeController::class, 'show']);      
-                Route::put('/{id}', [EmployeeController::class, 'update']);    
+                Route::get('/', [EmployeeController::class, 'index']);
+                Route::post('/', [EmployeeController::class, 'store']);
+                Route::get('/{id}', [EmployeeController::class, 'show']);
+                Route::put('/{id}', [EmployeeController::class, 'update']);
                 Route::delete('/{id}', [EmployeeController::class, 'destroy']);
             });
+
+
+
 
             Route::prefix('rcar')->group(function () {
                 Route::get('/', [RCARController::class, 'index']);
@@ -103,7 +141,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
 
         });
-        
+
         // Role: Admin
         Route::middleware('role:admin')->group(function () {
         });

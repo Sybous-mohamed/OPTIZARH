@@ -8,12 +8,15 @@ import {
 import axiosClient from "../../apis/axiosConfig";
 
 export default function Sidebar() {
+
   const location = useLocation();
   const active = location.pathname;
 
   const navItems = [
     { label: "Tableau de bord", icon: <LayoutGrid size={18} />, path: "/SuperAdmin/Dashboard" },
     { label: "Utilisateurs", icon: <Users size={18} />, path: "/SuperAdmin/users" },
+    { label: "Parametrages", icon: <Users2 size={18} />, path: "/SuperAdmin/Parametrages"},
+    
     { label: "RCAR", icon: <Shield size={18} />, path: "/SuperAdmin/rcar" },
     { label: "Indemnités", icon: <Banknote size={18} />, path: "/SuperAdmin/Indementes" },
     { label: "Cotisation", icon: <Wallet size={18} />, path: "/SuperAdmin/Cotisation" },
