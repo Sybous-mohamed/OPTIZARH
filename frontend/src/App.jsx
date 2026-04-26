@@ -16,13 +16,21 @@ import ResetPassword from './routes/auth/ResetPassword';
 import VerifyEmail from './routes/auth/VerifyEmail';
 import VerifyNotice from './routes/auth/VerifyNotice';
 
+
 // SuperAdmin
 import SuperAdminLayout from "../src/layout/SuperAdminLayout";
 import SuperAdminDashboard from "./routes/superadmin/Dashboard";
 import Users from "./routes/superadmin/users";
 import Parametrages from './routes/superadmin/Prametrages/Parmetrages';
-import GestionEtat from "./routes/superadmin/GestionEtat";
-import GestionIndemenitee from "./routes/superadmin/GestionIndementee";
+    import GestionEtat from "./routes/superadmin/Prametrages/GestionEtat";
+    import GestionIndemenitee from "./routes/superadmin/Prametrages/GestionIndementee";
+    import IRGestion from "./routes/superadmin/Prametrages/GestionIR";
+
+
+import IRAffichage from "./routes/superadmin/IRAffichage";
+import Logs from "./routes/superadmin/Logs";
+import Parametres from './routes/superadmin/Settings'
+
 
 
 
@@ -33,9 +41,9 @@ import Retraite from "./routes/superadmin/Retraite";
 import Credit from "./routes/superadmin/Credit";
 import SNTL from "./routes/superadmin/SNTL";
 import Social from "./routes/superadmin/Social";
-import IR from "./routes/superadmin/GestionIR";
-import Logs from "./routes/superadmin/Logs";
-import Parametres from './routes/superadmin/Settings'
+
+
+
 
 
 
@@ -114,6 +122,7 @@ const PublicRoute = ({ children, isFirstRun }) => {
     return children;
 };
 
+
 function AppContent() {
     const { setLoading } = useLoading();
     const [isFirstRun, setIsFirstRun] = useState(null);
@@ -147,16 +156,12 @@ function AppContent() {
     return (
             <Router>
                 <Routes>
-                    {/* 1. Root logic */}
-                    <Route path="/" element={
-                        isFirstRun ? <Navigate to="/auth/setup" replace /> : <Navigate to="/auth/login" replace />
-                    } />
+                    <Route path="/" element={isFirstRun ? <Navigate to="/auth/setup" replace /> : <Navigate to="/auth/login" replace />} />
 
                     {/* 2.Auth Routes */}
                     <Route path="/auth">
                         <Route index element={<Navigate to="/auth/login" replace />} />
-                        <Route path="setup" element={
-                            isFirstRun ? <SuperAdminRegister /> : <Navigate to="/auth/login" replace />} />
+                        <Route path="setup" element={isFirstRun ? <SuperAdminRegister /> : <Navigate to="/auth/login" replace />} />
                         <Route path="login" element={<PublicRoute isFirstRun={isFirstRun}><Login /></PublicRoute>} />
                         <Route path="register" element={<PublicRoute isFirstRun={isFirstRun}><RoleSelection /></PublicRoute>} />
                         <Route path="register/:role" element={<PublicRoute isFirstRun={isFirstRun}><Register /></PublicRoute>} />
@@ -167,7 +172,6 @@ function AppContent() {
                         <Route path="*" element={<Navigate to="/auth/login" replace />} />
                     </Route>
 
-                    {/* 3. Protected Dashboards */}
                     {/* SuperAdmin */}
                     <Route element={<ProtectedRoute allowedRoles={['superadmin']} />}>
                         <Route path="/SuperAdmin" element={<SuperAdminLayout />}>
@@ -178,10 +182,12 @@ function AppContent() {
                                 <Route index element={<Parametrages />} />
                                 <Route path="GestionEtat" element={<GestionEtat/>}/>
                                 <Route path="GestionIndemenitee" element={<GestionIndemenitee/>} />
-
-
+                                <Route path="GesionIR" element={<IRGestion/>}/>
                             </Route>
+                            <Route path="IRAffichage" element={<IRAffichage/>}/>
 
+                            <Route path="Logs" element={<Logs/>}/>
+                            <Route path="Parametres" element={<Parametres/>}/>
 
 
 
@@ -193,9 +199,6 @@ function AppContent() {
                             <Route path="Credit" element={<Credit />} />
                             <Route path="SNTL" element={<SNTL />} />
                             <Route path="Social" element={<Social />} />
-                            <Route path="GesionIR" element={<IR/>}/>
-                            <Route path="Logs" element={<Logs/>}/>
-                            <Route path="Parametres" element={<Parametres/>}/>
                         </Route>
                     </Route>
 

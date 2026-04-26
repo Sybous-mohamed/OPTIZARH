@@ -10,4 +10,9 @@ class Echelon extends Model
     public function echelle() {
         return $this->belongsTo(Echelle::class);
     }
+
+    // Accessor bach tkon formatée
+    public function getFormattedSalaryAttribute() {
+        return number_format($this->salary, 0, ',', ' ') . ' MAD';
+    }
 }

@@ -64,10 +64,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
             Route::prefix('gestionEtat')->group(function () {
                 Route::get('/years', [GestionEtatController::class, 'getYears']);
-
                 Route::post('/store', [GestionEtatController::class, 'store']);
-
                 Route::get('/get-by-year/{year}', [GestionEtatController::class, 'getByYear']);
+                
                 Route::get('/roles/{yearId}', [GestionEtatController::class, 'getRoles']);
                 Route::get('/grades/{roleId}', [GestionEtatController::class, 'getGrades']);
                 Route::get('/echelles/{gradeId}', [GestionEtatController::class, 'getEchelles']);
@@ -76,13 +75,15 @@ Route::middleware('auth:sanctum')->group(function () {
                 Route::get('/grade-details/{gradeId}', [GestionEtatController::class, 'getGradeDetails']);
                 Route::get('/echelon-details/{id}', [GestionEtatController::class, 'getEchelonDetails']);
 
+                Route::get('/starred-roles', [GestionEtatController::class, 'getStarredRoles']);
+                Route::put('/role/{id}/toggle-star', [GestionEtatController::class, 'toggleStarredRole']);
+
                 Route::delete('/role/{id}', [GestionEtatController::class, 'destroyRole']);
                 Route::delete('/grade/{id}', [GestionEtatController::class, 'destroyGrade']);
                 Route::delete('/echelle/{id}', [GestionEtatController::class, 'destroyEchelle']);
                 Route::delete('/echelon/{id}', [GestionEtatController::class, 'destroyEchelon']);
 
                 Route::get('/export-pdf/{year}', [GestionEtatController::class, 'exportPDF']);
-
 
                 Route::get('/gestionindemnites/{yearId}', [GestionIndemniteController::class, 'index']);
                 Route::post('/gestionindemnites', [GestionIndemniteController::class, 'store']);
@@ -129,13 +130,21 @@ Route::middleware('auth:sanctum')->group(function () {
                 Route::patch('/{id}/toggle', [CreditController::class, 'toggleStatus']);
             });
 
-            Route::prefix('ir')->group(function () {
-                Route::get('/annees', [IrController::class, 'getAnnees']);
-                Route::get('/settings/{annee}', [IrController::class, 'getSettings']);
-                Route::post('/settings/{annee}', [IrController::class, 'updateSettings']);
-                Route::delete('/settings/{annee}', [IrController::class, 'destroy']);
-                Route::get('/export/{annee}', [IrController::class, 'exportPdf']);
-            });
+
+            
+           Route::prefix('ir')->group(function () {
+    // Routes pour l'affichage (consultation)
+    Route::get('/annees', [IrController::class, 'getAnnees']);
+    Route::get('/settings/{annee}', [IrController::class, 'getSettings']);
+    Route::get('/export/{annee}', [IrController::class, 'exportPdf']);
+    
+    // Routes pour le paramétrage (modification)
+    Route::get('/annees-for-settings', [IrController::class, 'getAnneesForSettings']);
+    Route::get('/settings-for-edit/{annee}', [IrController::class, 'getSettingsForEdit']);
+    Route::post('/settings/{annee}', [IrController::class, 'updateSettings']);
+    Route::delete('/settings/{annee}', [IrController::class, 'destroy']);
+});
+            
 
 
 

@@ -1,13 +1,16 @@
 <?php
 
 namespace App\Models\SuperAdmin;
+
 use Illuminate\Database\Eloquent\Model;
 
-class Gestion_IR extends Model {
-    protected $table = 'gestion_IR';
+class GestionIR extends Model
+{
+    protected $table = 'gestion_ir';
+    
     protected $fillable = ['annee', 'data_rows'];
+    
     protected $casts = [
-        'data_rows' => 'array', 
+        'data_rows' => 'array',
     ];
 }
-

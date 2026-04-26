@@ -1,89 +1,220 @@
 <?php
+
 namespace App\Http\Controllers\SuperAdmin;
 
-use App\Models\SuperAdmin\Gestion_IR;
+use App\Models\SuperAdmin\GestionIR;
+use App\Models\SuperAdmin\SalaryYear;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Barryvdh\DomPDF\Facade\Pdf;
 
-class IrController extends Controller{
-    
-    public function getAnnees() {
-        $annees = Gestion_IR::pluck('annee')->toArray();
-        return response()->json($annees);
+class IrController extends Controller
+{
+    // ==========================================================
+    //                 FONCTIONS POUR L'AFFICHAGE
+    // ==========================================================
+
+    // Récupérer toutes les années depuis la table gestion_ir
+    public function getAnnees()
+    {
+        try {
+            $annees = GestionIR::orderBy('annee', 'desc')->pluck('annee')->toArray();
+            
+            if (empty($annees)) {
+                return response()->json([]);
+            }
+            
+            return response()->json($annees);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
     }
 
-    public function getSettings($annee) {
-        $settings = Gestion_IR::where('annee', $annee)->first();
-        return response()->json($settings ?: ['data_rows' => []]);
+    // Récupérer les paramètres d'une année (pour affichage)
+    public function getSettings($annee)
+    {
+        try {
+            $settings = GestionIR::where('annee', $annee)->first();
+            
+            if (!$settings) {
+                return response()->json([
+                    'data_rows' => [
+                        ['min' => 0, 'max' => 0, 'taux' => 0, 'marie' => 0, 'enfant1' => 0, 'enfant2' => 0]
+                    ]
+                ]);
+            }
+            
+            return response()->json([
+                'data_rows' => $settings->data_rows
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
     }
 
-    public function updateSettings(Request $request, $annee) {
+    // Exporter PDF
+    public function exportPdf($annee)
+    {
+        try {
+            $settings = GestionIR::where('annee', $annee)->first();
+            
+            if (!$settings) {
+                return response()->json(['message' => 'Données introuvables pour l\'année ' . $annee], 404);
+            }
+            
+            $pdf = Pdf::loadView('pdf.ir_settings', [
+                'annee' => $annee,
+                'rows' => $settings->data_rows,
+                'date' => now()->format('d/m/Y H:i')
+            ]);
+            
+            $pdf->setPaper('a4', 'portrait');
+            
+            $this->logActivity(
+                'Export IR',
+                'EXPORT',
+                "Génération PDF de la configuration IR pour l'année " . $annee
+            );
+            
+            return $pdf->download("barème_IR_{$annee}.pdf");
+        } catch (\Exception $e) {
+            $this->logActivity(
+                'Export IR',
+                'ERROR',
+                "Erreur lors de l'export PDF IR: " . $e->getMessage()
+            );
+            return response()->json(['message' => 'Erreur lors de la génération du PDF'], 500);
+        }
+    }
+
+    // ==========================================================
+    //                 FONCTIONS POUR LE PARAMÉTRAGE
+    // ==========================================================
+
+    // Récupérer toutes les années (pour paramétrage)
+    public function getAnneesForSettings()
+    {
+        try {
+            $annees = SalaryYear::orderBy('year', 'desc')->pluck('year')->toArray();
+            return response()->json($annees);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    // Récupérer les paramètres d'une année pour modification
+    public function getSettingsForEdit($annee)
+    {
+        try {
+            $settings = GestionIR::where('annee', $annee)->first();
+            
+            if (!$settings) {
+                return response()->json([
+                    'data_rows' => [
+                        ['min' => 0, 'max' => 0, 'taux' => 0, 'marie' => 0, 'enfant1' => 0, 'enfant2' => 0]
+                    ]
+                ]);
+            }
+            
+            return response()->json([
+                'data_rows' => $settings->data_rows
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    // Mettre à jour les paramètres
+    public function updateSettings(Request $request, $annee)
+    {
         $request->validate([
             'data_rows' => 'required|array|min:1',
             'data_rows.*.min' => 'required|numeric|min:0',
-            'data_rows.*.max' => [
-            'required',
-            'numeric',
-                function ($attribute, $value, $fail) use ($request) {
-                    preg_match('/data_rows\.(\d+)\.max/', $attribute, $matches);
-                    $index = $matches[1];
-                    $min = $request->data_rows[$index]['min'];
-                    if ($value <= $min && !($value == 0 && $min == 0)) {
-                        $fail("Le montant maximum doit être supérieur au minimum.");
-                    }
-                },
-            ], 
+            'data_rows.*.max' => 'required|numeric|min:0',
             'data_rows.*.taux' => 'required|numeric|min:0|max:100',
             'data_rows.*.marie' => 'required|numeric|min:0',
             'data_rows.*.enfant1' => 'required|numeric|min:0',
             'data_rows.*.enfant2' => 'required|numeric|min:0',
-        ], [
-            'data_rows.*.min.min' => 'Le montant minimum ne peut pas être négatif.',
-            'data_rows.*.max.gt' => 'Le montant maximum doit être supérieur au minimum.',
-            'data_rows.*.taux.max' => 'Le taux ne peut pas dépasser 100%.',
         ]);
 
+        // Validation: max > min (sauf si max == 0)
+        foreach ($request->data_rows as $index => $row) {
+            $min = $row['min'];
+            $max = $row['max'];
+            
+            if ($max != 0 && $max <= $min) {
+                return response()->json([
+                    'message' => "Erreur tranche " . ($index + 1) . " : Le maximum ($max) doit être supérieur au minimum ($min)"
+                ], 422);
+            }
+        }
+        
+        // Validation: Cohérence entre les tranches
+        $dataRows = $request->data_rows;
+        for ($i = 0; $i < count($dataRows) - 1; $i++) {
+            $currentMax = $dataRows[$i]['max'];
+            $nextMin = $dataRows[$i + 1]['min'];
+            
+            if ($currentMax != 0 && $currentMax != $nextMin) {
+                return response()->json([
+                    'message' => "Erreur: La tranche " . ($i + 1) . " max ($currentMax) doit être égale à la tranche " . ($i + 2) . " min ($nextMin)"
+                ], 422);
+            }
+        }
+
         try {
-            $setting = Gestion_IR::updateOrCreate(
+            $setting = GestionIR::updateOrCreate(
                 ['annee' => $annee],
-                ['data_rows' => $request->data_rows] 
+                ['data_rows' => $request->data_rows]
             );
-            $this->logActivity("Paramétrage IR", "UPDATE", "Mise à jour de la grille IR pour l'exercice : " . $annee);
+            
+            $this->logActivity(
+                'Paramétrage IR',
+                'UPDATE',
+                "Mise à jour de la grille IR pour l'année : " . $annee
+            );
+            
             return response()->json([
-                'status' => 'success',
-                'message' => 'Configuration mise à jour',
+                'success' => true,
+                'message' => 'Configuration enregistrée avec succès',
                 'data' => $setting
             ]);
         } catch (\Exception $e) {
-            return response()->json(['message' => 'Erreur serveur'], 500);
+            $this->logActivity(
+                'Paramétrage IR',
+                'ERROR',
+                "Erreur lors de l'enregistrement IR: " . $e->getMessage()
+            );
+            return response()->json(['message' => 'Erreur serveur : ' . $e->getMessage()], 500);
         }
     }
-    
-   public function destroy($annee) {
+
+    // Supprimer la configuration d'une année
+    public function destroy($annee)
+    {
         try {
-            $setting = Gestion_IR::where('annee', $annee)->first();
+            $setting = GestionIR::where('annee', $annee)->first();
 
             if (!$setting) {
-                return response()->json(['message' => 'Année introuvable'], 404);
+                return response()->json(['message' => 'Aucune configuration trouvée pour l\'année ' . $annee], 404);
             }
+            
             $setting->delete();
-            $this->logActivity("Paramétrage IR", "DELETE", "Suppression de la configuration IR de l'année : " . $annee);
-            return response()->json(['message' => 'L’exercice ' . $annee . ' a été supprimé avec succès']);
+            
+            $this->logActivity(
+                'Paramétrage IR',
+                'DELETE',
+                "Suppression de la configuration IR de l'année : " . $annee
+            );
+            
+            return response()->json(['success' => true, 'message' => 'Configuration IR supprimée avec succès']);
         } catch (\Exception $e) {
+            $this->logActivity(
+                'Paramétrage IR',
+                'ERROR',
+                "Erreur lors de la suppression IR: " . $e->getMessage()
+            );
             return response()->json(['message' => 'Erreur lors de la suppression'], 500);
         }
-    }
-    public function exportPdf($annee) {
-        $settings = Gestion_IR::where('annee', $annee)->first();
-        if (!$settings) {
-            return response()->json(['message' => 'Données introuvables'], 404);
-        }
-        $pdf = Pdf::loadView('pdf.ir_settings', [
-            'annee' => $annee,
-            'rows' => $settings->data_rows
-        ]);
-        $this->logActivity("Export", "EXPORT", "Génération PDF de la configuration IR " . $annee);
-        return $pdf->setPaper('a4')->stream("Configuration_IR_$annee.pdf");
     }
 }

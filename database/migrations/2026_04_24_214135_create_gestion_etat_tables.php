@@ -20,6 +20,8 @@ return new class extends Migration
             $table->id();
             $table->foreignId('salary_year_id')->constrained('salary_years')->onDelete('cascade');
             $table->string('name');
+            $table->boolean('is_starred')->default(false);
+            $table->index('is_starred');
             $table->timestamps();
         });
 

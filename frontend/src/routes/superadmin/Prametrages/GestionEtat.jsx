@@ -1,29 +1,31 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Plus, Save, Trash2, ChevronUp, ChevronDown, Download, Upload, 
   TrendingUp, Users, DollarSign, FileText, Printer,
   Copy, Check, Edit2, BarChart3, Calendar, Shield, Clock, AlertCircle, Loader,
   Layers, Briefcase, Award, Zap, Eye, EyeOff, RefreshCw, Grid3x3, List,
-  ArrowUpDown, Sparkles, Database, Server, HardDrive
+  ArrowUpDown, Sparkles, Database, Server, HardDrive, Star, ArrowLeft
 } from 'lucide-react';
-
-import api from '../../lib/apis/axiosConfig'; 
-import { useNotification } from '../../context/NotificationContext';
-import DeleteConfirmModal from '../../lib/components/DeleteConfirmModal';
-import { useTheme } from '../../context/ThemeContext';
+import api from '../../../lib/apis/axiosConfig'; 
+import { useNotification } from '../../../context/NotificationContext';
+import DeleteConfirmModal from '../../../lib/components/DeleteConfirmModal';
+import { useTheme } from '../../../context/ThemeContext';
 
 
 const GestionEtat = () => {
     const { darkMode } = useTheme();
     const { showNotification } = useNotification();
+    const navigate = useNavigate(); 
     const [confirmConfig, setConfirmConfig] = useState({
         isOpen: false,
         title: "",
         message: "",
         onConfirm: () => {}
     });
+
     const closeConfirm = () => setConfirmConfig({ ...confirmConfig, isOpen: false });
-    const [config, setConfig] = useState({ year: 2026, roles: [] });
+    const [config, setConfig] = useState({ year: new Date().getFullYear(), roles: [] });
     const [showStats, setShowStats] = useState(true);
     const [loading, setLoading] = useState(false);
     const [deleting, setDeleting] = useState({ type: null, id: null });
@@ -32,6 +34,17 @@ const GestionEtat = () => {
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
     const [compactView, setCompactView] = useState(false);
     const [selectedRoleId, setSelectedRoleId] = useState(null);
+    const [roleStarred, setRoleStarred] = useState({});
+    const [isTyping, setIsTyping] = useState(false);
+    const fetchTimeoutRef = useRef(null);
+    const typingTimeoutRef = useRef(null);
+    
+    useEffect(() => {
+        const savedStarred = localStorage.getItem('starred_roles');
+        if (savedStarred) {
+            setRoleStarred(JSON.parse(savedStarred));
+        }
+    }, []);
 
     useEffect(() => {
         const savedView = localStorage.getItem('rh_compact_view');
@@ -39,25 +52,73 @@ const GestionEtat = () => {
         fetchYearData();
     }, []);
 
+    // Fetch data with debounce
     useEffect(() => {
-        fetchYearData();
-    }, [config.year]);
+        if (isTyping) return;
+        
+        if (fetchTimeoutRef.current) {
+            clearTimeout(fetchTimeoutRef.current);
+        }
+        
+        fetchTimeoutRef.current = setTimeout(() => {
+            if (config.year && config.year !== '') {
+                fetchYearData();
+            }
+        }, 500);
+        
+        return () => {
+            if (fetchTimeoutRef.current) {
+                clearTimeout(fetchTimeoutRef.current);
+            }
+        };
+    }, [config.year, isTyping]);
+
+    useEffect(() => {
+        const fetchStarredRolesFromDB = async () => {
+            try {
+                const response = await api.get('/api/gestionEtat/starred-roles');
+                const starredMap = {};
+                response.data.forEach(role => {
+                    starredMap[role.id] = true;
+                });
+                setRoleStarred(starredMap);
+                localStorage.setItem('starred_roles', JSON.stringify(starredMap));
+            } catch (error) {
+                console.error("Erreur chargement rôles étoilés:", error);
+            }
+        };
+        
+        if (config.year && isDataSaved && config.roles.length > 0) {
+            fetchStarredRolesFromDB();
+        }
+    }, [config.year, isDataSaved, config.roles.length]);
 
     const fetchYearData = async () => {
+        if (!config.year || config.year === '') {
+            setLoading(false);
+            return;
+        }
+        
+        const yearNumber = parseInt(config.year);
+        if (isNaN(yearNumber)) {
+            setLoading(false);
+            return;
+        }
+        
         setLoading(true);
         try {
-            const response = await api.get(`/api/gestionEtat/get-by-year/${config.year}`);
+            const response = await api.get(`/api/gestionEtat/get-by-year/${yearNumber}`);
             if (response.data && response.data.roles) {
-                setConfig(response.data);
+                setConfig(prev => ({ ...prev, year: yearNumber, roles: response.data.roles }));
                 setIsDataSaved(true);
                 setHasUnsavedChanges(false);
             } else {
-                setConfig(prev => ({ ...prev, roles: [] }));
+                setConfig(prev => ({ ...prev, year: yearNumber, roles: [] }));
                 setIsDataSaved(true);
                 setHasUnsavedChanges(false);
             }
         } catch (error) {
-            setConfig(prev => ({ ...prev, roles: [] }));
+            setConfig(prev => ({ ...prev, year: yearNumber, roles: [] }));
             setIsDataSaved(true);
             setHasUnsavedChanges(false);
         } finally {
@@ -67,33 +128,44 @@ const GestionEtat = () => {
 
     const isValidData = () => {
         if (config.roles.length === 0) {
-            showNotification("Ajoutez au moins un rôle avant d'enregistrer", "error");
+            showNotification("Ajoutez au moins un poste avant d'enregistrer", "error");
             return false;
         }
-        
         let hasError = false;
-        
+        let errorMessages = [];
         config.roles.forEach(role => {
             if (!role.name || role.name.trim() === "") {
-                showNotification(`Le rôle "${role.name || 'sans nom'}" n'a pas de nom`, "error");
+                errorMessages.push(`Le poste "${role.name || 'sans nom'}" n'a pas de nom`);
+                hasError = true;
+            }
+            
+            if (!role.grades || role.grades.length === 0) {
+                errorMessages.push(`Le poste "${role.name || 'sans nom'}" doit avoir au moins un grade`);
                 hasError = true;
             }
             
             role.grades.forEach(grade => {
                 if (!grade.name || grade.name.trim() === "") {
-                    showNotification(`Un grade dans le rôle "${role.name}" n'a pas de nom`, "error");
+                    errorMessages.push(`Un grade dans le poste "${role.name}" n'a pas de nom`);
                     hasError = true;
                 }
                 
+                if (!grade.echelles || grade.echelles.length === 0) {
+                    errorMessages.push(`Le grade "${grade.name}" dans le poste "${role.name}" doit avoir au moins une échelle`);
+                    hasError = true;
+                }
                 grade.echelles.forEach(ech => {
                     if (!ech.level || ech.level.trim() === "") {
-                        showNotification(`Une échelle dans "${grade.name}" n'a pas de niveau`, "error");
+                        errorMessages.push(`Une échelle dans le grade "${grade.name}" n'a pas de niveau`);
                         hasError = true;
                     }
-                    
+                    if (!ech.echelons || ech.echelons.length === 0) {
+                        errorMessages.push(`L'échelle "${ech.level || 'sans niveau'}" dans le grade "${grade.name}" doit avoir au moins un échelon`);
+                        hasError = true;
+                    }
                     ech.echelons.forEach(ecl => {
                         if (!ecl.salary || ecl.salary <= 0) {
-                            showNotification(`L'échelon ${ecl.order} dans "${grade.name}" n'a pas de salaire valide`, "error");
+                            errorMessages.push(`L'échelon ${ecl.order} dans l'échelle "${ech.level}" du grade "${grade.name}" n'a pas de salaire valide`);
                             hasError = true;
                         }
                     });
@@ -101,7 +173,42 @@ const GestionEtat = () => {
             });
         });
         
+        if (hasError) {
+            const displayErrors = errorMessages.slice(0, 5);
+            displayErrors.forEach(err => showNotification(err, "error"));
+            if (errorMessages.length > 5) {
+                showNotification(`Et ${errorMessages.length - 5} autre(s) erreur(s)...`, "error");
+            }
+        }
         return !hasError;
+    };
+
+    const toggleRoleStar = async (roleId, roleName) => {
+        if (hasUnsavedChanges) {
+            showNotification("⚠️ Veuillez d'abord enregistrer vos modifications", "warning");
+            return;
+        }
+        setLoading(true);
+        try {
+            const response = await api.put(`/api/gestionEtat/role/${roleId}/toggle-star`);
+            
+            const newStarred = { ...roleStarred, [roleId]: response.data.is_starred };
+            setRoleStarred(newStarred);
+            localStorage.setItem('starred_roles', JSON.stringify(newStarred));
+            
+            showNotification(response.data.message, "success");
+            
+            // Recharger les données après toggle
+            setTimeout(() => {
+                fetchYearData();
+            }, 1000);
+            
+        } catch (error) {
+            console.error("Erreur toggle star:", error);
+            showNotification("❌ Erreur lors de la modification", "error");
+        } finally {
+            setLoading(false);
+        }
     };
 
     const totalGrades = isDataSaved && !hasUnsavedChanges ? config.roles.reduce((acc, role) => 
@@ -119,8 +226,13 @@ const GestionEtat = () => {
             acc2 + (grade.echelles?.reduce((acc3, ech) => 
                 acc3 + (ech.echelons?.reduce((acc4, ecl) => acc4 + (Number(ecl.salary) || 0), 0) || 0), 0) || 0), 0) || 0), 0) : 0;
 
-    const changeYear = (amount) => {
+    const changeYear = async (amount) => {
         const newYear = parseInt(config.year) + amount;
+        
+        if (newYear < 2000 || newYear > 2100) {
+            showNotification(`❌ Année ${newYear} invalide. Limite: 2000-2100`, "error");
+            return;
+        }
         
         if (hasUnsavedChanges) {
             if (window.confirm(`Changer vers ${newYear} perdra les modifications non sauvegardées. Continuer ?`)) {
@@ -143,7 +255,7 @@ const GestionEtat = () => {
         setIsDataSaved(false);
         setHasUnsavedChanges(true);
         setSelectedRoleId(newRole.id);
-        showNotification(" Nouveau rôle créé", "success");
+        showNotification("✨ Nouveau poste créé", "success");
     };
 
     const addGrade = (rId) => {
@@ -155,7 +267,7 @@ const GestionEtat = () => {
         });
         setIsDataSaved(false);
         setHasUnsavedChanges(true);
-        showNotification(" Nouveau grade ajouté", "success");
+        showNotification("📊 Nouveau grade ajouté", "success");
     };
 
     const addEchelle = (rId, gId) => {
@@ -169,7 +281,7 @@ const GestionEtat = () => {
         });
         setIsDataSaved(false);
         setHasUnsavedChanges(true);
-        showNotification(" Nouvelle échelle créée", "success");
+        showNotification("📐 Nouvelle échelle créée", "success");
     };
 
     const addEchelon = (rId, gId, eId) => {
@@ -203,7 +315,7 @@ const GestionEtat = () => {
     // ============ FONCTIONS DE SUPPRESSION ============
     const deleteRoleFromDB = async (roleId) => {
         if (hasUnsavedChanges) {
-            showNotification(" Veuillez d'abord enregistrer vos modifications", "error");
+            showNotification("⚠️ Veuillez d'abord enregistrer vos modifications", "error");
             return false;
         }
         
@@ -211,11 +323,11 @@ const GestionEtat = () => {
         try {
             await api.delete(`/api/gestionEtat/role/${roleId}`);
             setConfig({ ...config, roles: config.roles.filter(r => r.id !== roleId) });
-            showNotification(" Rôle supprimé avec succès", "success");
+            showNotification("🗑️ Poste supprimé avec succès", "success");
             return true;
         } catch (error) {
-            console.error("Erreur suppression rôle:", error);
-            showNotification(" Erreur lors de la suppression", "error");
+            console.error("Erreur suppression poste:", error);
+            showNotification("❌ Erreur lors de la suppression", "error");
             return false;
         } finally {
             setDeleting({ type: null, id: null });
@@ -224,7 +336,7 @@ const GestionEtat = () => {
 
     const deleteGradeFromDB = async (gradeId, roleId) => {
         if (hasUnsavedChanges) {
-            showNotification(" Veuillez d'abord enregistrer vos modifications", "error");
+            showNotification("⚠️ Veuillez d'abord enregistrer vos modifications", "error");
             return false;
         }
         
@@ -237,11 +349,11 @@ const GestionEtat = () => {
                     ...r, grades: r.grades.filter(g => g.id !== gradeId)
                 } : r)
             });
-            showNotification(" Grade supprimé avec succès", "success");
+            showNotification("🗑️ Grade supprimé avec succès", "success");
             return true;
         } catch (error) {
             console.error("Erreur suppression grade:", error);
-            showNotification(" Erreur lors de la suppression", "error");
+            showNotification("❌ Erreur lors de la suppression", "error");
             return false;
         } finally {
             setDeleting({ type: null, id: null });
@@ -250,7 +362,7 @@ const GestionEtat = () => {
 
     const deleteEchelleFromDB = async (echelleId, roleId, gradeId) => {
         if (hasUnsavedChanges) {
-            showNotification(" Veuillez d'abord enregistrer vos modifications", "error");
+            showNotification("⚠️ Veuillez d'abord enregistrer vos modifications", "error");
             return false;
         }
         
@@ -269,7 +381,7 @@ const GestionEtat = () => {
             return true;
         } catch (error) {
             console.error("Erreur suppression échelle:", error);
-            showNotification(" Erreur lors de la suppression", "error");
+            showNotification("❌ Erreur lors de la suppression", "error");
             return false;
         } finally {
             setDeleting({ type: null, id: null });
@@ -278,7 +390,7 @@ const GestionEtat = () => {
 
     const deleteEchelonFromDB = async (echelonId, roleId, gradeId, echelleId) => {
         if (hasUnsavedChanges) {
-            showNotification("Veuillez d'abord enregistrer vos modifications", "error");
+            showNotification("⚠️ Veuillez d'abord enregistrer vos modifications", "error");
             return false;
         }
         
@@ -295,11 +407,11 @@ const GestionEtat = () => {
                     } : g)
                 } : r)
             });
-            showNotification(" Échelon supprimé avec succès", "success");
+            showNotification("🗑️ Échelon supprimé avec succès", "success");
             return true;
         } catch (error) {
             console.error("Erreur suppression échelon:", error);
-            showNotification(" Erreur lors de la suppression", "error");
+            showNotification("❌ Erreur lors de la suppression", "error");
             return false;
         } finally {
             setDeleting({ type: null, id: null });
@@ -308,7 +420,7 @@ const GestionEtat = () => {
 
     const openDeleteModal = (title, message, action) => {
         if (hasUnsavedChanges) {
-            showNotification(" Veuillez d'abord enregistrer vos modifications", "error");
+            showNotification("⚠️ Veuillez d'abord enregistrer vos modifications", "error");
             return;
         }
         setConfirmConfig({
@@ -321,8 +433,8 @@ const GestionEtat = () => {
 
     const handleDeleteRole = (roleId) => {
         openDeleteModal(
-            "Supprimer le rôle",
-            "Êtes-vous sûr de vouloir supprimer ce rôle ainsi que toutes ses données liées ? Cette action est irréversible.",
+            "Supprimer le poste",
+            "Êtes-vous sûr de vouloir supprimer ce poste ainsi que toutes ses données liées ? Cette action est irréversible.",
             () => deleteRoleFromDB(roleId)
         );
     };
@@ -352,6 +464,7 @@ const GestionEtat = () => {
     };
     
     // ============ FIN FONCTIONS SUPPRESSION ============
+    
     const duplicateEchelon = (rIdx, gIdx, eIdx, ecIdx) => {
         const newRoles = [...config.roles];
         const echelonToCopy = { ...newRoles[rIdx].grades[gIdx].echelles[eIdx].echelons[ecIdx] };
@@ -412,13 +525,12 @@ const GestionEtat = () => {
     const isDeleting = (type, id) => deleting.type === type && deleting.id === id;
 
     const statsCards = [
-        { title: "RÔLES", value: config.roles.length, icon: Users, color: "indigo", bgColor: darkMode ? "bg-indigo-500/10" : "bg-indigo-50", iconColor: "text-indigo-500" },
-        { title: "GRADES", value: totalGrades, icon: Layers, color: "green", bgColor: darkMode ? "bg-green-500/10" : "bg-green-50", iconColor: "text-green-500" },
-        { title: "ÉCHELLES", value: totalEchelles, icon: Grid3x3, color: "purple", bgColor: darkMode ? "bg-purple-500/10" : "bg-purple-50", iconColor: "text-purple-500" },
-        { title: "ÉCHELONS", value: totalEchelons, icon: Database, color: "orange", bgColor: darkMode ? "bg-orange-500/10" : "bg-orange-50", iconColor: "text-orange-500" },
-        { title: "MASSE SALARIALE", value: totalSalaryMass.toLocaleString(), icon: DollarSign, color: "red", bgColor: darkMode ? "bg-red-500/10" : "bg-red-50", iconColor: "text-red-500" }
+        { title: "POSTES", value: config.roles.length, icon: Users, bgColor: darkMode ? "bg-indigo-500/10" : "bg-indigo-50", iconColor: "text-indigo-500" },
+        { title: "GRADES", value: totalGrades, icon: Layers, bgColor: darkMode ? "bg-green-500/10" : "bg-green-50", iconColor: "text-green-500" },
+        { title: "ÉCHELLES", value: totalEchelles, icon: Grid3x3, bgColor: darkMode ? "bg-purple-500/10" : "bg-purple-50", iconColor: "text-purple-500" },
+        { title: "ÉCHELONS", value: totalEchelons, icon: Database, bgColor: darkMode ? "bg-orange-500/10" : "bg-orange-50", iconColor: "text-orange-500" },
+        { title: "MASSE SALARIALE", value: totalSalaryMass.toLocaleString(), icon: DollarSign, bgColor: darkMode ? "bg-red-500/10" : "bg-red-50", iconColor: "text-red-500" }
     ];
-
 
     const toggleCompactView = () => {
         setCompactView(!compactView);
@@ -427,33 +539,34 @@ const GestionEtat = () => {
 
     const bgClass = darkMode ? 'bg-[#0D0D0D]' : 'bg-[#F5F7FA]';
     const cardClass = darkMode ? 'bg-[#1A1A1A] border-[#2A2A2A]' : 'bg-white border-gray-100';
-    const headerCardClass = darkMode ? 'bg-[#1A1A1A] border-[#2A2A2A]' : 'bg-white border-gray-100';
     const textClass = darkMode ? 'text-gray-100' : 'text-gray-800';
     const textMutedClass = darkMode ? 'text-gray-500' : 'text-gray-500';
     const borderClass = darkMode ? 'border-[#2A2A2A]' : 'border-gray-100';
-    const badgeClass = darkMode ? 'bg-[#252525] text-gray-300 border-[#333]' : 'bg-gray-50 text-gray-600 border-gray-100';
-
-
 
     return (
         <div className={`min-h-screen transition-all duration-300 ${bgClass}`}>
             <div className="p-3 max-w-[1600px] mx-auto">
-                
+
                 {/* Header Section */}
-                <div className="mb-6">
+                <div className="mb-8">
                     <div className="flex justify-between items-start mb-4">
-                        <div>
-                            <h1 className={`text-2xl font-bold mb-1 ${textClass}`}>Grille des Salaires</h1>
-                            <p className={`text-xs ${textMutedClass}`}>Gestion des rôles, grades, échelles et échelons</p>
+                        <div className="flex items-center gap-3">
+                            <button onClick={() => navigate(-1)}
+                                className={`p-2 rounded-xl transition-all cursor-pointer ${darkMode ? 'bg-[#1A1A1A] border-[#2A2A2A] hover:bg-[#252525]' : 'bg-white border-gray-200 hover:bg-gray-50'} border shadow-sm`}
+                                title="Retour">
+                                <ArrowLeft size={18} className={textClass} />
+                            </button>
+                            <div>
+                                <h1 className={`text-2xl font-bold mb-1 ${textClass}`}>Grille des Salaires</h1>
+                                <p className={`text-xs ${textMutedClass}`}>Gestion des postes, grades, échelles et échelons</p>
+                            </div>
                         </div>
                         <div className="flex gap-2">
-                            <button onClick={toggleCompactView} className={`p-2 rounded-xl transition-all ${darkMode ? 'bg-[#1A1A1A] border-[#2A2A2A] hover:bg-[#252525]' : 'bg-white border-gray-200 hover:bg-gray-50'} border shadow-sm`} title={compactView ? "Vue normale" : "Vue compacte"}>
+                            <button onClick={toggleCompactView} className={`p-2 rounded-xl transition-all cursor-pointer ${darkMode ? 'bg-[#1A1A1A] border-[#2A2A2A] hover:bg-[#252525]' : 'bg-white border-gray-200 hover:bg-gray-50'} border shadow-sm`} title={compactView ? "Vue normale" : "Vue compacte"}>
                                 {compactView ? <Grid3x3 size={16} className={textClass}/> : <List size={16} className={textClass}/>}
                             </button>
                         </div>
                     </div>
-
-                    {/* Stats Grid Modern */}
                     {showStats && isDataSaved && !hasUnsavedChanges && (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
                             {statsCards.map((stat, idx) => (
@@ -469,8 +582,6 @@ const GestionEtat = () => {
                             ))}
                         </div>
                     )}
-                    
-                    {/* Message non sauvegardé */}
                     {(!isDataSaved || hasUnsavedChanges) && (
                         <div className={`${cardClass} rounded-xl p-4 border ${borderClass} mb-6`}>
                             <div className="flex items-center gap-3">
@@ -480,12 +591,12 @@ const GestionEtat = () => {
                                 <div>
                                     <p className={`text-sm font-medium ${darkMode ? 'text-yellow-400' : 'text-yellow-700'}`}>
                                         {config.roles.length === 0 
-                                            ? "Commencez par créer un rôle et remplir les données"
+                                            ? "Commencez par créer un poste et remplir les données"
                                             : "Modifications en attente de sauvegarde"}
                                     </p>
                                     <p className={`text-[10px] ${textMutedClass}`}>
                                         {config.roles.length === 0 
-                                            ? "Cliquez sur 'Nouveau Rôle' pour commencer"
+                                            ? "Cliquez sur 'Nouveau Poste' pour commencer"
                                             : "Les statistiques apparaîtront après la sauvegarde"}
                                     </p>
                                 </div>
@@ -494,31 +605,72 @@ const GestionEtat = () => {
                     )}
                 </div>
 
+
                 {/* Controls Bar */}
                 <div className="flex flex-wrap justify-between items-center gap-3 mb-6">
                     <div className="flex flex-wrap gap-2">
                         <div className={`flex items-center gap-2 ${darkMode ? 'bg-[#1A1A1A]' : 'bg-white'} p-1.5 rounded-xl border ${borderClass} shadow-sm`}>
                             <span className={`pl-2 text-[10px] font-bold uppercase ${textMutedClass}`}>Année</span>
-                            <input type="number" value={config.year} 
+                           <input 
+                                type="number" 
+                                value={config.year}
                                 className={`w-16 font-black text-center outline-none text-sm ${darkMode ? 'bg-transparent text-indigo-400' : 'bg-transparent text-indigo-600'}`} 
                                 onChange={(e) => {
-                                    setConfig({...config, year: parseInt(e.target.value)});
+                                    const rawValue = e.target.value;
+                                    if (typingTimeoutRef.current) {
+                                        clearTimeout(typingTimeoutRef.current);
+                                    }
+                                    setIsTyping(true);
+                                    
+                                    if (rawValue === '') {
+                                        setConfig({...config, year: ''});
+                                        setIsDataSaved(false);
+                                        setHasUnsavedChanges(true);
+                                        return;
+                                    }
+                                    
+                                    let newYear = parseInt(rawValue);
+                                    if (newYear < 2000) {
+                                        showNotification("⚠️ L'année ne peut pas être inférieure à 2000", "warning");
+                                        setConfig({...config, year: newYear});
+                                    } else if (newYear > 2100) {
+                                        showNotification("⚠️ L'année ne peut pas être supérieure à 2100", "warning");
+                                        setConfig({...config, year: newYear});
+                                    } else {
+                                        setConfig({...config, year: newYear});
+                                    }
+                                    
                                     setIsDataSaved(false);
                                     setHasUnsavedChanges(true);
-                                }}/>
+                                    setSelectedRoleId(null);
+                                    
+                                    typingTimeoutRef.current = setTimeout(() => {
+                                        setIsTyping(false);
+                                    }, 1000);
+                                }}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        e.target.blur();
+                                        setIsTyping(false);
+                                    }
+                                }}
+                                onBlur={() => {
+                                    setIsTyping(false);
+                                }}
+                            />
                             <div className="flex flex-col border-l pl-1 ${borderClass}">
                                 <button onClick={() => changeYear(1)} className={`p-0.5 hover:text-indigo-500 transition-colors`}><ChevronUp size={10}/></button>
                                 <button onClick={() => changeYear(-1)} className={`p-0.5 hover:text-indigo-500 transition-colors`}><ChevronDown size={10}/></button>
                             </div>
                         </div>
-                        <button onClick={addRole} className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-1.5 rounded-xl font-bold hover:from-indigo-700 hover:to-purple-700 transition-all transform hover:scale-105 text-[11px] shadow-lg shadow-indigo-500/25">
-                            <Plus size={14} /> NOUVEAU RÔLE
+                        
+
+                        <button onClick={addRole} className="flex items-center cursor-pointer gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-1.5 rounded-xl font-bold hover:from-indigo-700 hover:to-purple-700 transition-all transform hover:scale-105 text-[11px] shadow-lg shadow-indigo-500/25">
+                            <Plus size={14} /> NOUVEAU POSTE
                         </button>
-                        <button 
-                            onClick={exportToPDF} 
+                        <button onClick={exportToPDF} 
                             disabled={loading || config.roles.length === 0}
-                            className="flex items-center gap-2 bg-gradient-to-r from-red-600 to-rose-600 text-white px-4 py-1.5 rounded-xl font-bold hover:from-red-700 hover:to-rose-700 transition-all text-[11px] shadow-lg shadow-red-500/25 disabled:opacity-50"
-                        >
+                            className="flex items-center gap-2 bg-gradient-to-r from-red-600 cursor-pointer to-rose-600 text-white px-4 py-1.5 rounded-xl font-bold hover:from-red-700 hover:to-rose-700 transition-all text-[11px] shadow-lg shadow-red-500/25 disabled:opacity-50">
                             <FileText size={14} /> EXPORT PDF
                         </button>
                     </div>
@@ -528,11 +680,10 @@ const GestionEtat = () => {
                     </button>
                 </div>
 
-                {/* Roles List */}
+                {/* Post List */}
                 <div className="space-y-4">
                     {config.roles.map((role, rIdx) => (
                         <div key={role.id} className={`${cardClass} rounded-xl border shadow-sm overflow-hidden transition-all hover:shadow-xl ${borderClass} animate-fadeIn`}>
-                            {/* Role Header */}
                             <div className={`${darkMode ? 'bg-[#252525]' : 'bg-gray-50/50'} px-5 py-3 border-b ${borderClass} flex flex-wrap justify-between items-center gap-3`}>
                                 <div className="flex-1 min-w-[200px]">
                                     <div className="flex items-center gap-2 mb-0.5">
@@ -549,7 +700,7 @@ const GestionEtat = () => {
                                                 setIsDataSaved(false);
                                                 setHasUnsavedChanges(true);
                                             }}
-                                            placeholder="Nom du rôle..."
+                                            placeholder="Nom du Poste..."
                                         />
                                     </div>
                                     <div className={`text-[9px] ${textMutedClass}`}>
@@ -558,13 +709,18 @@ const GestionEtat = () => {
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <button 
-                                        onClick={() => setSelectedRoleId(selectedRoleId === role.id ? null : role.id)}
-                                        className={`p-1.5 rounded-lg transition-all ${darkMode ? 'hover:bg-[#333]' : 'hover:bg-gray-100'}`}
+                                        onClick={() => toggleRoleStar(role.id, role.name)}
+                                        disabled={hasUnsavedChanges || loading}
+                                        className={`p-1.5 rounded-lg transition-all ${hasUnsavedChanges ? 'text-gray-500 cursor-not-allowed' : roleStarred[role.id] ? 'text-yellow-500' : 'text-gray-400 hover:text-yellow-500'}`}
+                                        title={roleStarred[role.id] ? "Poste disponible dans toutes les années" : "Copier ce poste vers toutes les années"}
                                     >
+                                        <Star size={14} fill={roleStarred[role.id] ? "currentColor" : "none"} />
+                                    </button>
+                                    <button onClick={() => setSelectedRoleId(selectedRoleId === role.id ? null : role.id)}
+                                        className={`p-1.5 rounded-lg transition-all ${darkMode ? 'hover:bg-[#333]' : 'hover:bg-gray-100'}`}>
                                         {selectedRoleId === role.id ? <EyeOff size={14} className={textMutedClass}/> : <Eye size={14} className={textMutedClass}/>}
                                     </button>
-                                    <button 
-                                        onClick={() => handleDeleteRole(role.id)} 
+                                    <button onClick={() => handleDeleteRole(role.id)} 
                                         disabled={isDeleting('role', role.id) || hasUnsavedChanges}
                                         className={`p-1.5 rounded-lg transition-all ${hasUnsavedChanges ? 'text-gray-500 cursor-not-allowed' : 'text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10'}`}
                                         title={hasUnsavedChanges ? "Sauvegardez d'abord" : "Supprimer"}>
@@ -573,12 +729,10 @@ const GestionEtat = () => {
                                 </div>
                             </div>
 
-                            {/* Role Content */}
                             {(selectedRoleId === null || selectedRoleId === role.id) && (
                                 <div className="p-5 space-y-4">
                                     {role.grades.map((grade, gIdx) => (
                                         <div key={grade.id} className={`border rounded-xl p-4 transition-all hover:shadow-md ${borderClass} ${darkMode ? 'bg-[#1A1A1A]' : 'bg-white'}`}>
-                                            {/* Grade Header */}
                                             <div className="flex flex-wrap justify-between items-center mb-4 pb-2 border-b ${borderClass}">
                                                 <div className="flex items-center gap-2">
                                                     <div className={`p-1 rounded-lg ${darkMode ? 'bg-green-500/20' : 'bg-green-100'}`}>
@@ -612,11 +766,9 @@ const GestionEtat = () => {
                                                 </div>
                                             </div>
 
-                                            {/* Echelles Grid */}
                                             <div className={`grid ${compactView ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'} gap-4`}>
                                                 {grade.echelles.map((ech, eIdx) => (
                                                     <div key={ech.id} className={`${darkMode ? 'bg-[#252525]' : 'bg-gray-50/50'} p-3 rounded-xl border ${borderClass} transition-all hover:shadow-md group`}>
-                                                        {/* Echelle Header */}
                                                         <div className="flex justify-between items-center mb-3">
                                                             <div className="flex items-center gap-1.5">
                                                                 <span className={`text-[9px] font-bold uppercase tracking-wide ${textMutedClass}`}>Échelle</span>
@@ -649,7 +801,6 @@ const GestionEtat = () => {
                                                             </div>
                                                         </div>
 
-                                                        {/* Echelons List */}
                                                         <div className="space-y-1.5 max-h-56 overflow-y-auto custom-scrollbar">
                                                             {ech.echelons.map((ecl, ecIdx) => (
                                                                 <div key={ecl.id} 
@@ -727,14 +878,13 @@ const GestionEtat = () => {
                             </div>
                             <p className="font-medium mb-2">Aucune configuration pour {config.year}</p>
                             <button onClick={addRole} className="mt-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-2 rounded-xl font-bold hover:from-indigo-700 hover:to-purple-700 transition-all text-xs shadow-lg">
-                                + Créer un rôle
+                                + Créer un poste
                             </button>
                         </div>
                     )}
                 </div>
             </div>
             
-            {/* Floating notification for unsaved changes */}
             {hasUnsavedChanges && !loading && (
                 <div className="fixed bottom-6 right-6 z-50 bg-gradient-to-r from-yellow-500 to-orange-500 text-white px-4 py-2 rounded-full shadow-xl animate-pulse text-[10px] font-bold flex items-center gap-2">
                     <Sparkles size={12} className="animate-spin"/>

@@ -19,7 +19,7 @@ export default function Layout() {
             <div className="flex flex-col flex-1 min-w-0 ml-[240px]">
                 <Header />
                 <main className="flex-1 overflow-y-auto" style={{ paddingTop: '56px' }}>
-                    <div className="p-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                    <div className="p-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
                         <Outlet />
                     </div>
                 </main>

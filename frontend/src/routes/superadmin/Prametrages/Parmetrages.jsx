@@ -83,7 +83,6 @@ const Parmetrages = () => {
     const borderClass = darkMode ? 'border-[#2A2A2A]' : 'border-gray-100';
     const buttonClass = darkMode ? 'bg-[#1A1A1A] border-[#2A2A2A] text-gray-300 hover:bg-[#252525]' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50';
 
-    // Ila knti f we7da mn les pages s-ghar, ghadi t-afficha ghir l-Outlet
     const isMainPage = location.pathname === "/SuperAdmin/Parametrages";
 
     if (!isMainPage) {
@@ -103,7 +102,7 @@ const Parmetrages = () => {
     }
 
     return (
-        <div className={`p-8 min-h-screen transition-colors duration-300 ${bgClass}`}>
+        <div className={`p-3 min-h-screen transition-colors duration-300 ${bgClass}`}>
             <div className="mb-8">
                 <h1 className={`text-2xl font-bold ${textClass}`}>Paramétrages du Système</h1>
                 <p className={`${textMutedClass} mt-1`}>Gérez les configurations globales de l'application OptizaRH</p>

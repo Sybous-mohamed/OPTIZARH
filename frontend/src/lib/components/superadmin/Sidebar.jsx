@@ -16,7 +16,8 @@ export default function Sidebar() {
     { label: "Tableau de bord", icon: <LayoutGrid size={18} />, path: "/SuperAdmin/Dashboard" },
     { label: "Utilisateurs", icon: <Users size={18} />, path: "/SuperAdmin/users" },
     { label: "Parametrages", icon: <Users2 size={18} />, path: "/SuperAdmin/Parametrages"},
-    
+    { label: "IR", icon: <Percent size={18} />, path: "/SuperAdmin/IRAffichage" },
+
     { label: "RCAR", icon: <Shield size={18} />, path: "/SuperAdmin/rcar" },
     { label: "Indemnités", icon: <Banknote size={18} />, path: "/SuperAdmin/Indementes" },
     { label: "Cotisation", icon: <Wallet size={18} />, path: "/SuperAdmin/Cotisation" },
@@ -24,7 +25,8 @@ export default function Sidebar() {
     { label: "Crédit", icon: <CreditCard size={18} />, path: "/SuperAdmin/Credit" },
     { label: "SNTL", icon: <Truck size={18} />, path: "/SuperAdmin/SNTL" },
     { label: "Social", icon: <Users2 size={18} />, path: "/SuperAdmin/Social" },
-    { label: "IR", icon: <Percent size={18} />, path: "/SuperAdmin/GesionIR" },
+    
+    
   ];
 
   const adminItems = [
@@ -61,9 +63,17 @@ export default function Sidebar() {
 
       <nav className="flex-1 overflow-y-auto py-2 custom-scrollbar">
         <div className="space-y-0.5">
-          {navItems.map((item) => (
-            <NavItem key={item.path} item={item} isActive={active === item.path} />
-          ))}
+          {navItems.map((item) => {
+          const isItemActive = active.startsWith(item.path);
+
+          return (
+            <NavItem 
+              key={item.path} 
+              item={item} 
+              isActive={isItemActive} 
+            />
+          );
+        })}
         </div>
 
         <div className="px-8 mt-8 mb-2">
