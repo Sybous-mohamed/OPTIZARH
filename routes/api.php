@@ -21,6 +21,7 @@ use App\Http\Controllers\SuperAdmin\IrController;
 use App\Http\Controllers\SuperAdmin\GestionEtatController;
 use App\Http\Controllers\SuperAdmin\GestionIndemniteController;
 
+
 /*
 |--------------------------------------------------------------------------
 | Public Routes (Guest)
@@ -125,8 +126,8 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::apiResource('indemnites', IndemniteController::class);
             Route::patch('/indemnites/{id}/toggle-statut', [IndemniteController::class, 'toggleStatut']);
 
-            Route::get('/retraite', [RetraiteController::class, 'index']);
-            Route::post('/retraite/update', [RetraiteController::class, 'update']);
+            Route::get('/retraite-settings/{year}', [RetraiteController::class, 'getSettings']);
+            Route::post('/retraite-settings', [RetraiteController::class, 'storeOrUpdate']);
 
             Route::apiResource('cotisations', CotisationController::class);
 
