@@ -2,93 +2,131 @@
 
 namespace App\Http\Controllers\SuperAdmin;
 
-use App\Models\SuperAdmin\ParametrageRCAR;
-use App\Models\SuperAdmin\ActivityLog; 
+use App\Http\Controllers\Controller;
+use App\Models\SuperAdmin\RcarType;
+use App\Models\SuperAdmin\RcarDetail;
+use App\Models\SuperAdmin\SalaryYear;
 use Illuminate\Http\Request;
-use App\Http\Controllers\Controller; 
+use Illuminate\Support\Facades\DB;
 
-class RCARController extends Controller {
-    
-    private function rules($id = null) {
-        return [
-            'annee' => 'required|integer|min:1900|max:2200|unique:parametrage_rcars,annee,' . $id,
-            'salariale_active' => 'required|boolean',
-            'patronale_active' => 'required|boolean',
-            'salariale_rg_taux' => 'nullable|numeric|min:0|max:100',
-            'salariale_rc_taux' => 'nullable|numeric|min:0|max:100',
-            'patronale_rg_taux' => 'nullable|numeric|min:0|max:100',
-            'patronale_rc_taux' => 'nullable|numeric|min:0|max:100',
-            'salariale_rg_plafond' => 'nullable|numeric|min:0',
-            'salariale_rc_plafond' => 'nullable|numeric|min:0',
-            'patronale_rg_plafond' => 'nullable|numeric|min:0',
-            'patronale_rc_plafond' => 'nullable|numeric|min:0',
-        ];
-    }
+class RcarController extends Controller
+{
+    // 1. GET: Récupérer la configuration
+    public function getConfiguration($year)
+    {
+        $config = SalaryYear::where('year', $year)
+            ->with(['rcarTypes' => function($query) {
+                // IMPORTANT: 'salary_year_id' khass ikoun hna bach t-khedem l-relation
+                $query->select('id', 'salary_year_id', 'label', 'is_favorite');
+            }, 'rcarTypes.details'])
+            ->first();
 
-    private function logRCAR($action, $type, $desc) {
-        try {
-            ActivityLog::create([
-                'user_id'     => auth()->id(),
-                'titre'       => $action,
-                'action_type' => $type,
-                'description' => $desc,
-                'annee'       => date('Y'),
-            ]);
-        } catch (\Exception $e) {
-            \Log::error("Erreur Log RCAR: " . $e->getMessage());
-        }
-    }
-
-    public function index() {
-        return response()->json(ParametrageRCAR::orderBy('annee', 'desc')->get());
-    }
-
-    public function store(Request $request) {
-        $validated = $request->validate($this->rules());
-        $rcar = ParametrageRCAR::create($validated); 
-
-        if ($rcar) {
-            $this->logRCAR(
-                "Paramétrage RCAR", 
-                "CREATE", 
-                "Ajout d'un nouveau paramétrage RCAR pour l'année : " . $rcar->annee
-            );
+        if (!$config) {
+            return response()->json(['message' => 'Aucune configuration trouvée', 'rcar_types' => []], 200);
         }
 
-        return response()->json($rcar, 201);
+        return response()->json($config);
     }
 
-    public function update(Request $request, $id) {
-        $rcar = ParametrageRCAR::findOrFail($id);
-        $validated = $request->validate($this->rules($id));
-        
-        $rcar->update($validated);
+    // 2. SAVE: Sauvegarder (avec persistance du favori)
+    public function saveConfiguration(Request $request)
+    {
+        $validated = $request->validate([
+            'salary_year_id' => 'required|exists:salary_years,id',
+            'types' => 'required|array',
+            'types.*.label' => 'required|string',
+            'types.*.details' => 'array',
+        ]);
 
-        $this->logRCAR(
-            "Paramétrage RCAR", 
-            "UPDATE", 
-            "Mise à jour du paramétrage RCAR de l'année : " . $rcar->annee
-        );
+        return DB::transaction(function () use ($validated) {
+            // Supprimer l'ancienne config pour cette année
+            RcarType::where('salary_year_id', $validated['salary_year_id'])->delete();
 
-        return response()->json($rcar);
+            foreach ($validated['types'] as $typeData) {
+                // Check if this label is favorite in ANY other year
+                $isFav = RcarType::whereRaw('LOWER(label) = ?', [strtolower($typeData['label'])])
+                                 ->where('is_favorite', true)
+                                 ->exists();
+
+                $type = RcarType::create([
+                    'salary_year_id' => $validated['salary_year_id'],
+                    'label' => $typeData['label'],
+                    'is_favorite' => $isFav
+                ]);
+
+                if (!empty($typeData['details'])) {
+                    foreach ($typeData['details'] as $detail) {
+                        RcarDetail::create([
+                            'rcar_type_id' => $type->id,
+                            'designation' => $detail['designation'] ?? $detail['name'] ?? '',
+                            'plafond' => $detail['plafond'] ?? null,
+                            'percentage' => $detail['percentage'] ?? 0,
+                        ]);
+                    }
+                }
+            }
+            return response()->json(['message' => 'Paramétrage RCAR enregistré']);
+        });
     }
 
-    public function destroy($id) {
-        try {
-            $rcar = ParametrageRCAR::findOrFail($id);
-            $anneeDeleted = $rcar->annee; 
-            
-            $rcar->delete();
+    // 3. TOGGLE FAVORITE: Appliquer à toutes les années
+    public function toggleFavorite(Request $request, $id)
+{
+    return DB::transaction(function () use ($request, $id) {
+        // 1. Kan-jibou l-organisme l-asli (l-source) m3a les détails dyalo
+        $sourceType = RcarType::with('details')->findOrFail($id);
+        $isFavorite = $request->input('is_favorite');
 
-            $this->logRCAR(
-                "Paramétrage RCAR", 
-                "DELETE", 
-                "Suppression du paramétrage RCAR pour l'année : " . $anneeDeleted
-            );
+        // 2. Updati l-source hwa l-owl
+        $sourceType->update(['is_favorite' => $isFavorite]);
 
-            return response()->json(['message' => 'Année supprimée avec succès']);
-        } catch (\Exception $e) {
-            return response()->json(['message' => 'Erreur lors de la suppression'], 500);
+        // 3. ILA KAN IS_FAVORITE = TRUE, ghadi n-copiawh l-ga3 les années
+        if ($isFavorite) {
+            // Njibou ga3 les années (SalaryYear) men ghir had l-3am li hna fih
+            $otherYears = SalaryYear::where('id', '!=', $sourceType->salary_year_id)->get();
+
+            foreach ($otherYears as $year) {
+                // a. N-meshou ila fayt kan 3ndu chi config b nefs l-label f dak l-3am
+                $existing = RcarType::where('salary_year_id', $year->id)
+                                    ->where('label', $sourceType->label)
+                                    ->first();
+                if ($existing) {
+                    $existing->delete(); // delete() ghadi imseh hta les details (cascade)
+                }
+
+                // b. N-creeyi l-organisme jdid f dak l-3am
+                $newType = RcarType::create([
+                    'salary_year_id' => $year->id,
+                    'label'          => $sourceType->label,
+                    'is_favorite'    => true
+                ]);
+
+                // c. N-copiaw les détails kamlin
+                foreach ($sourceType->details as $detail) {
+                    RcarDetail::create([
+                        'rcar_type_id' => $newType->id,
+                        'designation'  => $detail->designation,
+                        'plafond'      => $detail->plafond,
+                        'percentage'   => $detail->percentage,
+                    ]);
+                }
+            }
+        } else {
+            // ILA REDITIHA FALSE: ghadi n-updatiw ghir l-statut f ga3 les années
+            RcarType::where('label', $sourceType->label)->update(['is_favorite' => false]);
         }
+
+        return response()->json(['message' => 'Configuration propagée avec succès']);
+    });
+}
+
+    public function deleteType($id) {
+        RcarType::destroy($id);
+        return response()->json(['message' => 'Type supprimé']);
+    }
+
+    public function deleteDetail($id) {
+        RcarDetail::destroy($id);
+        return response()->json(['message' => 'Ligne supprimée']);
     }
 }

@@ -27,6 +27,11 @@ const Login = () => {
             const response = await api.post('/api/login', credentials);
             const { access_token, user } = response.data;
             localStorage.setItem("token", access_token);
+            localStorage.setItem("user_name", user.full_name || user.name || `${user.prenom} ${user.nom}`);
+            localStorage.setItem("role", user.role);
+            localStorage.setItem("user", JSON.stringify(user));
+            localStorage.setItem("user_email", user.email);
+            
             login(user, access_token); 
             if (user.email_verified_at === null) {
                 showNotification("Veuillez vérifier votre email avant de continuer.", "warning");

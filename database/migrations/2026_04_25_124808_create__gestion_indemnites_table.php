@@ -13,7 +13,7 @@ return new class extends Migration
             $table->string('libelle'); 
             $table->enum('type', ['Fixe', 'Pourcentage'])->default('Fixe');
             $table->decimal('valeur', 15, 2);
-        
+
             $table->foreignId('salary_year_id')
                   ->constrained('salary_years')
                   ->onDelete('cascade');

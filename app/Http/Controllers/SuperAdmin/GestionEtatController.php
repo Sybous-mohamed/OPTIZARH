@@ -157,8 +157,6 @@ class GestionEtatController extends Controller
             $item = Role::findOrFail($id);
             $roleName = $item->name;
             $year = $item->salaryYear->year ?? 'N/A';
-            
-            // Supprimer tous les grades et leurs dépendances
             foreach($item->grades as $grade) {
                 foreach($grade->echelles as $echelle) {
                     $echelle->echelons()->delete();
@@ -169,7 +167,6 @@ class GestionEtatController extends Controller
             $item->delete();
             Cache::forget('starred_roles');
             
-            // Log l'activité
             $this->logActivity(
                 'Suppression poste',
                 'DELETE',
@@ -200,7 +197,6 @@ class GestionEtatController extends Controller
             $gradeName = $item->name;
             $item->delete();
             
-            // Log l'activité
             $this->logActivity(
                 'Suppression grade',
                 'DELETE',
@@ -226,7 +222,6 @@ class GestionEtatController extends Controller
             $echelleLevel = $item->level;
             $item->delete();
             
-            // Log l'activité
             $this->logActivity(
                 'Suppression échelle',
                 'DELETE',
@@ -286,11 +281,9 @@ class GestionEtatController extends Controller
             $role->save();
             
             if (!$oldStatus && $role->is_starred) {
-                // Étoile activée → Copier vers toutes les années
                 $this->copyRoleToAllYears($role);
                 $message = "⭐ Poste '{$role->name}' étoilé et copié vers toutes les années";
             } else if ($oldStatus && !$role->is_starred) {
-                // Étoile désactivée → Supprimer de toutes les autres années
                 $this->removeRoleFromAllOtherYears($role);
                 $message = "⭐ Poste '{$role->name}' désétoilé et retiré des autres années";
             } else {
@@ -298,8 +291,6 @@ class GestionEtatController extends Controller
             }
             
             Cache::forget('starred_roles');
-            
-            // Log l'activité
             $this->logActivity(
                 'Poste étoilé',
                 'UPDATE',
@@ -490,6 +481,24 @@ class GestionEtatController extends Controller
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
+    public function getYearsWithIndemnites(){
+        try {
+            $yearsWithIndemnites = DB::table('gestion_indemnites')
+                ->select('salary_year_id')
+                ->distinct()
+                ->pluck('salary_year_id')
+                ->toArray();
+            
+            $years = SalaryYear::whereIn('id', $yearsWithIndemnites)
+                ->orderBy('year', 'desc')
+                ->get();
+            
+            return response()->json($years);
+        } catch (\Exception $e) {
+            \Log::error('Erreur getYearsWithIndemnites: ' . $e->getMessage());
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
 
     public function copyYearConfig(Request $request)
     {
@@ -545,8 +554,7 @@ class GestionEtatController extends Controller
                 }
                 
                 Cache::forget('salary_years');
-                
-                // Log l'activité
+
                 $this->logActivity(
                     'Copie configuration',
                     'CREATE',

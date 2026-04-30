@@ -10,12 +10,17 @@ class SalaryYearsSeeder extends Seeder
 {
     public function run(): void
     {
-        $this->command->info('Création des années 2015 à 2035...');
+        $currentYear = date('Y'); 
+        $startYear = $currentYear - 10; 
+        $endYear = $currentYear + 10;   
+        
+        $this->command->info("Création des années de {$startYear} à {$endYear}...");
+        $this->command->info("Année actuelle: {$currentYear}");
         
         $created = 0;
         $existing = 0;
         
-        for ($year = 2015; $year <= 2035; $year++) {
+        for ($year = $startYear; $year <= $endYear; $year++) {
             $result = SalaryYear::firstOrCreate(
                 ['year' => $year],
                 ['is_active' => true]
@@ -29,5 +34,6 @@ class SalaryYearsSeeder extends Seeder
         }
         
         $this->command->info("✅ $created années créées, $existing années existantes");
+        $this->command->info("📅 Plage d'années: {$startYear} - {$endYear}");
     }
 }

@@ -3,13 +3,15 @@
 namespace App\Models\SuperAdmin;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Organisme extends Model
 {
-    protected $fillable = ['nom', 'type', 'rattachement'];
-    public function rules(): HasMany
+    protected $table = 'organisme';
+    protected $fillable = ['nom', 'annee', 'is_favorite'];
+
+    // L'organisme possède plusieurs cotisations
+    public function cotisations()
     {
-        return $this->hasMany(CotisationRule::class);
+        return $this->hasMany(Cotisation::class, 'organisme_id');
     }
 }

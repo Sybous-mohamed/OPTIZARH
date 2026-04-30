@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { superAdminApi } from './lib/apis/superadmin';
+import { attachLoadingHandler } from "./lib/apis/axiosConfig";
+
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from "./context/ThemeContext";
 import { LoadingProvider, useLoading } from "./context/LoadingContext";
-import { attachLoadingHandler } from "./lib/apis/axiosConfig";
 
 // Auth Components
 import Login from './routes/auth/login';
@@ -17,46 +18,43 @@ import VerifyEmail from './routes/auth/VerifyEmail';
 import VerifyNotice from './routes/auth/VerifyNotice';
 
 
-// SuperAdmin
+// SuperAdmin Components
 import SuperAdminLayout from "../src/layout/SuperAdminLayout";
 import SuperAdminDashboard from "./routes/superadmin/Dashboard";
 import Users from "./routes/superadmin/users";
 import Parametrages from './routes/superadmin/Prametrages/Parmetrages';
     import GestionEtat from "./routes/superadmin/Prametrages/GestionEtat";
     import GestionIndemenitee from "./routes/superadmin/Prametrages/GestionIndementee";
+    import GestionCotisation from './routes/superadmin/Prametrages/Gestion_Cotisation';
+    import GestionRCAR from './routes/superadmin/Prametrages/Gestion_RCAR';
     import IRGestion from "./routes/superadmin/Prametrages/GestionIR";
-
-
+    import GestionCredit from './routes/superadmin/Credit'; //
+    import SNTL from "./routes/superadmin/Prametrages/SNTL";
+import Indemente from "./routes/superadmin/AffichageIndementes";
+import Cotisation from "./routes/superadmin/Cotisation";//
+import RCAR from "./routes/superadmin/RCAR";//
 import IRAffichage from "./routes/superadmin/IRAffichage";
-import Logs from "./routes/superadmin/Logs";
-import Parametres from './routes/superadmin/Settings'
-
-
-
-
-import RCAR from "./routes/superadmin/ParametrageRCAR";
-import Indemente from "./routes/superadmin/Indementes";
-import Cotisation from "./routes/superadmin/Cotisation";
+import Credit from "./routes/superadmin/Credit";//
 import Retraite from "./routes/superadmin/Retraite";
-import Credit from "./routes/superadmin/Credit";
-import SNTL from "./routes/superadmin/SNTL";
-import Social from "./routes/superadmin/Social";
+import AssuranceManagement from './routes/superadmin/AssuranceManagement';//
+
+
+import Logs from "./routes/superadmin/Logs";
+import Parametres from './routes/superadmin/Settings'//
 
 
 
 
 
 
-//Admin 
+
+
+//Admin Components
 import AdminDashboard from './routes/Admin/Dashboard';
-
-// RH
+// RH Components
 import RHDashboard from './routes/Rh/Dashboard';
-
-// Employee
+// Employee Components
 import EmployeeDashboard from './routes/employee/Dashboard';
-
-
 
 /*
 |--------------------------------------------------------------------------
@@ -78,7 +76,6 @@ const ProtectedRoute = ({ allowedRoles }) => {
     }
     return <Outlet />;
 };
-
 /*
 |--------------------------------------------------------------------------
 |                            Public Route 
@@ -131,7 +128,6 @@ function AppContent() {
         attachLoadingHandler(setLoading);
     }, [setLoading]);
 
-
     useEffect(() => {
         const checkStatus = async () => {
             try {
@@ -182,23 +178,23 @@ function AppContent() {
                                 <Route index element={<Parametrages />} />
                                 <Route path="GestionEtat" element={<GestionEtat/>}/>
                                 <Route path="GestionIndemenitee" element={<GestionIndemenitee/>} />
+                                <Route path="GestionCotisation" element={<GestionCotisation/>} />
+                                <Route path="GestionRCAR" element={<GestionRCAR/>} />
                                 <Route path="GesionIR" element={<IRGestion/>}/>
+                                <Route path="GestionCredit" element={<GestionCredit/>}/>
+                                <Route path="SNTL" element={<SNTL />} />
                             </Route>
+                            <Route path="affichageIndementes" element={<Indemente/>} />
+                            <Route path="Cotisation" element={<Cotisation/>} />
+                            <Route path="RCAR" element={<RCAR/>} />
                             <Route path="IRAffichage" element={<IRAffichage/>}/>
+                            <Route path="Credit" element={<Credit />} />
+                            <Route path="Retraite" element={<Retraite/>} />
+                            <Route path="assurances" element={<AssuranceManagement />} />
+                            
 
                             <Route path="Logs" element={<Logs/>}/>
                             <Route path="Parametres" element={<Parametres/>}/>
-
-
-
-                            
-                            <Route path="RCAR" element={<RCAR/>} />
-                            <Route path="Indementes" element={<Indemente/>} />
-                            <Route path="Cotisation" element={<Cotisation/>} />
-                            <Route path="Retraite" element={<Retraite/>} />
-                            <Route path="Credit" element={<Credit />} />
-                            <Route path="SNTL" element={<SNTL />} />
-                            <Route path="Social" element={<Social />} />
                         </Route>
                     </Route>
 

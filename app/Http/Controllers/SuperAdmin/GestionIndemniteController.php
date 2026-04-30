@@ -112,4 +112,14 @@ class GestionIndemniteController extends Controller
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
+
+    public function getYearsWithIndemnites()
+    {
+        try {
+            $years = SalaryYear::whereHas('indemnites')->orderBy('year', 'desc')->get();
+            return response()->json($years);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
 }

@@ -3,9 +3,7 @@ import { Bell, Moon, Sun, Search } from 'lucide-react';
 import { useTheme } from '../../../context/ThemeContext';
 
 export default function Header() {
-    const theme = useTheme();
-    const darkMode = theme?.darkMode;
-    const toggleDarkMode = theme?.toggleDarkMode;
+    const { darkMode, toggleDarkMode } = useTheme();
     const [user, setUser] = useState({
         name: "Chargement...",
         role: "Utilisateur"
@@ -46,7 +44,7 @@ export default function Header() {
     };
 
     return (
-        <header className="h-14 bg-white/80 dark:bg-[#121212]/80 backdrop-blur-md border-b border-gray-100 dark:border-[#262626] flex items-center justify-between px-6 fixed top-0 right-0 left-[240px] z-10 transition-colors duration-300">
+        <header className="h-14 bg-white/80 dark:bg-[#1A1A1A]/80 backdrop-blur-md border-b border-gray-100 dark:border-[#2A2A2A] flex items-center justify-between px-6 fixed top-0 right-0 left-[260px] z-10 transition-colors duration-300">
             
             {/* Search Bar */}
             <div className="flex-1 max-w-sm relative group">
@@ -56,7 +54,7 @@ export default function Header() {
                 <input 
                     type="text" 
                     placeholder="Rechercher..." 
-                    className="w-full h-10 bg-gray-50 dark:bg-[#1c1c1c] border-none rounded-lg pl-10 pr-4 text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 dark:text-gray-200 transition-all placeholder:text-gray-400 dark:placeholder:text-gray-500"
+                    className="w-full h-10 bg-gray-50 dark:bg-[#252525] border-none rounded-lg pl-10 pr-4 text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 dark:text-gray-200 transition-all placeholder:text-gray-400 dark:placeholder:text-gray-500"
                 />
             </div>
 
@@ -64,30 +62,30 @@ export default function Header() {
                 {/* Dark Mode Toggle */}
                 <button 
                     onClick={toggleDarkMode}
-                    className="p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#262626] rounded-full transition-all cursor-pointer"
+                    className="p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#2A2A2A] rounded-full transition-all cursor-pointer"
                 >
                     {darkMode ? <Sun size={20} className="text-yellow-400" /> : <Moon size={20} />}
                 </button>
 
                 {/* Notifications */}
-                <button className="p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#262626] rounded-full transition-colors relative cursor-pointer">
+                <button className="p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#2A2A2A] rounded-full transition-colors relative cursor-pointer">
                     <Bell size={20} />
-                    <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-[#121212]"></span>
+                    <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-[#1A1A1A]"></span>
                 </button>
 
-                <div className="h-8 w-[1px] bg-gray-100 dark:bg-[#262626] mx-2"></div>
+                <div className="h-8 w-[1px] bg-gray-100 dark:bg-[#2A2A2A] mx-2"></div>
 
-                {/* Profile Section - Daba Dynamic */}
+                {/* Profile Section */}
                 <div className="flex items-center gap-3 cursor-pointer group">
                     <div className="text-right hidden sm:block">
-                        <p className="text-sm font-bold text-gray-900 dark:text-gray-100 leading-none">
+                        <p className="text-sm font-bold text-gray-900 dark:text-white leading-none">
                             {user.name}
                         </p>
                         <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium mt-1 uppercase tracking-tighter">
                             {user.role}
                         </p>
                     </div>
-                    <div className="w-10 h-10 rounded-full bg-indigo-600 border-2 border-white dark:border-[#262626] shadow-sm flex items-center justify-center text-white font-bold text-[11px] group-hover:scale-105 transition-transform">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 border-2 border-white dark:border-[#2A2A2A] shadow-sm flex items-center justify-center text-white font-bold text-[11px] group-hover:scale-105 transition-transform">
                         {getInitials(user.name)}
                     </div>
                 </div>

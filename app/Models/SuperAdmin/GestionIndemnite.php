@@ -39,4 +39,5 @@ class GestionIndemnite extends Model
     public function echelon() {
         return $this->belongsTo(Echelon::class);
     }
+
 }

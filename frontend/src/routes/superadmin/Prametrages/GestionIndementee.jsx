@@ -4,13 +4,13 @@ import api from '../../../lib/apis/axiosConfig';
 import { 
   Plus, Trash2, Calendar, Loader2, AlertCircle, 
   Users, Award, Grid3x3, Hash, Percent, Globe,
-  CheckCircle, Gift, TrendingUp, Sparkles, Eye, EyeOff, 
-  Zap, Wallet, BadgeCheck, X, Search, ChevronDown, List, ArrowLeft
+  CheckCircle, Gift, TrendingUp, Sparkles, 
+  Zap, Wallet, BadgeCheck, X, ChevronDown, ArrowLeft
 } from 'lucide-react';
 import { useNotification } from '../../../context/NotificationContext';
 import { useTheme } from '../../../context/ThemeContext';
 
-const IndemniteManagement = () => {
+const GestionIndemnitee = () => {
     const { showNotification } = useNotification();
     const { darkMode } = useTheme();
     const navigate = useNavigate();
@@ -19,7 +19,6 @@ const IndemniteManagement = () => {
     const [selectedYear, setSelectedYear] = useState('');
     const [selectedYearId, setSelectedYearId] = useState(null);
     const [configData, setConfigData] = useState(null);
-    const [indemnites, setIndemnites] = useState([]);
     const [loading, setLoading] = useState(false);
     const [selectedRole, setSelectedRole] = useState(null);
     const [selectedGrade, setSelectedGrade] = useState(null);
@@ -27,8 +26,6 @@ const IndemniteManagement = () => {
     const [selectedEchelon, setSelectedEchelon] = useState(null);
     const [salaryValue, setSalaryValue] = useState(0);
     const [indexValue, setIndexValue] = useState(0);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [filterType, setFilterType] = useState('all');
     const [isYearOpen, setIsYearOpen] = useState(false);
     const yearRef = useRef(null);
 
@@ -73,7 +70,6 @@ const IndemniteManagement = () => {
     useEffect(() => {
         if (selectedYearId) {
             fetchYearConfig();
-            fetchIndemnites();
         }
     }, [selectedYearId]);
 
@@ -81,7 +77,20 @@ const IndemniteManagement = () => {
         setLoading(true);
         try {
             const res = await api.get('/api/gestionEtat/years');
-            setYears(Array.isArray(res.data) ? res.data : []);
+            const data = Array.isArray(res.data) ? res.data : [];
+            setYears(data);
+            
+            const savedYear = localStorage.getItem('indemnite_selected_year');
+            if (savedYear && data.some(y => y.year == savedYear)) {
+                setSelectedYear(savedYear);
+                const yearObj = data.find(y => y.year == savedYear);
+                setSelectedYearId(yearObj?.id);
+            } else if (data.length > 0) {
+                const lastYear = data[data.length - 1];
+                setSelectedYear(lastYear.year);
+                setSelectedYearId(lastYear.id);
+                localStorage.setItem('indemnite_selected_year', lastYear.year);
+            }
         } catch (err) {
             showNotification("❌ Erreur chargement des années", "error");
             setYears([]);
@@ -91,30 +100,22 @@ const IndemniteManagement = () => {
     };
 
     const fetchYearConfig = async () => {
+        setLoading(true);
         try {
             const res = await api.get(`/api/gestionEtat/get-by-year/${selectedYear}`);
             setConfigData(res.data);
         } catch (err) { 
-            showNotification(" Erreur chargement configuration", "error");
+            showNotification("❌ Erreur chargement configuration", "error");
+        } finally {
+            setLoading(false);
         }
     };
 
-    const fetchIndemnites = async () => {
-        try {
-            const res = await api.get(`/api/gestionEtat/gestionindemnites/${selectedYearId}`);
-            setIndemnites(Array.isArray(res.data) ? res.data : []);
-        } catch (err) { 
-            setIndemnites([]); 
-        }
-    };
-
-    const handleYearChange = (yearValue) => {
+    const handleYearChange = (yearValue, yearId) => {
         setSelectedYear(yearValue);
-        const yearObj = years.find(y => y.year == yearValue);
-        setSelectedYearId(yearObj?.id || null);
-        if (yearValue) {
-            showNotification(`Année ${yearValue} sélectionnée`, "success");
-        }
+        setSelectedYearId(yearId);
+        localStorage.setItem('indemnite_selected_year', yearValue);
+        showNotification(`📅 Année ${yearValue} sélectionnée`, "success");
     };
 
     const handleRoleChange = (roleId) => {
@@ -191,24 +192,14 @@ const IndemniteManagement = () => {
             return;
         }
 
-        // Validation pour le type Pourcentage
         if (form.type === 'Pourcentage') {
             const valeur = parseFloat(form.valeur);
-            if (isNaN(valeur)) {
-                showNotification("⚠️ Veuillez entrer une valeur de pourcentage valide", "error");
-                return;
-            }
-            if (valeur <= 0) {
-                showNotification("⚠️ Le pourcentage doit être supérieur à 0%", "error");
-                return;
-            }
-            if (valeur > 100) {
-                showNotification("⚠️ Le pourcentage ne peut pas dépasser 100%", "error");
+            if (isNaN(valeur) || valeur <= 0 || valeur > 100) {
+                showNotification("⚠️ Le pourcentage doit être entre 1% et 100%", "error");
                 return;
             }
         }
 
-        // Validation pour le type Fixe
         if (form.type === 'Fixe') {
             const valeur = parseFloat(form.valeur);
             if (isNaN(valeur) || valeur <= 0) {
@@ -225,9 +216,7 @@ const IndemniteManagement = () => {
                 valeur: parseFloat(form.valeur)
             };
             
-            const res = await api.post('/api/gestionEtat/gestionindemnites', payload);
-            setIndemnites([res.data.data, ...indemnites]);
-            
+            await api.post('/api/gestionEtat/gestionindemnites', payload);
             showNotification(`✨ Indemnité "${form.libelle}" ajoutée avec succès!`, "success");
             resetForm();
             
@@ -239,50 +228,6 @@ const IndemniteManagement = () => {
         }
     };
 
-    const handleDelete = async (id, libelle) => {
-        if (window.confirm(`Supprimer l'indemnité "${libelle}" ?`)) {
-            try {
-                await api.delete(`/api/gestionEtat/gestionindemnites/${id}`);
-                setIndemnites(indemnites.filter(i => i.id !== id));
-                showNotification(`🗑️ Indemnité "${libelle}" supprimée`, "success");
-            } catch (err) {
-                showNotification("❌ Erreur lors de la suppression", "error");
-            }
-        }
-    };
-
-    const getTargetText = (item) => {
-        if (item.is_for_all) return "🌍 Tous les employés";
-        let target = "";
-        if (item.role) target += item.role.name;
-        if (item.grade) target += ` / ${item.grade.name}`;
-        if (item.echelle) target += ` / Éch. ${item.echelle.level}`;
-        if (item.echelon) target += ` / E${item.echelon.order}`;
-        return target || "Non spécifié";
-    };
-
-    const getTargetIcon = (item) => {
-        if (item.is_for_all) return <Globe size={14} className="text-indigo-500"/>;
-        if (item.echelon) return <Hash size={14} className="text-purple-500"/>;
-        if (item.echelle) return <Grid3x3 size={14} className="text-green-500"/>;
-        if (item.grade) return <Award size={14} className="text-blue-500"/>;
-        return <Users size={14} className="text-gray-500"/>;
-    };
-
-    const getTypeBadge = (type) => {
-        if (type === 'Fixe') {
-            return <span className={`${badgeFixeClass} px-3 py-1 rounded-full text-[10px] font-bold flex items-center gap-1.5 shadow-sm`}><Wallet size={10}/> Fixe</span>;
-        }
-        return <span className={`${badgePercentClass} px-3 py-1 rounded-full text-[10px] font-bold flex items-center gap-1.5 shadow-sm`}><Percent size={10}/> Pourcentage</span>;
-    };
-
-    const filteredIndemnites = indemnites.filter(item => {
-        const matchesSearch = item.libelle.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesType = filterType === 'all' || item.type === filterType;
-        return matchesSearch && matchesType;
-    });
-
-    // Empêcher les nombres négatifs dans l'input valeur
     const handleValeurChange = (e) => {
         let value = e.target.value;
         if (value === '') {
@@ -320,13 +265,12 @@ const IndemniteManagement = () => {
 
     return (
         <div className={`min-h-screen transition-all duration-300 ${bgClass}`}>
-            <div className="container mx-auto p-2 md:p-2 max-w-6xl">
+            <div className="container p-4 ">
                 
                 {/* Header */}
-                <div className={`${cardClass} rounded-2xl shadow-xl border ${borderClass} p-3 mb-6 sticky top-0 z-30 backdrop-blur-xl bg-opacity-80 dark:bg-opacity-80`}>
+                <div className={`${cardClass} rounded-2xl shadow-xl border ${borderClass} p-4 mb-6 sticky top-0 z-30 backdrop-blur-xl bg-opacity-80 dark:bg-opacity-80`}>
                     <div className="flex flex-wrap items-center justify-between gap-4">
                         <div className="flex items-center gap-4">
-                            {/* Bouton Retour */}
                             <button 
                                 onClick={() => navigate(-1)}
                                 className={`p-2 rounded-xl transition-all cursor-pointer ${darkMode ? 'bg-[#252525] hover:bg-[#333] border border-[#333]' : 'bg-gray-100 hover:bg-gray-200 border border-gray-200'} hover:scale-105`}
@@ -334,379 +278,232 @@ const IndemniteManagement = () => {
                             >
                                 <ArrowLeft size={20} className={textClass} />
                             </button>
-
                             <div>
                                 <h2 className={`font-bold text-xl md:text-2xl tracking-tight flex items-center gap-2 ${textClass}`}>
-                                    Indemnités 
+                                    <Gift size={24} className="text-indigo-500" />
+                                    Paramétrage des Indemnités
                                 </h2>
-                                <p className={`text-sm ${textMutedClass} mt-1`}>Gérez les primes et indemnités par hiérarchie</p>
+                                <p className={`text-sm ${textMutedClass} mt-1`}>Configuration des primes et indemnités par hiérarchie</p>
                             </div>
                         </div>
                         
-                        <div className="flex items-center gap-3">
-                            <div className="relative" ref={yearRef}>
-                                <button 
-                                    onClick={() => setIsYearOpen(!isYearOpen)}
-                                    className={`h-10 px-4 rounded-xl font-medium outline-none cursor-pointer min-w-[140px] transition-all ${selectClass} border ${borderClass} ${textClass} text-sm flex items-center justify-between gap-3 hover:border-indigo-400`}
-                                >
-                                    <span className="truncate">{selectedYear || 'Sélectionner année'}</span>
-                                    <ChevronDown size={16} className={`text-indigo-500 transition-transform duration-200 ${isYearOpen ? 'rotate-180' : ''}`} />
-                                </button>
-                                
-                                {isYearOpen && (
-                                    <div className={`absolute top-full left-0 right-0 mt-2 rounded-xl border ${borderClass} ${cardClass} z-50 max-h-60 overflow-y-auto shadow-xl animate-fadeIn`}>
+                        <div className="relative" ref={yearRef}>
+                            <button 
+                                onClick={() => setIsYearOpen(!isYearOpen)}
+                                className={`h-10 px-4 rounded-xl font-medium outline-none cursor-pointer min-w-[140px] transition-all ${selectClass} border ${borderClass} ${textClass} text-sm flex items-center justify-between gap-3 hover:border-indigo-400`}
+                            >
+                                <span className="truncate">{selectedYear || 'Sélectionner année'}</span>
+                                <ChevronDown size={16} className={`text-indigo-500 transition-transform duration-200 ${isYearOpen ? 'rotate-180' : ''}`} />
+                            </button>
+                            
+                            {isYearOpen && (
+                                <div className={`absolute top-full left-0 right-0 mt-2 rounded-xl border ${borderClass} ${cardClass} z-50 max-h-60 overflow-y-auto shadow-xl animate-fadeIn`}>
+                                    <div 
+                                        onClick={() => {
+                                            handleYearChange('');
+                                            setIsYearOpen(false);
+                                        }}
+                                        className={`px-4 py-2.5 cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-sm transition-colors ${!selectedYear ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 font-medium' : ''}`}
+                                    >
+                                        -- Année --
+                                    </div>
+                                    {years.map(y => (
                                         <div 
+                                            key={y.id}
                                             onClick={() => {
-                                                handleYearChange('');
+                                                handleYearChange(y.year, y.id);
                                                 setIsYearOpen(false);
                                             }}
-                                            className={`px-4 py-2.5 cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-sm transition-colors ${!selectedYear ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 font-medium' : ''}`}
+                                            className={`px-4 py-2.5 cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-sm transition-colors ${selectedYear == y.year ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 font-medium' : ''}`}
                                         >
-                                            -- Année --
+                                            {y.year}
                                         </div>
-                                        {years.map(y => (
-                                            <div 
-                                                key={y.id}
-                                                onClick={() => {
-                                                    handleYearChange(y.year);
-                                                    setIsYearOpen(false);
-                                                }}
-                                                className={`px-4 py-2.5 cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-sm transition-colors ${selectedYear == y.year ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 font-medium' : ''}`}
-                                            >
-                                                {y.year}
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
 
                 {selectedYear && configData ? (
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        {/* Formulaire */}
-                        <div className="lg:col-span-1">
-                            <div className={`${cardClass} rounded-2xl shadow-xl border ${borderClass} overflow-hidden sticky top-28`}>
-                                <div className={`${cardHeaderClass} px-6 py-4`}>
-                                    <h3 className="flex items-center gap-2 font-bold text-white text-sm uppercase tracking-wider">
-                                        <Sparkles size={16} />
-                                        Nouvelle Indemnité
-                                    </h3>
-                                </div>
-                                
-                                <div className="p-6">
-                                    <div className="space-y-5">
-                                        <div>
-                                            <label className={`text-xs font-bold ${textMutedClass} mb-1.5 block uppercase tracking-wider`}>Libellé *</label>
-                                            <input 
-                                                placeholder="ex: Prime de transport, Indemnité de logement..."
-                                                className={`w-full p-3 rounded-xl outline-none transition-all ${inputClass} border ${borderClass}`}
-                                                value={form.libelle}
-                                                onChange={e => setForm({...form, libelle: e.target.value})}
-                                            />
-                                        </div>
-
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div>
-                                                <label className={`text-xs font-bold ${textMutedClass} mb-1.5 block uppercase tracking-wider`}>Type</label>
-                                                <select 
-                                                    className={`w-full p-3 rounded-xl outline-none transition-all ${selectClass} border ${borderClass} ${textClass}`}
-                                                    value={form.type}
-                                                    onChange={e => {
-                                                        setForm({...form, type: e.target.value, valeur: ''});
-                                                    }}
-                                                >
-                                                    <option value="Fixe">💰 Fixe (MAD)</option>
-                                                    <option value="Pourcentage">📈 Pourcentage (%)</option>
-                                                </select>
-                                            </div>
-                                            <div>
-                                                <label className={`text-xs font-bold ${textMutedClass} mb-1.5 block uppercase tracking-wider`}>Valeur</label>
-                                                <input 
-                                                    type="number" 
-                                                    placeholder={form.type === 'Fixe' ? "0 MAD" : "0 %"}
-                                                    className={`w-full p-3 rounded-xl outline-none transition-all ${inputClass} border ${borderClass}`}
-                                                    value={form.valeur}
-                                                    onChange={handleValeurChange}
-                                                />
-                                                {form.type === 'Pourcentage' && form.valeur > 0 && (
-                                                    <p className={`text-[9px] mt-1 ${form.valeur > 100 ? 'text-red-500' : 'text-green-500'}`}>
-                                                        {form.valeur > 100 ? '⚠️ Le pourcentage ne peut pas dépasser 100%' : '✓ Pourcentage valide (0-100%)'}
-                                                    </p>
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        <div 
-                                            className={`relative p-4 rounded-xl border-2 transition-all cursor-pointer ${form.is_for_all ? 'border-indigo-500 bg-indigo-500/10' : borderClass} ${hoverClass}`}
-                                            onClick={() => {
-                                                setForm({
-                                                    ...form, 
-                                                    is_for_all: !form.is_for_all, 
-                                                    role_id: '', 
-                                                    grade_id: '', 
-                                                    echelle_id: '', 
-                                                    echelon_id: ''
-                                                });
-                                                setSelectedRole(null);
-                                                setSelectedGrade(null);
-                                                setSelectedEchelle(null);
-                                                setSelectedEchelon(null);
-                                            }}
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <div className={`p-2 rounded-xl transition-all ${form.is_for_all ? 'bg-indigo-500 text-white' : darkMode ? 'bg-[#252525] text-gray-500' : 'bg-gray-100 text-gray-500'}`}>
-                                                    <Globe size={18} />
-                                                </div>
-                                                <div className="flex-1">
-                                                    <p className={`font-semibold text-sm ${textClass}`}>Appliquer à tous les employés</p>
-                                                    <p className={`text-xs ${textMutedClass}`}>L'indemnité sera attribuée à tous</p>
-                                                </div>
-                                                {form.is_for_all && (
-                                                    <CheckCircle size={20} className="text-indigo-500" />
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        {!form.is_for_all && (
-                                            <div className="space-y-4 animate-fadeIn">
-                                                <div>
-                                                    <label className={`text-xs font-bold ${textMutedClass} mb-1.5 block flex items-center gap-1 uppercase tracking-wider`}>
-                                                        <Users size={12}/> Rôle *
-                                                    </label>
-                                                    <select 
-                                                        className={`w-full p-3 rounded-xl outline-none transition-all ${selectClass} border ${borderClass} ${textClass}`}
-                                                        value={form.role_id}
-                                                        onChange={(e) => handleRoleChange(e.target.value)}
-                                                    >
-                                                        <option value="">-- Choisir un rôle --</option>
-                                                        {configData.roles?.map(r => (
-                                                            <option key={r.id} value={r.id}>{r.name}</option>
-                                                        ))}
-                                                    </select>
-                                                </div>
-
-                                                {selectedRole && selectedRole.grades?.length > 0 && (
-                                                    <div className="animate-fadeIn">
-                                                        <label className={`text-xs font-bold ${textMutedClass} mb-1.5 block flex items-center gap-1 uppercase tracking-wider`}>
-                                                            <Award size={12}/> Grade (Optionnel)
-                                                        </label>
-                                                        <select 
-                                                            className={`w-full p-3 rounded-xl outline-none transition-all ${selectClass} border ${borderClass} ${textClass}`}
-                                                            value={form.grade_id}
-                                                            onChange={(e) => handleGradeChange(e.target.value)}
-                                                        >
-                                                            <option value="">-- Tous les grades --</option>
-                                                            {selectedRole.grades.map(g => (
-                                                                <option key={g.id} value={g.id}>{g.name}</option>
-                                                            ))}
-                                                        </select>
-                                                    </div>
-                                                )}
-
-                                                {selectedGrade && selectedGrade.echelles?.length > 0 && (
-                                                    <div className="animate-fadeIn">
-                                                        <label className={`text-xs font-bold ${textMutedClass} mb-1.5 block flex items-center gap-1 uppercase tracking-wider`}>
-                                                            <Grid3x3 size={12}/> Échelle (Optionnel)
-                                                        </label>
-                                                        <select 
-                                                            className={`w-full p-3 rounded-xl outline-none transition-all ${selectClass} border ${borderClass} ${textClass}`}
-                                                            value={form.echelle_id}
-                                                            onChange={(e) => handleEchelleChange(e.target.value)}
-                                                        >
-                                                            <option value="">-- Toutes les échelles --</option>
-                                                            {selectedGrade.echelles.map(e => (
-                                                                <option key={e.id} value={e.id}>Échelle {e.level}</option>
-                                                            ))}
-                                                        </select>
-                                                    </div>
-                                                )}
-
-                                                {selectedEchelle && selectedEchelle.echelons?.length > 0 && (
-                                                    <div className="animate-fadeIn">
-                                                        <label className={`text-xs font-bold ${textMutedClass} mb-1.5 block flex items-center gap-1 uppercase tracking-wider`}>
-                                                            <Hash size={12}/> Échelon (Optionnel)
-                                                        </label>
-                                                        <select 
-                                                            className={`w-full p-3 rounded-xl outline-none transition-all ${selectClass} border ${borderClass} ${textClass}`}
-                                                            value={form.echelon_id}
-                                                            onChange={(e) => handleEchelonChange(e.target.value)}
-                                                        >
-                                                            <option value="">-- Tous les échelons --</option>
-                                                            {selectedEchelle.echelons.map(e => (
-                                                                <option key={e.id} value={e.id}>
-                                                                    E{e.order} (Indice: {e.index_val} | {e.salary.toLocaleString()} MAD)
-                                                                </option>
-                                                            ))}
-                                                        </select>
-                                                        
-                                                        {selectedEchelon && (
-                                                            <div className={`mt-3 p-3 rounded-xl border ${darkMode ? 'bg-emerald-900/20 border-emerald-800' : 'bg-emerald-50 border-emerald-200'} animate-fadeIn`}>
-                                                                <div className="flex justify-between items-center">
-                                                                    <div>
-                                                                        <p className={`text-[9px] font-bold uppercase tracking-wider ${darkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>Salaire de base</p>
-                                                                        <p className={`font-bold text-lg ${darkMode ? 'text-emerald-400' : 'text-emerald-700'}`}>{salaryValue.toLocaleString()} MAD</p>
-                                                                    </div>
-                                                                    <div className="text-right">
-                                                                        <p className={`text-[9px] font-bold uppercase tracking-wider ${darkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>Indice</p>
-                                                                        <p className={`font-bold text-lg ${darkMode ? 'text-emerald-400' : 'text-emerald-700'}`}>{indexValue}</p>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                )}
-
-                                                {selectedRole && selectedRole.grades?.length === 0 && (
-                                                    <div className={`p-3 rounded-xl border ${darkMode ? 'bg-amber-900/20 border-amber-800' : 'bg-amber-50 border-amber-200'}`}>
-                                                        <p className={`text-xs flex items-center gap-2 ${darkMode ? 'text-amber-400' : 'text-amber-700'}`}>
-                                                            <AlertCircle size={12}/>
-                                                            Aucun grade configuré pour ce rôle
-                                                        </p>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
-
-                                        <div className="flex gap-3 pt-2">
-                                            <button 
-                                                onClick={handleSave}
-                                                disabled={loading}
-                                                className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold py-3 rounded-xl transition-all transform hover:scale-[1.02] flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/25 disabled:opacity-50"
-                                            >
-                                                {loading ? <Loader2 size={18} className="animate-spin"/> : <Plus size={18} />}
-                                                {loading ? "Enregistrement..." : "Enregistrer"}
-                                            </button>
-                                            <button 
-                                                onClick={resetForm}
-                                                type="button"
-                                                className="px-6 bg-gray-500 hover:bg-gray-600 text-white font-semibold py-3 rounded-xl transition-all flex items-center justify-center gap-2"
-                                            >
-                                                <X size={18} /> Réinitialiser
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                    <div className={`${cardClass} rounded-2xl shadow-xl border ${borderClass} overflow-hidden`}>
+                        <div className={`${cardHeaderClass} px-6 py-4`}>
+                            <h3 className="flex items-center gap-2 font-bold text-white text-sm uppercase tracking-wider">
+                                <Sparkles size={16} />
+                                Nouvelle Indemnité - {selectedYear}
+                            </h3>
                         </div>
+                        
+                        <div className="p-6 space-y-5">
+                            <div>
+                                <label className={`text-xs font-bold ${textMutedClass} mb-1.5 block uppercase tracking-wider`}>Libellé *</label>
+                                <input 
+                                    placeholder="ex: Prime de transport, Indemnité de logement..."
+                                    className={`w-full p-3 rounded-xl outline-none transition-all ${inputClass} border ${borderClass}`}
+                                    value={form.libelle}
+                                    onChange={e => setForm({...form, libelle: e.target.value})}
+                                />
+                            </div>
 
-                        {/* Liste et Résumé */}
-                        <div className="lg:col-span-1 space-y-6">
-                            {/* Liste des indemnités */}
-                            <div className={`${cardClass} rounded-2xl shadow-xl border ${borderClass} overflow-hidden`}>
-                                <div className={`px-6 py-4 border-b ${borderClass} ${darkMode ? 'bg-[#1A1A1A]' : 'bg-gray-50'}`}>
-                                    <div className="flex flex-wrap items-center justify-between gap-3">
-                                        <h3 className={`font-bold flex items-center gap-2 ${textClass}`}>
-                                            <List size={18} className="text-indigo-500"/>
-                                            Liste des indemnités
-                                            <span className={`ml-2 px-2 py-0.5 rounded-full text-[10px] font-bold ${darkMode ? 'bg-indigo-900/50 text-indigo-400' : 'bg-indigo-100 text-indigo-700'}`}>{filteredIndemnites.length}</span>
-                                        </h3>
-                                        <div className="flex gap-2">
-                                            <div className="relative">
-                                                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"/>
-                                                <input 
-                                                    type="text"
-                                                    placeholder="Rechercher..."
-                                                    value={searchTerm}
-                                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                                    className={`pl-9 pr-3 py-2 rounded-xl text-sm border ${borderClass} ${inputClass} w-44 focus:ring-1`}
-                                                />
-                                            </div>
-                                            <select 
-                                                value={filterType}
-                                                onChange={(e) => setFilterType(e.target.value)}
-                                                className={`px-3 py-2 rounded-xl text-sm border ${borderClass} ${selectClass} ${textClass} focus:ring-1`}
-                                            >
-                                                <option value="all">Tous</option>
-                                                <option value="Fixe">Fixe</option>
-                                                <option value="Pourcentage">Pourcentage</option>
-                                            </select>
-                                        </div>
-                                    </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className={`text-xs font-bold ${textMutedClass} mb-1.5 block uppercase tracking-wider`}>Type</label>
+                                    <select 
+                                        className={`w-full p-3 rounded-xl outline-none transition-all ${selectClass} border ${borderClass} ${textClass}`}
+                                        value={form.type}
+                                        onChange={e => setForm({...form, type: e.target.value, valeur: ''})}
+                                    >
+                                        <option value="Fixe">💰 Fixe (MAD)</option>
+                                        <option value="Pourcentage">📈 Pourcentage (%)</option>
+                                    </select>
                                 </div>
-                                
-                                <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
-                                    {filteredIndemnites.length === 0 ? (
-                                        <div className="p-12 text-center">
-                                            <div className={`p-4 rounded-full mb-4 inline-block ${darkMode ? 'bg-[#252525]' : 'bg-gray-100'}`}>
-                                                <Gift size={40} className={darkMode ? 'text-gray-600' : 'text-gray-300'} />
-                                            </div>
-                                            <p className={`text-sm font-medium ${textMutedClass}`}>
-                                                {indemnites.length === 0 ? "Aucune indemnité configurée" : "Aucun résultat trouvé"}
-                                            </p>
-                                            <p className={`text-xs ${textMutedClass} mt-1`}>
-                                                {indemnites.length === 0 ? "Utilisez le formulaire ci-contre" : "Modifiez vos critères de recherche"}
-                                            </p>
-                                        </div>
-                                    ) : (
-                                        <div className="divide-y divide-gray-100 dark:divide-[#2A2A2A]">
-                                            {filteredIndemnites.map((item) => (
-                                                <div key={item.id} className={`p-4 transition-all duration-200 ${hoverClass}`}>
-                                                    <div className="flex items-start justify-between gap-3">
-                                                        <div className="flex-1">
-                                                            <div className="flex items-center gap-2 mb-2">
-                                                                <div className={`p-2 rounded-xl ${darkMode ? 'bg-indigo-900/30' : 'bg-indigo-100'}`}>
-                                                                    <Gift size={14} className="text-indigo-500" />
-                                                                </div>
-                                                                <span className={`font-semibold ${textClass}`}>{item.libelle}</span>
-                                                            </div>
-                                                            <div className="flex flex-wrap items-center gap-2 mt-2">
-                                                                {getTypeBadge(item.type)}
-                                                                <div className="flex items-center gap-1">
-                                                                    {getTargetIcon(item)}
-                                                                    <span className={`text-xs ${textMutedClass} truncate max-w-[200px]`} title={getTargetText(item)}>
-                                                                        {getTargetText(item)}
-                                                                    </span>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        <div className="flex items-center gap-2">
-                                                            <span className={`font-bold text-indigo-600 dark:text-indigo-400 text-sm ${darkMode ? 'bg-indigo-900/30' : 'bg-indigo-50'} px-3 py-1.5 rounded-lg`}>
-                                                                {item.valeur} {item.type === 'Fixe' ? 'MAD' : '%'}
-                                                            </span>
-                                                            <button 
-                                                                onClick={() => handleDelete(item.id, item.libelle)}
-                                                                className={`p-2 rounded-xl transition-all ${darkMode ? 'text-gray-500 hover:text-red-400 hover:bg-red-900/20' : 'text-gray-400 hover:text-red-600 hover:bg-red-50'}`}
-                                                            >
-                                                                <Trash2 size={16} />
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
+                                <div>
+                                    <label className={`text-xs font-bold ${textMutedClass} mb-1.5 block uppercase tracking-wider`}>Valeur</label>
+                                    <input 
+                                        type="number" 
+                                        placeholder={form.type === 'Fixe' ? "0 MAD" : "0 %"}
+                                        className={`w-full p-3 rounded-xl outline-none transition-all ${inputClass} border ${borderClass}`}
+                                        value={form.valeur}
+                                        onChange={handleValeurChange}
+                                    />
+                                    {form.type === 'Pourcentage' && form.valeur > 0 && (
+                                        <p className={`text-[9px] mt-1 ${form.valeur > 100 ? 'text-red-500' : 'text-green-500'}`}>
+                                            {form.valeur > 100 ? '⚠️ Le pourcentage ne peut pas dépasser 100%' : '✓ Pourcentage valide (0-100%)'}
+                                        </p>
                                     )}
                                 </div>
                             </div>
 
-                            {/* Résumé */}
-                            {indemnites.length > 0 && (
-                                <div className={`p-5 rounded-2xl border ${borderClass} ${darkMode ? 'bg-[#1A1A1A]' : 'bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50'}`}>
-                                    <h4 className={`text-xs font-bold ${textMutedClass} mb-4 flex items-center gap-2 uppercase tracking-wider`}>
-                                        <Zap size={14} className="text-indigo-500"/>
-                                        Résumé des configurations
-                                    </h4>
-                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                        <div className={`text-center p-3 rounded-xl ${darkMode ? 'bg-[#252525]' : 'bg-white/80'}`}>
-                                            <p className={`text-[9px] font-bold ${darkMode ? 'text-indigo-400' : 'text-indigo-600'}`}>Total</p>
-                                            <p className={`font-black text-xl ${textClass}`}>{indemnites.length}</p>
-                                        </div>
-                                        <div className={`text-center p-3 rounded-xl ${darkMode ? 'bg-[#252525]' : 'bg-white/80'}`}>
-                                            <p className={`text-[9px] font-bold ${darkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>Fixes</p>
-                                            <p className={`font-black text-xl ${textClass}`}>{indemnites.filter(i => i.type === 'Fixe').length}</p>
-                                        </div>
-                                        <div className={`text-center p-3 rounded-xl ${darkMode ? 'bg-[#252525]' : 'bg-white/80'}`}>
-                                            <p className={`text-[9px] font-bold ${darkMode ? 'text-amber-400' : 'text-amber-600'}`}>Pourcentages</p>
-                                            <p className={`font-black text-xl ${textClass}`}>{indemnites.filter(i => i.type === 'Pourcentage').length}</p>
-                                        </div>
-                                        <div className={`text-center p-3 rounded-xl ${darkMode ? 'bg-[#252525]' : 'bg-white/80'}`}>
-                                            <p className={`text-[9px] font-bold ${darkMode ? 'text-purple-400' : 'text-purple-600'}`}>Globales</p>
-                                            <p className={`font-black text-xl ${textClass}`}>{indemnites.filter(i => i.is_for_all).length}</p>
-                                        </div>
+                            <div 
+                                className={`relative p-4 rounded-xl border-2 transition-all cursor-pointer ${form.is_for_all ? 'border-indigo-500 bg-indigo-500/10' : borderClass} ${hoverClass}`}
+                                onClick={() => {
+                                    setForm({...form, is_for_all: !form.is_for_all, role_id: '', grade_id: '', echelle_id: '', echelon_id: ''});
+                                    setSelectedRole(null);
+                                    setSelectedGrade(null);
+                                    setSelectedEchelle(null);
+                                    setSelectedEchelon(null);
+                                }}
+                            >
+                                <div className="flex items-center gap-3">
+                                    <div className={`p-2 rounded-xl transition-all ${form.is_for_all ? 'bg-indigo-500 text-white' : darkMode ? 'bg-[#252525] text-gray-500' : 'bg-gray-100 text-gray-500'}`}>
+                                        <Globe size={18} />
                                     </div>
+                                    <div className="flex-1">
+                                        <p className={`font-semibold text-sm ${textClass}`}>Appliquer à tous les employés</p>
+                                        <p className={`text-xs ${textMutedClass}`}>L'indemnité sera attribuée à tous</p>
+                                    </div>
+                                    {form.is_for_all && <CheckCircle size={20} className="text-indigo-500" />}
+                                </div>
+                            </div>
+
+                            {!form.is_for_all && (
+                                <div className="space-y-4 animate-fadeIn">
+                                    <div>
+                                        <label className={`text-xs font-bold ${textMutedClass} mb-1.5 block flex items-center gap-1 uppercase tracking-wider`}>
+                                            <Users size={12}/> Rôle *
+                                        </label>
+                                        <select 
+                                            className={`w-full p-3 rounded-xl outline-none transition-all ${selectClass} border ${borderClass} ${textClass}`}
+                                            value={form.role_id}
+                                            onChange={(e) => handleRoleChange(e.target.value)}
+                                        >
+                                            <option value="">-- Choisir un rôle --</option>
+                                            {configData?.roles?.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                                        </select>
+                                    </div>
+
+                                    {selectedRole && selectedRole.grades?.length > 0 && (
+                                        <div className="animate-fadeIn">
+                                            <label className={`text-xs font-bold ${textMutedClass} mb-1.5 block flex items-center gap-1 uppercase tracking-wider`}>
+                                                <Award size={12}/> Grade (Optionnel)
+                                            </label>
+                                            <select 
+                                                className={`w-full p-3 rounded-xl outline-none transition-all ${selectClass} border ${borderClass} ${textClass}`}
+                                                value={form.grade_id}
+                                                onChange={(e) => handleGradeChange(e.target.value)}
+                                            >
+                                                <option value="">-- Tous les grades --</option>
+                                                {selectedRole.grades.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                                            </select>
+                                        </div>
+                                    )}
+
+                                    {selectedGrade && selectedGrade.echelles?.length > 0 && (
+                                        <div className="animate-fadeIn">
+                                            <label className={`text-xs font-bold ${textMutedClass} mb-1.5 block flex items-center gap-1 uppercase tracking-wider`}>
+                                                <Grid3x3 size={12}/> Échelle (Optionnel)
+                                            </label>
+                                            <select 
+                                                className={`w-full p-3 rounded-xl outline-none transition-all ${selectClass} border ${borderClass} ${textClass}`}
+                                                value={form.echelle_id}
+                                                onChange={(e) => handleEchelleChange(e.target.value)}
+                                            >
+                                                <option value="">-- Toutes les échelles --</option>
+                                                {selectedGrade.echelles.map(e => <option key={e.id} value={e.id}>Échelle {e.level}</option>)}
+                                            </select>
+                                        </div>
+                                    )}
+
+                                    {selectedEchelle && selectedEchelle.echelons?.length > 0 && (
+                                        <div className="animate-fadeIn">
+                                            <label className={`text-xs font-bold ${textMutedClass} mb-1.5 block flex items-center gap-1 uppercase tracking-wider`}>
+                                                <Hash size={12}/> Échelon (Optionnel)
+                                            </label>
+                                            <select 
+                                                className={`w-full p-3 rounded-xl outline-none transition-all ${selectClass} border ${borderClass} ${textClass}`}
+                                                value={form.echelon_id}
+                                                onChange={(e) => handleEchelonChange(e.target.value)}
+                                            >
+                                                <option value="">-- Tous les échelons --</option>
+                                                {selectedEchelle.echelons.map(e => (
+                                                    <option key={e.id} value={e.id}>E{e.order} (Indice: {e.index_val} | {e.salary.toLocaleString()} MAD)</option>
+                                                ))}
+                                            </select>
+                                            
+                                            {selectedEchelon && (
+                                                <div className={`mt-3 p-3 rounded-xl border ${darkMode ? 'bg-emerald-900/20 border-emerald-800' : 'bg-emerald-50 border-emerald-200'} animate-fadeIn`}>
+                                                    <div className="flex justify-between items-center">
+                                                        <div>
+                                                            <p className={`text-[9px] font-bold uppercase tracking-wider ${darkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>Salaire de base</p>
+                                                            <p className={`font-bold text-lg ${darkMode ? 'text-emerald-400' : 'text-emerald-700'}`}>{salaryValue.toLocaleString()} MAD</p>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <p className={`text-[9px] font-bold uppercase tracking-wider ${darkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>Indice</p>
+                                                            <p className={`font-bold text-lg ${darkMode ? 'text-emerald-400' : 'text-emerald-700'}`}>{indexValue}</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {selectedRole && selectedRole.grades?.length === 0 && (
+                                        <div className={`p-3 rounded-xl border ${darkMode ? 'bg-amber-900/20 border-amber-800' : 'bg-amber-50 border-amber-200'}`}>
+                                            <p className={`text-xs flex items-center gap-2 ${darkMode ? 'text-amber-400' : 'text-amber-700'}`}>
+                                                <AlertCircle size={12}/>
+                                                Aucun grade configuré pour ce rôle
+                                            </p>
+                                        </div>
+                                    )}
                                 </div>
                             )}
+
+                            <div className="flex gap-3 pt-2">
+                                <button 
+                                    onClick={handleSave}
+                                    disabled={loading}
+                                    className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold py-3 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                                >
+                                    {loading ? <Loader2 size={18} className="animate-spin"/> : <Plus size={18} />}
+                                    {loading ? "Enregistrement..." : "Enregistrer l'indemnité"}
+                                </button>
+                                <button 
+                                    onClick={resetForm}
+                                    className="px-6 bg-gray-500 hover:bg-gray-600 text-white font-semibold py-3 rounded-xl transition-all flex items-center justify-center gap-2"
+                                >
+                                    <X size={18} /> Réinitialiser
+                                </button>
+                            </div>
                         </div>
                     </div>
                 ) : (
@@ -731,32 +528,16 @@ const IndemniteManagement = () => {
 
             <style jsx>{`
                 @keyframes fadeIn {
-                    from {
-                        opacity: 0;
-                        transform: translateY(-8px);
-                    }
-                    to {
-                        opacity: 1;
-                        transform: translateY(0);
-                    }
+                    from { opacity: 0; transform: translateY(-8px); }
+                    to { opacity: 1; transform: translateY(0); }
                 }
-                .animate-fadeIn {
-                    animation: fadeIn 0.2s ease-out;
-                }
-                .custom-scrollbar::-webkit-scrollbar {
-                    width: 5px;
-                }
-                .custom-scrollbar::-webkit-scrollbar-track {
-                    background: ${darkMode ? '#2A2A2A' : '#E5E7EB'};
-                    border-radius: 10px;
-                }
-                .custom-scrollbar::-webkit-scrollbar-thumb {
-                    background: linear-gradient(135deg, #6366f1, #a855f7);
-                    border-radius: 10px;
-                }
+                .animate-fadeIn { animation: fadeIn 0.2s ease-out; }
+                .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+                .custom-scrollbar::-webkit-scrollbar-track { background: ${darkMode ? '#2A2A2A' : '#E5E7EB'}; border-radius: 10px; }
+                .custom-scrollbar::-webkit-scrollbar-thumb { background: linear-gradient(135deg, #6366f1, #a855f7); border-radius: 10px; }
             `}</style>
         </div>
     );
 };
 
-export default IndemniteManagement;
+export default GestionIndemnitee;

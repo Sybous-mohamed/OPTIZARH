@@ -2,36 +2,51 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Liste Employés</title>
+    <title>Liste des employés</title>
     <style>
-        body { font-family: sans-serif; font-size: 12px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        body { font-family: DeJaVu Sans, sans-serif; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
         th { background-color: #4B42C8; color: white; }
-        .header { text-align: center; margin-bottom: 30px; }
+        .header { text-align: center; margin-bottom: 20px; }
+        .footer { text-align: center; margin-top: 20px; font-size: 12px; }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>Liste des Employés</h1>
-        <p>Généré le: {{ date('d/m/Y H:i') }}</p>
+        <h2>Liste des employés - {{ $annee }}</h2>
+        <p>Généré le: {{ $date }}</p>
+        <p>Total: {{ $total }} employés</p>
     </div>
+    
     <table>
         <thead>
             <tr>
-                <th>Nom & Prénom</th>
+                <th>ID</th>
+                <th>Nom complet</th>
                 <th>Email</th>
-                <th>Poste</th>
                 <th>Département</th>
+                <th>Poste</th>
+                <th>Grade</th>
+                <th>Échelle</th>
+                <th>Échelon</th>
+                <th>Salaire</th>
+                <th>Statut</th>
             </tr>
         </thead>
         <tbody>
             @foreach($employees as $emp)
             <tr>
-                <td>{{ $emp['prenom'] }} {{ $emp['nom'] }}</td>
-                <td>{{ $emp['email'] }}</td>
-                <td>{{ $emp['poste'] ?? 'N/A' }}</td>
-                <td>{{ $emp['departement'] ?? 'N/A' }}</td>
+                <td>{{ $emp->id }}</td>
+                <td>{{ $emp->prenom }} {{ $emp->nom }}</td>
+                <td>{{ $emp->email }}</td>
+                <td>{{ $emp->departement ?? '-' }}</td>
+                <td>{{ $emp->poste ?? '-' }}</td>
+                <td>{{ $emp->grade ?? '-' }}</td>
+                <td>{{ $emp->echelle ?? '-' }}</td>
+                <td>{{ $emp->echelon ?? '-' }}</td>
+                <td>{{ number_format($emp->salaire ?? 0, 2) }} MAD</td>
+                <td>{{ $emp->statut }}</td>
             </tr>
             @endforeach
         </tbody>

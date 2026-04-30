@@ -9,23 +9,22 @@ return new class extends Migration
     /**
      * Run the migrations.
      */
-    public function up()
+    public function up(): void
     {
-        Schema::create('organismes', function (Blueprint $table) {
+        Schema::create('organisme', function (Blueprint $table) {
             $table->id();
-            $table->string('nom');       
-            $table->string('type');      
-            $table->string('rattachement')->nullable(); 
+            $table->string('nom'); // ex: CNSS
+            $table->integer('annee'); // ex: 2026
+            $table->boolean('is_favorite')->default(false);
             $table->timestamps();
         });
     }
-
 
     /**
      * Reverse the migrations.
      */
     public function down(): void
     {
-        Schema::dropIfExists('organismes');
+        Schema::dropIfExists('organisme');
     }
 };

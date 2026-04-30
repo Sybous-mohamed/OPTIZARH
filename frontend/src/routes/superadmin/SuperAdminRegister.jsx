@@ -152,7 +152,7 @@ const SuperAdminRegister = () => {
                         <div className="py-2"></div>
 
                         <button disabled={loading} type="submit"
-                            className="w-full bg-gradient-to-br from-[#4F46E5] via-[#30317c] to-[#8B5CF6] hover:shadow-[#4F46E5]/20 hover:shadow-2xl text-white font-bold p-4 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50">
+                            className="w-full bg-gradient-to-br from-[#4F46E5] via-[#30317c] to-[#8B5CF6] hover:shadow-[#4F46E5]/20 hover:shadow-2xl text-white font-bold p-4 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer">
                             {loading ? (
                                 <span className="flex items-center gap-2">
                                     <svg className="animate-spin h-5 w-5 text-white" viewBox="0 0 24 24">
