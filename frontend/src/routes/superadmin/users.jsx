@@ -356,7 +356,7 @@ export default function EmployeeManagement() {
 
     const handleEdit = (emp) => {
         if (!isYearEditable) {
-            showNotification(`⚠️ L'année ${selectedAnnee} est passée. Vous ne pouvez plus modifier les employés.`, "warning");
+            showNotification(` L'année ${selectedAnnee} est passée. Vous ne pouvez plus modifier les employés.`, "warning");
             return;
         }
         setFormData(emp);
@@ -385,10 +385,10 @@ export default function EmployeeManagement() {
 
     const handleDelete = async (id) => {
         if (!isYearEditable) {
-            showNotification(`⚠️ L'année ${selectedAnnee} est passée. Vous ne pouvez plus supprimer des employés.`, "warning");
+            showNotification(` L'année ${selectedAnnee} est passée. Vous ne pouvez plus supprimer des employés.`, "warning");
             return;
         }
-        if (window.confirm("⚠️ Êtes-vous sûr de vouloir supprimer cet employé ?")) {
+        if (window.confirm(" Êtes-vous sûr de vouloir supprimer cet employé ?")) {
             setLoading(true);
             try {
                 await axiosClient.delete(`/api/employees/${id}`);
@@ -469,7 +469,7 @@ export default function EmployeeManagement() {
         e.preventDefault();
         
         if (!isYearEditable) {
-            showNotification(`⚠️ L'année ${selectedAnnee} est passée. Vous ne pouvez plus ajouter/modifier des employés.`, "error");
+            showNotification(` L'année ${selectedAnnee} est passée. Vous ne pouvez plus ajouter/modifier des employés.`, "error");
             return;
         }
         
@@ -575,7 +575,7 @@ export default function EmployeeManagement() {
 
     const handleCotisationChange = (cotisationId) => {
         if (!isYearEditable) {
-            showNotification(`⚠️ L'année ${selectedAnnee} est passée. Vous ne pouvez plus modifier les données.`, "warning");
+            showNotification(` L'année ${selectedAnnee} est passée. Vous ne pouvez plus modifier les données.`, "warning");
             return;
         }
         const cotisation = cotisationsList.find(c => c.id === parseInt(cotisationId));
@@ -598,7 +598,7 @@ export default function EmployeeManagement() {
 
     const handleExportPDF = async () => {
         if (employeesList.length === 0) {
-            showNotification("⚠️ Aucun employé à exporter", "warning");
+            showNotification(" Aucun employé à exporter", "warning");
             return;
         }
         setLoading(true);

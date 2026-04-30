@@ -38,6 +38,9 @@ const GestionEtat = () => {
     const [isTyping, setIsTyping] = useState(false);
     const fetchTimeoutRef = useRef(null);
     const typingTimeoutRef = useRef(null);
+    const [isYearValid, setIsYearValid] = useState(true);
+    const currentYear = config.year;
+    const isValidYearRange = currentYear >= 1900 && currentYear <= 2200;
     
     useEffect(() => {
         const savedStarred = localStorage.getItem('starred_roles');
@@ -52,7 +55,6 @@ const GestionEtat = () => {
         fetchYearData();
     }, []);
 
-    // Fetch data with debounce
     useEffect(() => {
         if (isTyping) return;
         
@@ -64,7 +66,7 @@ const GestionEtat = () => {
             if (config.year && config.year !== '') {
                 fetchYearData();
             }
-        }, 500);
+        }, 1200);
         
         return () => {
             if (fetchTimeoutRef.current) {
@@ -98,13 +100,11 @@ const GestionEtat = () => {
             setLoading(false);
             return;
         }
-        
         const yearNumber = parseInt(config.year);
         if (isNaN(yearNumber)) {
             setLoading(false);
             return;
         }
-        
         setLoading(true);
         try {
             const response = await api.get(`/api/gestionEtat/get-by-year/${yearNumber}`);
@@ -185,7 +185,7 @@ const GestionEtat = () => {
 
     const toggleRoleStar = async (roleId, roleName) => {
         if (hasUnsavedChanges) {
-            showNotification("⚠️ Veuillez d'abord enregistrer vos modifications", "warning");
+            showNotification(" Veuillez d'abord enregistrer vos modifications", "error");
             return;
         }
         setLoading(true);
@@ -197,8 +197,6 @@ const GestionEtat = () => {
             localStorage.setItem('starred_roles', JSON.stringify(newStarred));
             
             showNotification(response.data.message, "success");
-            
-            // Recharger les données après toggle
             setTimeout(() => {
                 fetchYearData();
             }, 1000);
@@ -229,8 +227,8 @@ const GestionEtat = () => {
     const changeYear = async (amount) => {
         const newYear = parseInt(config.year) + amount;
         
-        if (newYear < 2000 || newYear > 2100) {
-            showNotification(`❌ Année ${newYear} invalide. Limite: 2000-2100`, "error");
+        if (newYear < 1900 || newYear > 2200) {
+            showNotification(`❌ Année ${newYear} invalide. Limite: 1900-2200`, "error");
             return;
         }
         
@@ -250,38 +248,59 @@ const GestionEtat = () => {
     };
     
     const addRole = () => {
-        const newRole = { id: Date.now(), name: '', grades: [] };
+        if (config.year < 1900 || config.year > 2200) {
+            showNotification(" Année invalide. Sélectionnez une année entre 1900 et 2200", "error");
+            return;
+        }
+        const newRole = { 
+            id: Date.now(), 
+            name: '', 
+            grades: [],
+            _isNew: true
+        };
         setConfig({ ...config, roles: [...config.roles, newRole] });
         setIsDataSaved(false);
         setHasUnsavedChanges(true);
         setSelectedRoleId(newRole.id);
-        showNotification("✨ Nouveau poste créé", "success");
+        showNotification("✨ Nouveau poste créé (non sauvegardé)", "success");
     };
 
     const addGrade = (rId) => {
+        const newGrade = { 
+            id: Date.now(), 
+            name: '', 
+            echelles: [],
+            _isNew: true
+        };
         setConfig({
             ...config,
             roles: config.roles.map(r => r.id === rId ? { 
-                ...r, grades: [...r.grades, { id: Date.now(), name: '', echelles: [] }] 
+                ...r, grades: [...r.grades, newGrade] 
             } : r)
         });
         setIsDataSaved(false);
         setHasUnsavedChanges(true);
-        showNotification("📊 Nouveau grade ajouté", "success");
+        showNotification("📊 Nouveau grade ajouté (non sauvegardé)", "success");
     };
 
     const addEchelle = (rId, gId) => {
+        const newEchelle = { 
+            id: Date.now(), 
+            level: '', 
+            echelons: [],
+            _isNew: true
+        };
         setConfig({
             ...config,
             roles: config.roles.map(r => r.id === rId ? {
                 ...r, grades: r.grades.map(g => g.id === gId ? { 
-                    ...g, echelles: [...g.echelles, { id: Date.now(), level: '', echelons: [] }] 
+                    ...g, echelles: [...g.echelles, newEchelle] 
                 } : g)
             } : r)
         });
         setIsDataSaved(false);
         setHasUnsavedChanges(true);
-        showNotification("📐 Nouvelle échelle créée", "success");
+        showNotification("📐 Nouvelle échelle créée (non sauvegardée)", "success");
     };
 
     const addEchelon = (rId, gId, eId) => {
@@ -293,12 +312,16 @@ const GestionEtat = () => {
                         if (e.id === eId) {
                             const nextOrder = e.echelons.length + 1;
                             const lastIndex = e.echelons[e.echelons.length - 1]?.index_val || 150;
+                            const newEchelon = {
+                                id: Date.now(), 
+                                order: nextOrder, 
+                                index_val: lastIndex + 15, 
+                                salary: 0,
+                                _isNew: true
+                            };
                             return { 
-                                ...e, echelons: [...e.echelons, { 
-                                    id: Date.now(), order: nextOrder, 
-                                    index_val: lastIndex + 15, 
-                                    salary: 0 
-                                }] 
+                                ...e, 
+                                echelons: [...e.echelons, newEchelon] 
                             };
                         }
                         return e;
@@ -308,14 +331,14 @@ const GestionEtat = () => {
         });
         setIsDataSaved(false);
         setHasUnsavedChanges(true);
-        showNotification("📈 Nouvel échelon ajouté", "success");
+        showNotification("📈 Nouvel échelon ajouté (non sauvegardé)", "success");
     };
 
 
     // ============ FONCTIONS DE SUPPRESSION ============
     const deleteRoleFromDB = async (roleId) => {
         if (hasUnsavedChanges) {
-            showNotification("⚠️ Veuillez d'abord enregistrer vos modifications", "error");
+            showNotification(" Veuillez d'abord enregistrer vos modifications", "error");
             return false;
         }
         
@@ -336,7 +359,7 @@ const GestionEtat = () => {
 
     const deleteGradeFromDB = async (gradeId, roleId) => {
         if (hasUnsavedChanges) {
-            showNotification("⚠️ Veuillez d'abord enregistrer vos modifications", "error");
+            showNotification(" Veuillez d'abord enregistrer vos modifications", "error");
             return false;
         }
         
@@ -362,7 +385,7 @@ const GestionEtat = () => {
 
     const deleteEchelleFromDB = async (echelleId, roleId, gradeId) => {
         if (hasUnsavedChanges) {
-            showNotification("⚠️ Veuillez d'abord enregistrer vos modifications", "error");
+            showNotification(" Veuillez d'abord enregistrer vos modifications", "error");
             return false;
         }
         
@@ -390,7 +413,7 @@ const GestionEtat = () => {
 
     const deleteEchelonFromDB = async (echelonId, roleId, gradeId, echelleId) => {
         if (hasUnsavedChanges) {
-            showNotification("⚠️ Veuillez d'abord enregistrer vos modifications", "error");
+            showNotification(" Veuillez d'abord enregistrer vos modifications", "error");
             return false;
         }
         
@@ -420,7 +443,7 @@ const GestionEtat = () => {
 
     const openDeleteModal = (title, message, action) => {
         if (hasUnsavedChanges) {
-            showNotification("⚠️ Veuillez d'abord enregistrer vos modifications", "error");
+            showNotification(" Veuillez d'abord enregistrer vos modifications", "error");
             return;
         }
         setConfirmConfig({
@@ -429,6 +452,58 @@ const GestionEtat = () => {
             message,
             onConfirm: action
         });
+    };
+
+    const deleteRoleLocal = (roleId) => {
+        setConfig({ ...config, roles: config.roles.filter(r => r.id !== roleId) });
+        setIsDataSaved(false);
+        setHasUnsavedChanges(true);
+        if (selectedRoleId === roleId) {
+            setSelectedRoleId(null);
+        }
+        showNotification("🗑️ Poste supprimé localement", "success");
+    };
+
+    const deleteGradeLocal = (gradeId, roleId) => {
+        setConfig({
+            ...config,
+            roles: config.roles.map(r => r.id === roleId ? {
+                ...r, grades: r.grades.filter(g => g.id !== gradeId)
+            } : r)
+        });
+        setIsDataSaved(false);
+        setHasUnsavedChanges(true);
+        showNotification("🗑️ Grade supprimé localement", "success");
+    };
+
+    const deleteEchelleLocal = (echelleId, roleId, gradeId) => {
+        setConfig({
+            ...config,
+            roles: config.roles.map(r => r.id === roleId ? {
+                ...r, grades: r.grades.map(g => g.id === gradeId ? {
+                    ...g, echelles: g.echelles.filter(e => e.id !== echelleId)
+                } : g)
+            } : r)
+        });
+        setIsDataSaved(false);
+        setHasUnsavedChanges(true);
+        showNotification("🗑️ Échelle supprimée localement", "success");
+    };
+
+    const deleteEchelonLocal = (echelonId, roleId, gradeId, echelleId) => {
+        setConfig({
+            ...config,
+            roles: config.roles.map(r => r.id === roleId ? {
+                ...r, grades: r.grades.map(g => g.id === gradeId ? {
+                    ...g, echelles: g.echelles.map(e => e.id === echelleId ? {
+                        ...e, echelons: e.echelons.filter(ec => ec.id !== echelonId)
+                    } : e)
+                } : g)
+            } : r)
+        });
+        setIsDataSaved(false);
+        setHasUnsavedChanges(true);
+        showNotification("🗑️ Échelon supprimé localement", "success");
     };
 
     const handleDeleteRole = (roleId) => {
@@ -480,12 +555,42 @@ const GestionEtat = () => {
     };
 
     const handleSave = async () => {
+        if (config.year < 1900 || config.year > 2200) {
+            showNotification(" Année invalide. Veuillez choisir une année entre 1900 et 2200", "error");
+            return;
+        }
         if (!isValidData()) {
             return;
         }
         setLoading(true);
         try {
-            await api.post('/api/gestionEtat/store', config);
+            const cleanConfig = {
+                ...config,
+                roles: config.roles.map(role => {
+                    const { _isNew: rIsNew, ...cleanRole } = role;
+                    return {
+                        ...cleanRole,
+                        grades: role.grades?.map(grade => {
+                            const { _isNew: gIsNew, ...cleanGrade } = grade;
+                            return {
+                                ...cleanGrade,
+                                echelles: grade.echelles?.map(echelle => {
+                                    const { _isNew: eIsNew, ...cleanEchelle } = echelle;
+                                    return {
+                                        ...cleanEchelle,
+                                        echelons: echelle.echelons?.map(echelon => {
+                                            const { _isNew: ecIsNew, ...cleanEchelon } = echelon;
+                                            return cleanEchelon;
+                                        })
+                                    };
+                                })
+                            };
+                        })
+                    };
+                })
+            };
+            
+            await api.post('/api/gestionEtat/store', cleanConfig);
             setIsDataSaved(true);
             setHasUnsavedChanges(false);
             showNotification(`✅ Configuration ${config.year} enregistrée avec succès!`, "success");
@@ -498,6 +603,10 @@ const GestionEtat = () => {
     };
 
     const exportToPDF = async () => {
+        if (config.year < 1900 || config.year > 2200) {
+            showNotification("Année invalide. Sélectionnez une année entre 1900 et 2200", "error");
+            return;
+        }
         setLoading(true);
         try {
             const response = await api.get(`/api/gestionEtat/export-pdf/${config.year}`, {
@@ -532,11 +641,6 @@ const GestionEtat = () => {
         { title: "MASSE SALARIALE", value: totalSalaryMass.toLocaleString(), icon: DollarSign, bgColor: darkMode ? "bg-red-500/10" : "bg-red-50", iconColor: "text-red-500" }
     ];
 
-    const toggleCompactView = () => {
-        setCompactView(!compactView);
-        localStorage.setItem('rh_compact_view', JSON.stringify(!compactView));
-    };
-
     const bgClass = darkMode ? 'bg-[#0D0D0D]' : 'bg-[#F5F7FA]';
     const cardClass = darkMode ? 'bg-[#1A1A1A] border-[#2A2A2A]' : 'bg-white border-gray-100';
     const textClass = darkMode ? 'text-gray-100' : 'text-gray-800';
@@ -546,7 +650,6 @@ const GestionEtat = () => {
     return (
         <div className={`min-h-screen transition-all duration-300 ${bgClass}`}>
             <div className="p-3 max-w-[1600px] mx-auto">
-
                 {/* Header Section */}
                 <div className="mb-8">
                     <div className="flex justify-between items-start mb-4">
@@ -561,12 +664,8 @@ const GestionEtat = () => {
                                 <p className={`text-xs ${textMutedClass}`}>Gestion des postes, grades, échelles et échelons</p>
                             </div>
                         </div>
-                        <div className="flex gap-2">
-                            <button onClick={toggleCompactView} className={`p-2 rounded-xl transition-all cursor-pointer ${darkMode ? 'bg-[#1A1A1A] border-[#2A2A2A] hover:bg-[#252525]' : 'bg-white border-gray-200 hover:bg-gray-50'} border shadow-sm`} title={compactView ? "Vue normale" : "Vue compacte"}>
-                                {compactView ? <Grid3x3 size={16} className={textClass}/> : <List size={16} className={textClass}/>}
-                            </button>
-                        </div>
                     </div>
+
                     {showStats && isDataSaved && !hasUnsavedChanges && (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
                             {statsCards.map((stat, idx) => (
@@ -590,14 +689,10 @@ const GestionEtat = () => {
                                 </div>
                                 <div>
                                     <p className={`text-sm font-medium ${darkMode ? 'text-yellow-400' : 'text-yellow-700'}`}>
-                                        {config.roles.length === 0 
-                                            ? "Commencez par créer un poste et remplir les données"
-                                            : "Modifications en attente de sauvegarde"}
+                                        {config.roles.length === 0 ? "Commencez par créer un poste et remplir les données": "Modifications en attente de sauvegarde"}
                                     </p>
                                     <p className={`text-[10px] ${textMutedClass}`}>
-                                        {config.roles.length === 0 
-                                            ? "Cliquez sur 'Nouveau Poste' pour commencer"
-                                            : "Les statistiques apparaîtront après la sauvegarde"}
+                                        {config.roles.length === 0 ? "Cliquez sur 'Nouveau Poste' pour commencer": "Les statistiques apparaîtront après la sauvegarde"}
                                     </p>
                                 </div>
                             </div>
@@ -605,13 +700,12 @@ const GestionEtat = () => {
                     )}
                 </div>
 
-
                 {/* Controls Bar */}
                 <div className="flex flex-wrap justify-between items-center gap-3 mb-6">
                     <div className="flex flex-wrap gap-2">
                         <div className={`flex items-center gap-2 ${darkMode ? 'bg-[#1A1A1A]' : 'bg-white'} p-1.5 rounded-xl border ${borderClass} shadow-sm`}>
                             <span className={`pl-2 text-[10px] font-bold uppercase ${textMutedClass}`}>Année</span>
-                           <input 
+                            <input 
                                 type="number" 
                                 value={config.year}
                                 className={`w-16 font-black text-center outline-none text-sm ${darkMode ? 'bg-transparent text-indigo-400' : 'bg-transparent text-indigo-600'}`} 
@@ -630,11 +724,11 @@ const GestionEtat = () => {
                                     }
                                     
                                     let newYear = parseInt(rawValue);
-                                    if (newYear < 2000) {
-                                        showNotification("⚠️ L'année ne peut pas être inférieure à 2000", "warning");
+                                    if (newYear < 1900) {
+                                        showNotification(" L'année ne peut pas être inférieure à 1900", "error");
                                         setConfig({...config, year: newYear});
-                                    } else if (newYear > 2100) {
-                                        showNotification("⚠️ L'année ne peut pas être supérieure à 2100", "warning");
+                                    } else if (newYear > 2200) {
+                                        showNotification(" L'année ne peut pas être supérieure à 2200", "error");
                                         setConfig({...config, year: newYear});
                                     } else {
                                         setConfig({...config, year: newYear});
@@ -656,25 +750,23 @@ const GestionEtat = () => {
                                 }}
                                 onBlur={() => {
                                     setIsTyping(false);
-                                }}
-                            />
+                                }}/>
                             <div className="flex flex-col border-l pl-1 ${borderClass}">
                                 <button onClick={() => changeYear(1)} className={`p-0.5 hover:text-indigo-500 transition-colors`}><ChevronUp size={10}/></button>
                                 <button onClick={() => changeYear(-1)} className={`p-0.5 hover:text-indigo-500 transition-colors`}><ChevronDown size={10}/></button>
                             </div>
                         </div>
-                        
-
                         <button onClick={addRole} className="flex items-center cursor-pointer gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-1.5 rounded-xl font-bold hover:from-indigo-700 hover:to-purple-700 transition-all transform hover:scale-105 text-[11px] shadow-lg shadow-indigo-500/25">
                             <Plus size={14} /> NOUVEAU POSTE
                         </button>
+
                         <button onClick={exportToPDF} 
                             disabled={loading || config.roles.length === 0}
                             className="flex items-center gap-2 bg-gradient-to-r from-red-600 cursor-pointer to-rose-600 text-white px-4 py-1.5 rounded-xl font-bold hover:from-red-700 hover:to-rose-700 transition-all text-[11px] shadow-lg shadow-red-500/25 disabled:opacity-50">
                             <FileText size={14} /> EXPORT PDF
                         </button>
                     </div>
-                    <button onClick={handleSave} disabled={loading || !hasUnsavedChanges} className={`px-5 py-1.5 rounded-xl font-bold shadow-lg flex items-center gap-2 text-[11px] transition-all disabled:opacity-50 ${!hasUnsavedChanges ? 'bg-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700'} text-white`}>
+                    <button onClick={handleSave} disabled={loading || !hasUnsavedChanges} className={` cursor-pointer px-5 py-1.5 rounded-xl font-bold shadow-lg flex items-center gap-2 text-[11px] transition-all disabled:opacity-50 ${!hasUnsavedChanges ? 'bg-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700'} text-white`}>
                         {loading ? <Loader size={14} className="animate-spin"/> : hasUnsavedChanges ? <Sparkles size={14}/> : <Save size={14}/>}
                         {!hasUnsavedChanges ? "SAUVEGARDÉ" : `SAUVEGARDER ${config.year}`}
                     </button>
@@ -690,8 +782,7 @@ const GestionEtat = () => {
                                         <div className={`p-1 rounded-lg ${darkMode ? 'bg-indigo-500/20' : 'bg-indigo-100'}`}>
                                             <Briefcase size={12} className="text-indigo-500"/>
                                         </div>
-                                        <input 
-                                            className={`font-bold outline-none text-sm focus:border-b-2 border-indigo-400 ${darkMode ? 'bg-transparent text-white' : 'bg-transparent text-gray-800'} w-full`}
+                                        <input className={`font-bold outline-none text-sm focus:border-b-2 border-indigo-400 ${darkMode ? 'bg-transparent text-white' : 'bg-transparent text-gray-800'} w-full`}
                                             value={role.name}
                                             onChange={(e) => {
                                                 const newRoles = [...config.roles];
@@ -700,36 +791,44 @@ const GestionEtat = () => {
                                                 setIsDataSaved(false);
                                                 setHasUnsavedChanges(true);
                                             }}
-                                            placeholder="Nom du Poste..."
-                                        />
+                                            placeholder="Nom du Poste..."/>
                                     </div>
                                     <div className={`text-[9px] ${textMutedClass}`}>
                                         {role.grades.length} grade{role.grades.length > 1 ? 's' : ''}
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <button 
-                                        onClick={() => toggleRoleStar(role.id, role.name)}
+                                    <button onClick={() => toggleRoleStar(role.id, role.name)}
                                         disabled={hasUnsavedChanges || loading}
-                                        className={`p-1.5 rounded-lg transition-all ${hasUnsavedChanges ? 'text-gray-500 cursor-not-allowed' : roleStarred[role.id] ? 'text-yellow-500' : 'text-gray-400 hover:text-yellow-500'}`}
-                                        title={roleStarred[role.id] ? "Poste disponible dans toutes les années" : "Copier ce poste vers toutes les années"}
-                                    >
+                                        className={`cursor-pointer p-1.5 rounded-lg transition-all ${hasUnsavedChanges ? 'text-gray-500 cursor-not-allowed' : roleStarred[role.id] ? 'text-yellow-500' : 'text-gray-400 hover:text-yellow-500'}`}
+                                        title={roleStarred[role.id] ? "Poste disponible dans toutes les années" : "Copier ce poste vers toutes les années"}>
                                         <Star size={14} fill={roleStarred[role.id] ? "currentColor" : "none"} />
                                     </button>
                                     <button onClick={() => setSelectedRoleId(selectedRoleId === role.id ? null : role.id)}
-                                        className={`p-1.5 rounded-lg transition-all ${darkMode ? 'hover:bg-[#333]' : 'hover:bg-gray-100'}`}>
-                                        {selectedRoleId === role.id ? <EyeOff size={14} className={textMutedClass}/> : <Eye size={14} className={textMutedClass}/>}
+                                        className={` cursor-pointer p-1.5 rounded-lg transition-all ${darkMode ? 'hover:bg-[#333]' : 'hover:bg-gray-100'}`}
+                                        title={selectedRoleId === role.id ? "Masquer les détails" : "Afficher les détails"}>
+                                        {selectedRoleId === role.id ? 
+                                            <EyeOff size={14} className={textMutedClass}/> : 
+                                            <Eye size={14} className={textMutedClass}/>
+                                        }
                                     </button>
-                                    <button onClick={() => handleDeleteRole(role.id)} 
-                                        disabled={isDeleting('role', role.id) || hasUnsavedChanges}
-                                        className={`p-1.5 rounded-lg transition-all ${hasUnsavedChanges ? 'text-gray-500 cursor-not-allowed' : 'text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10'}`}
-                                        title={hasUnsavedChanges ? "Sauvegardez d'abord" : "Supprimer"}>
+                                    <button 
+                                        onClick={() => {
+                                            if (role._isNew) {
+                                                deleteRoleLocal(role.id);
+                                            } else {
+                                                handleDeleteRole(role.id);
+                                            }
+                                        }} 
+                                        disabled={isDeleting('role', role.id) || (hasUnsavedChanges && !role._isNew)}
+                                        className={`cursor-pointer p-1.5 rounded-lg transition-all ${(hasUnsavedChanges && !role._isNew) ? 'text-gray-500 cursor-not-allowed' : 'text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10'}`}
+                                        title={(hasUnsavedChanges && !role._isNew) ? "Sauvegardez d'abord" : "Supprimer"}>
                                         {isDeleting('role', role.id) ? <Loader size={14} className="animate-spin"/> : <Trash2 size={14}/>}
                                     </button>
                                 </div>
                             </div>
 
-                            {(selectedRoleId === null || selectedRoleId === role.id) && (
+                            {selectedRoleId == role.id && (
                                 <div className="p-5 space-y-4">
                                     {role.grades.map((grade, gIdx) => (
                                         <div key={grade.id} className={`border rounded-xl p-4 transition-all hover:shadow-md ${borderClass} ${darkMode ? 'bg-[#1A1A1A]' : 'bg-white'}`}>
@@ -753,14 +852,20 @@ const GestionEtat = () => {
                                                 </div>
                                                 <div className="flex gap-1.5">
                                                     <button onClick={() => addEchelle(role.id, grade.id)} 
-                                                        className="text-[10px] bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-400 px-3 py-1 rounded-lg hover:bg-indigo-200 dark:hover:bg-indigo-900 font-medium transition-all">
+                                                        className=" cursor-pointer text-[10px] bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-400 px-3 py-1 rounded-lg hover:bg-indigo-200 dark:hover:bg-indigo-900 font-medium transition-all">
                                                         + Échelle
                                                     </button>
                                                     <button 
-                                                        onClick={() => handleDeleteGrade(grade.id, role.id)} 
-                                                        disabled={isDeleting('grade', grade.id) || hasUnsavedChanges}
-                                                        className={`p-1 rounded-lg transition-all ${hasUnsavedChanges ? 'text-gray-500 cursor-not-allowed' : 'text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10'}`}
-                                                        title={hasUnsavedChanges ? "Sauvegardez d'abord" : "Supprimer"}>
+                                                        onClick={() => {
+                                                            if (grade._isNew) {
+                                                                deleteGradeLocal(grade.id, role.id);
+                                                            } else {
+                                                                handleDeleteGrade(grade.id, role.id);
+                                                            }
+                                                        }} 
+                                                        disabled={isDeleting('grade', grade.id) || (hasUnsavedChanges && !grade._isNew)}
+                                                        className={`cursor-pointer p-1 rounded-lg transition-all ${(hasUnsavedChanges && !grade._isNew) ? 'text-gray-500 cursor-not-allowed' : 'text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10'}`}
+                                                        title={(hasUnsavedChanges && !grade._isNew) ? "Sauvegardez d'abord" : "Supprimer"}>
                                                         {isDeleting('grade', grade.id) ? <Loader size={12} className="animate-spin"/> : <Trash2 size={12}/>}
                                                     </button>
                                                 </div>
@@ -787,15 +892,20 @@ const GestionEtat = () => {
                                                             </div>
                                                             <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                                                                 <button onClick={() => addEchelon(role.id, grade.id, ech.id)} 
-                                                                    className="text-[9px] text-emerald-600 dark:text-emerald-400 font-medium hover:underline px-1.5">
+                                                                    className=" cursor-pointer  text-[9px] text-emerald-600 dark:text-emerald-400 font-medium hover:underline px-1.5">
                                                                     + Échelon
                                                                 </button>
                                                                 <button 
-                                                                    onClick={() => handleDeleteEchelle(ech.id, role.id, grade.id)} 
-                                                                    disabled={isDeleting('echelle', ech.id) || hasUnsavedChanges}
-                                                                    className={`p-0.5 rounded transition-all ${hasUnsavedChanges ? 'text-gray-500 cursor-not-allowed' : 'text-red-400 hover:text-red-600'}`}
-                                                                    title={hasUnsavedChanges ? "Sauvegardez d'abord" : "Supprimer"}
-                                                                >
+                                                                    onClick={() => {
+                                                                        if (ech._isNew) {
+                                                                            deleteEchelleLocal(ech.id, role.id, grade.id);
+                                                                        } else {
+                                                                            handleDeleteEchelle(ech.id, role.id, grade.id);
+                                                                        }
+                                                                    }} 
+                                                                    disabled={isDeleting('echelle', ech.id) || (hasUnsavedChanges && !ech._isNew)}
+                                                                    className={`cursor-pointer p-0.5 rounded transition-all ${(hasUnsavedChanges && !ech._isNew) ? 'text-gray-500 cursor-not-allowed' : 'text-red-400 hover:text-red-600'}`}
+                                                                    title={(hasUnsavedChanges && !ech._isNew) ? "Sauvegardez d'abord" : "Supprimer"}>
                                                                     {isDeleting('echelle', ech.id) ? <Loader size={9} className="animate-spin"/> : <Trash2 size={10}/>}
                                                                 </button>
                                                             </div>
@@ -838,15 +948,21 @@ const GestionEtat = () => {
                                                                     <span className={`text-[8px] ${textMutedClass}`}>MAD</span>
                                                                     <button 
                                                                         onClick={() => duplicateEchelon(rIdx, gIdx, eIdx, ecIdx)}
-                                                                        className="p-0.5 text-indigo-400 hover:text-indigo-600 transition-all"
+                                                                        className="p-0.5 text-indigo-400 hover:text-indigo-600 transition-all cursor-pointer "
                                                                         title="Dupliquer">
                                                                         {copiedIndex === ecIdx ? <Check size={9}/> : <Copy size={9}/>}
                                                                     </button>
                                                                     <button 
-                                                                        onClick={() => handleDeleteEchelon(ecl.id, role.id, grade.id, ech.id)}
-                                                                        disabled={isDeleting('echelon', ecl.id) || hasUnsavedChanges}
-                                                                        className={`p-0.5 rounded transition-all ${hasUnsavedChanges ? 'text-gray-500 cursor-not-allowed' : 'text-red-400 hover:text-red-600'}`}
-                                                                        title={hasUnsavedChanges ? "Sauvegardez d'abord" : "Supprimer"}>
+                                                                        onClick={() => {
+                                                                            if (ecl._isNew) {
+                                                                                deleteEchelonLocal(ecl.id, role.id, grade.id, ech.id);
+                                                                            } else {
+                                                                                handleDeleteEchelon(ecl.id, role.id, grade.id, ech.id);
+                                                                            }
+                                                                        }} 
+                                                                        disabled={isDeleting('echelon', ecl.id) || (hasUnsavedChanges && !ecl._isNew)}
+                                                                        className={`cursor-pointer p-0.5 rounded transition-all ${(hasUnsavedChanges && !ecl._isNew) ? 'text-gray-500 cursor-not-allowed' : 'text-red-400 hover:text-red-600'}`}
+                                                                        title={(hasUnsavedChanges && !ecl._isNew) ? "Sauvegardez d'abord" : "Supprimer"}>
                                                                         {isDeleting('echelon', ecl.id) ? <Loader size={8} className="animate-spin"/> : <Trash2 size={9}/>}
                                                                     </button>
                                                                 </div>
@@ -863,7 +979,7 @@ const GestionEtat = () => {
                                         </div>
                                     ))}
                                     <button onClick={() => addGrade(role.id)} 
-                                        className="text-[10px] text-indigo-600 dark:text-indigo-400 font-medium hover:underline px-2 py-1 transition-all flex items-center gap-1">
+                                        className=" cursor-pointer text-[10px] text-indigo-600 dark:text-indigo-400 font-medium hover:underline px-2 py-1 transition-all flex items-center gap-1">
                                         <Plus size={10}/> Ajouter un grade
                                     </button>
                                 </div>

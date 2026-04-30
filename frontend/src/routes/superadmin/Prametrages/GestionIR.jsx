@@ -89,7 +89,7 @@ const GestionIR = () => {
     // Supprimer une année
     const handleDeleteYear = async () => {
         if (!annee) return;
-        if (window.confirm(`⚠️ Supprimer la configuration IR pour l'année ${annee} ?`)) {
+        if (window.confirm(` Supprimer la configuration IR pour l'année ${annee} ?`)) {
             try {
                 setLoading(true);
                 await api.delete(`/api/ir/settings/${annee}`);

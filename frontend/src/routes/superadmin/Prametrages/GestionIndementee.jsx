@@ -183,19 +183,19 @@ const GestionIndemnitee = () => {
 
     const handleSave = async () => {
         if (!form.libelle || !form.valeur) {
-            showNotification("⚠️ Veuillez remplir le libellé et la valeur", "error");
+            showNotification(" Veuillez remplir le libellé et la valeur", "error");
             return;
         }
 
         if (!form.is_for_all && !form.role_id) {
-            showNotification("⚠️ Veuillez sélectionner un rôle ou activer 'Pour tous'", "error");
+            showNotification(" Veuillez sélectionner un rôle ou activer 'Pour tous'", "error");
             return;
         }
 
         if (form.type === 'Pourcentage') {
             const valeur = parseFloat(form.valeur);
             if (isNaN(valeur) || valeur <= 0 || valeur > 100) {
-                showNotification("⚠️ Le pourcentage doit être entre 1% et 100%", "error");
+                showNotification(" Le pourcentage doit être entre 1% et 100%", "error");
                 return;
             }
         }
@@ -203,7 +203,7 @@ const GestionIndemnitee = () => {
         if (form.type === 'Fixe') {
             const valeur = parseFloat(form.valeur);
             if (isNaN(valeur) || valeur <= 0) {
-                showNotification("⚠️ Veuillez entrer un montant valide (supérieur à 0 MAD)", "error");
+                showNotification(" Veuillez entrer un montant valide (supérieur à 0 MAD)", "error");
                 return;
             }
         }
@@ -243,19 +243,19 @@ const GestionIndemnitee = () => {
         
         if (form.type === 'Pourcentage') {
             if (numValue < 0) {
-                showNotification("⚠️ Le pourcentage ne peut pas être négatif", "warning");
+                showNotification(" Le pourcentage ne peut pas être négatif", "warning");
                 setForm({...form, valeur: 0});
                 return;
             }
             if (numValue > 100) {
-                showNotification("⚠️ Le pourcentage ne peut pas dépasser 100%", "warning");
+                showNotification(" Le pourcentage ne peut pas dépasser 100%", "warning");
                 setForm({...form, valeur: 100});
                 return;
             }
         }
         
         if (form.type === 'Fixe' && numValue < 0) {
-            showNotification("⚠️ Le montant ne peut pas être négatif", "warning");
+            showNotification(" Le montant ne peut pas être négatif", "warning");
             setForm({...form, valeur: 0});
             return;
         }
@@ -368,7 +368,7 @@ const GestionIndemnitee = () => {
                                     />
                                     {form.type === 'Pourcentage' && form.valeur > 0 && (
                                         <p className={`text-[9px] mt-1 ${form.valeur > 100 ? 'text-red-500' : 'text-green-500'}`}>
-                                            {form.valeur > 100 ? '⚠️ Le pourcentage ne peut pas dépasser 100%' : '✓ Pourcentage valide (0-100%)'}
+                                            {form.valeur > 100 ? ' Le pourcentage ne peut pas dépasser 100%' : '✓ Pourcentage valide (0-100%)'}
                                         </p>
                                     )}
                                 </div>

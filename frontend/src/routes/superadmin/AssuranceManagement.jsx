@@ -96,7 +96,7 @@ export default function AssuranceManagement() {
 
     // Supprimer une assurance
     const deleteAssurance = async (id, isNew) => {
-        if (!isNew && window.confirm("⚠️ Supprimer cette assurance ?")) {
+        if (!isNew && window.confirm(" Supprimer cette assurance ?")) {
             setLoading(true);
             try {
                 await axiosClient.delete(`/api/assurances/assurance/${id}`);
@@ -141,7 +141,7 @@ export default function AssuranceManagement() {
 
     // Supprimer une tranche
     const deleteTranche = async (assuranceId, trancheId, isNew) => {
-        if (!isNew && window.confirm("⚠️ Supprimer cette tranche ?")) {
+        if (!isNew && window.confirm(" Supprimer cette tranche ?")) {
             setLoading(true);
             try {
                 await axiosClient.delete(`/api/assurances/tranche/${trancheId}`);

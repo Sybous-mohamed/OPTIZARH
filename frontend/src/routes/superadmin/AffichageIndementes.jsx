@@ -155,7 +155,7 @@ const AffichageIndemnitee = () => {
                                 </h2>
                                 <p className={`text-sm ${textMutedClass} mt-1`}>Liste des primes et indemnités configurées</p>
                                 {years.length === 0 && !loading && (
-                                    <p className={`text-xs text-yellow-500 mt-1`}>⚠️ Aucune indemnité configurée</p>
+                                    <p className={`text-xs text-yellow-500 mt-1`}> Aucune indemnité configurée</p>
                                 )}
                             </div>
                         </div>
