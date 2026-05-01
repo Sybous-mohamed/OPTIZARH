@@ -69,9 +69,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/email/verification-notification', [AuthController::class, 'sendVerificationEmail'])
         ->middleware(['throttle:6,1'])
         ->name('verification.send');
-
-    Route::middleware(['verified'])->group(function () {
-        Route::middleware('role:superadmin')->group(function () {
+    Route::middleware('role:superadmin')->group(function () {
 
             Route::prefix('employees')->group(function () {
                 Route::get('/annees', [EmployeeController::class, 'getAnnees'])->name('employees.annees');
@@ -202,7 +200,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
 
 
-        });
+    });
+
+    Route::middleware(['verified'])->group(function () {
+        
         // Role: Admin
         Route::middleware('role:admin')->group(function () {});
         // Role: RH
