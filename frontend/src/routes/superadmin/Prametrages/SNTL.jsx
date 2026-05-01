@@ -226,6 +226,7 @@ const GestionSNTL = () => {
       if (item.type_montant === 'pourcentage' && (item.valeur < 0 || item.valeur > 100)) {
         showNotification(`Le pourcentage doit être compris entre 0 et 100 pour "${item.label}"`, "error");
         return;
+        
       }
 
       if (item.categorie_cible === 'cadres') {
