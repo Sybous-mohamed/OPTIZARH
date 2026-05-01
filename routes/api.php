@@ -45,9 +45,9 @@ Route::post('/register', [AuthController::class, 'register']);
 Route::post('/forgot-password', [PasswordResetLinkController::class, 'store'])->name('password.email');
 Route::post('/reset-password', [NewPasswordController::class, 'store'])->name('password.store');
 
-Route::get('/verify-email/{id}/{hash}', VerifyEmailController::class)
-    ->middleware(['signed', 'throttle:6,1'])
-    ->name('verification.verify');
+// Route::get('/verify-email/{id}/{hash}', VerifyEmailController::class)
+//     ->middleware(['signed', 'throttle:6,1'])
+//     ->name('verification.verify');
 
 /*
 |--------------------------------------------------------------------------
@@ -66,9 +66,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/auth/user-status', [AuthController::class, 'userStatus']);
 
     // Verification Notification
-    Route::post('/email/verification-notification', [AuthController::class, 'sendVerificationEmail'])
-        ->middleware(['throttle:6,1'])
-        ->name('verification.send');
+    // Route::post('/email/verification-notification', [AuthController::class, 'sendVerificationEmail'])
+        // ->middleware(['throttle:6,1'])
+        // ->name('verification.send');
+
     Route::middleware('role:superadmin')->group(function () {
 
             Route::prefix('employees')->group(function () {
@@ -200,7 +201,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
 
 
-    });
+        });
 
     Route::middleware(['verified'])->group(function () {
         
