@@ -10,7 +10,7 @@ import {
   Gift,
   TrendingUp,
   Car ,
-  Truck
+  Truck,PiggyBank
 } from 'lucide-react';
 import { useTheme } from '../../../context/ThemeContext';
 
@@ -40,7 +40,7 @@ const Parmetrages = () => {
             id: 3,
             title: "Cotisations",
             desc: "Paramétrage des taux de cotisations sociales et mutuelles.",
-            icon: <CreditCard className="w-8 h-8" />,
+            icon: <PiggyBank className="w-8 h-8" />,
             path: "GestionCotisation",
             color: "blue"
         },
@@ -48,7 +48,7 @@ const Parmetrages = () => {
             id: 4,
             title: "RCAR",
             desc: "Gestion de la retraite collective et affiliation des agents.",
-            icon: <Car className="w-8 h-8" />,
+            icon: <CreditCard className="w-8 h-8" />,
             path: "GestionRCAR",
             color: "purple"
         },
@@ -65,7 +65,7 @@ const Parmetrages = () => {
             title: "Crédits",
             desc: "Gestion des crédits et facilités pour les employés.",
             icon: <TrendingUp className="w-8 h-8" />,
-            path: "Credit",
+            path: "GestionCredit",
             color: "red"
         },
         {
@@ -73,7 +73,7 @@ const Parmetrages = () => {
             title: "SNTL",
             desc: "Gestion des agents SNTL et suivi des missions.",
             icon: <Truck className="w-8 h-8" />,
-            path: "SNTL",
+            path: "GestionSNTL",
             color: "emerald"
         }
     ];

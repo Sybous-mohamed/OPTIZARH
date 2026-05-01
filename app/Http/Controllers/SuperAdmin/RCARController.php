@@ -129,4 +129,15 @@ class RcarController extends Controller
         RcarDetail::destroy($id);
         return response()->json(['message' => 'Ligne supprimée']);
     }
+public function getYearsWithData()
+{
+    $yearsWithData = DB::table('rcar_types')
+        ->join('salary_years', 'rcar_types.salary_year_id', '=', 'salary_years.id')
+        ->select('salary_years.id', 'salary_years.year')
+        ->distinct()
+        ->orderBy('salary_years.year', 'desc')
+        ->get();
+    
+    return response()->json($yearsWithData);
+}
 }

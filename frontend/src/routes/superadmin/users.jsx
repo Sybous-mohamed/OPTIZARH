@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
     Save, Trash2, Edit2, Search, Download, UserPlus, 
     Briefcase, Star, Loader, AlertCircle, 
-    Calendar, Mail, Phone, Users, Filter, Plus, X, Lock,
+    Calendar, Mail, Phone, Users, Filter, Plus, X, Lock,User,
     ChevronDown, Eye, EyeOff, TrendingUp, DollarSign, Percent, Shield
 } from 'lucide-react';
 import axiosClient from "../../lib/apis/axiosConfig";
@@ -563,7 +563,7 @@ export default function EmployeeManagement() {
     // Fetch cotisations
     const fetchCotisations = async () => {
         try {
-            const res = await axiosClient.get('/api/get-cotisations', {
+            const res = await axiosClient.get('/api/cotisations', {
                 params: { year: selectedAnnee }
             });
             setCotisationsList(res.data || []);
@@ -898,7 +898,14 @@ export default function EmployeeManagement() {
                         </div>
                         
                         <form onSubmit={handleSubmit}>
-                            {/* Infos personnelles */}
+                            <div className="mb-3">
+                            <h3 className={`text-sm font-semibold flex items-center gap-2 ${textClass}`}>
+                                <div className="w-1 h-5 bg-emerald-500 rounded-full"></div>
+                                <User size={16} className="text-emerald-500" />
+                                Information Personnelle
+                            </h3>
+                            <div className="h-px bg-gradient-to-r from-emerald-500 to-transparent mt-2"></div>
+                            </div>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                                 <div>
                                     <label className={`text-xs font-medium ${textMutedClass} mb-1 block`}>Prénom *</label>
@@ -941,9 +948,9 @@ export default function EmployeeManagement() {
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                                 <div>
-                                    <label className={`text-xs font-medium ${textMutedClass} mb-1 block`}>👨‍👩‍👧 Situation familiale</label>
+                                    <label className={`text-xs font-medium ${textMutedClass} mb-1 block`}>Situation familiale</label>
                                     <select name="situation_familiale" value={formData.situation_familiale} onChange={handleChange} className={inputClass}>
                                         <option value="">Sélectionner</option>
                                         <option value="Célibataire">Célibataire</option>
@@ -953,15 +960,12 @@ export default function EmployeeManagement() {
                                     </select>
                                 </div>
                                 <div>
-                                    <label className={`text-xs font-medium ${textMutedClass} mb-1 block`}>👶 Nombre d'enfants</label>
+                                    <label className={`text-xs font-medium ${textMutedClass} mb-1 block`}>Nombre d'enfants</label>
                                     <input type="number" name="nombre_enfants" value={formData.nombre_enfants} onChange={handleChange} 
                                         className={errors.nombre_enfants ? inputErrorClass : inputClass} min="0" max="20" step="1"
                                         placeholder="0" />
                                     {errors.nombre_enfants && <p className="text-red-500 text-xs mt-1">{errors.nombre_enfants}</p>}
                                 </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                                 <div>
                                     <label className={`text-xs font-medium ${textMutedClass} mb-1 block`}>Statut</label>
                                     <select name="statut" value={formData.statut} onChange={handleChange} className={inputClass}>
@@ -970,71 +974,18 @@ export default function EmployeeManagement() {
                                         <option value="DÉPART">Départ</option>
                                     </select>
                                 </div>
-                                <div>
-                                    <label className={`text-xs font-medium ${textMutedClass} mb-1 block`}>Type contrat</label>
-                                    <select name="type_contrat" value={formData.type_contrat} onChange={handleChange} className={inputClass}>
-                                        <option value="">Sélectionner</option>
-                                        <option value="CDI">CDI</option>
-                                        <option value="CDD">CDD</option>
-                                        <option value="Stage">Stage</option>
-                                        <option value="Freelance">Freelance</option>
-                                    </select>
-                                </div>
                             </div>
 
-                            {/* Cotisations */}
-                            <div className="border-t pt-4 mb-4 dark:border-[#2A2A2A]">
-                                <h3 className={`text-sm font-semibold mb-3 flex items-center gap-2 ${textClass}`}>
-                                    <Briefcase size={16} className="text-purple-500" />
-                                    Cotisations
-                                </h3>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label className={`text-xs font-medium ${textMutedClass} mb-1 block`}>🏢 Organisme</label>
-                                        <select value={formData.cotisation_id || ""} onChange={(e) => handleCotisationChange(e.target.value)} className={inputClass}>
-                                            <option value="">-- Sélectionner un organisme --</option>
-                                            {cotisationsList.map(org => (
-                                                <option key={org.id} value={org.id}>{org.name} {org.is_favorite && '⭐'}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    {selectedCotisation && (
-                                        <div>
-                                            <label className={`text-xs font-medium ${textMutedClass} mb-1 block`}>📋 Rubriques</label>
-                                            <select value={formData.cotisation_rubrique_id || ""} onChange={(e) => {
-                                                const rubrique = selectedCotisation.rubriques?.find(r => r.id === parseInt(e.target.value));
-                                                setFormData({
-                                                    ...formData,
-                                                    cotisation_rubrique_id: rubrique?.id,
-                                                    cotisation_type: rubrique?.type,
-                                                    cotisation_label: rubrique?.label,
-                                                    cotisation_taux: rubrique?.taux
-                                                });
-                                            }} className={inputClass}>
-                                                <option value="">-- Sélectionner une rubrique --</option>
-                                                {selectedCotisation.rubriques?.map(rub => (
-                                                    <option key={rub.id} value={rub.id}>{rub.label} - {rub.type} ({rub.taux}%)</option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                    )}
-                                </div>
-                                {formData.cotisation_type && (
-                                    <div className="mt-3 p-3 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 rounded-lg">
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-sm font-medium">📌 {formData.cotisation_type}</span>
-                                            <span className="text-sm text-purple-600 dark:text-purple-400">Taux: {formData.cotisation_taux}%</span>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
 
-                            {/* Classification salariale */}
-                            <div className="border-t pt-4 mb-4 dark:border-[#2A2A2A]">
-                                <h3 className={`text-sm font-semibold mb-3 flex items-center gap-2 ${textClass}`}>
-                                    <Star size={16} className="text-yellow-500" />
-                                    Classification salariale
+                            <div className="pt-4 mb-4 dark:border-[#2A2A2A]">
+                                <div className="mb-3">
+                                <h3 className={`text-sm font-semibold flex items-center gap-2 ${textClass}`}>
+                                    <div className="w-1 h-5 bg-indigo-500 rounded-full"></div>
+                                    <Briefcase size={16} className="text-indigo-500" />
+                                    Information Professionnelle
                                 </h3>
+                                <div className="h-px bg-gradient-to-r from-indigo-500 to-transparent mt-2"></div>
+                                </div>
                                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
                                     <div>
                                         <label className={`text-xs font-medium ${textMutedClass} mb-1 block`}>Poste *</label>
@@ -1081,6 +1032,52 @@ export default function EmployeeManagement() {
                                             <label className={`text-xs font-medium ${textMutedClass} mb-1 block`}>📊 Indice</label>
                                             <input type="text" name="indice" value={formData.indice || '0'} readOnly
                                                 className={`w-full p-2 rounded-lg border ${cardClass} ${textClass} bg-gray-100 dark:bg-gray-800 cursor-not-allowed`} />
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                            {/* Cotisations */}
+                            <div className=" pt-4 mb-4 dark:border-[#2A2A2A]">
+                                <h3 className={`text-sm font-semibold mb-3 flex items-center gap-2 ${textClass}`}>
+                                    <Briefcase size={16} className="text-purple-500" />
+                                    Cotisations
+                                </h3>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div>
+                                        <label className={`text-xs font-medium ${textMutedClass} mb-1 block`}>🏢 Organisme</label>
+                                        <select value={formData.cotisation_id || ""} onChange={(e) => handleCotisationChange(e.target.value)} className={inputClass}>
+                                            <option value="">-- Sélectionner un organisme --</option>
+                                            {cotisationsList.map(org => (
+                                                <option key={org.id} value={org.id}>{org.name} {org.is_favorite && '⭐'}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    {selectedCotisation && (
+                                        <div>
+                                            <label className={`text-xs font-medium ${textMutedClass} mb-1 block`}>📋 Rubriques</label>
+                                            <select value={formData.cotisation_rubrique_id || ""} onChange={(e) => {
+                                                const rubrique = selectedCotisation.rubriques?.find(r => r.id === parseInt(e.target.value));
+                                                setFormData({
+                                                    ...formData,
+                                                    cotisation_rubrique_id: rubrique?.id,
+                                                    cotisation_type: rubrique?.type,
+                                                    cotisation_label: rubrique?.label,
+                                                    cotisation_taux: rubrique?.taux
+                                                });
+                                            }} className={inputClass}>
+                                                <option value="">-- Sélectionner une rubrique --</option>
+                                                {selectedCotisation.rubriques?.map(rub => (
+                                                    <option key={rub.id} value={rub.id}>{rub.label} - {rub.type} ({rub.taux}%)</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    )}
+                                </div>
+                                {formData.cotisation_type && (
+                                    <div className="mt-3 p-3 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 rounded-lg">
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-sm font-medium">📌 {formData.cotisation_type}</span>
+                                            <span className="text-sm text-purple-600 dark:text-purple-400">Taux: {formData.cotisation_taux}%</span>
                                         </div>
                                     </div>
                                 )}

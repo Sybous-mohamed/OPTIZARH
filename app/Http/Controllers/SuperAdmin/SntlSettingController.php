@@ -99,4 +99,32 @@ class SntlSettingController extends Controller
         $years = SalaryYear::orderBy('year', 'desc')->get();
         return response()->json($years);
     }
+/**
+ * Get years that have SNTL data (with fallback)
+ */
+public function getYearsWithData()
+{
+    try {
+        // Récupérer les années avec données
+        $yearsWithData = DB::table('sntl_configs')
+            ->join('salary_years', 'sntl_configs.salary_year_id', '=', 'salary_years.id')
+            ->select('salary_years.id', 'salary_years.year')
+            ->distinct()
+            ->orderBy('salary_years.year', 'desc')
+            ->get();
+        
+        // Si aucune donnée, retourner toutes les années
+        if ($yearsWithData->isEmpty()) {
+            $allYears = SalaryYear::orderBy('year', 'desc')->get();
+            return response()->json($allYears);
+        }
+        
+        return response()->json($yearsWithData);
+        
+    } catch (\Exception $e) {
+        // En cas d'erreur, retourner toutes les années
+        $allYears = SalaryYear::orderBy('year', 'desc')->get();
+        return response()->json($allYears);
+    }
+}
 }

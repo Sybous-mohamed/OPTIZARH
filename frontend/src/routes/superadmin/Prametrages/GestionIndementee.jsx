@@ -327,7 +327,7 @@ const GestionIndemnitee = () => {
                     <div className={`${cardClass} rounded-2xl shadow-xl border ${borderClass} overflow-hidden`}>
                         <div className={`${cardHeaderClass} px-6 py-4`}>
                             <h3 className="flex items-center gap-2 font-bold text-white text-sm uppercase tracking-wider">
-                                <Sparkles size={16} />
+                                
                                 Nouvelle Indemnité - {selectedYear}
                             </h3>
                         </div>

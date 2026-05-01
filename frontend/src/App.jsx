@@ -28,14 +28,15 @@ import Parametrages from './routes/superadmin/Prametrages/Parmetrages';
     import GestionCotisation from './routes/superadmin/Prametrages/Gestion_Cotisation';
     import GestionRCAR from './routes/superadmin/Prametrages/Gestion_RCAR';
     import IRGestion from "./routes/superadmin/Prametrages/GestionIR";
-    import GestionCredit from './routes/superadmin/Credit'; //
-    import SNTL from "./routes/superadmin/Prametrages/SNTL";
+    import GestionCredit from './routes/superadmin/Prametrages/GestionCredit'; 
+    import GestionSNTL from "./routes/superadmin/Prametrages/GestionSNTL";
 import Indemente from "./routes/superadmin/AffichageIndementes";
-import Cotisation from "./routes/superadmin/Cotisation";//
-import RCAR from "./routes/superadmin/RCAR";//
+import Cotisation from "./routes/superadmin/Cotisation";
+import RCAR from "./routes/superadmin/RCAR";
 import IRAffichage from "./routes/superadmin/IRAffichage";
-import Credit from "./routes/superadmin/Credit";//
+import Credit from "./routes/superadmin/Credit";
 import Retraite from "./routes/superadmin/Retraite";
+import SNTL from './routes/superadmin/SNTL';
 import AssuranceManagement from './routes/superadmin/AssuranceManagement';//
 
 
@@ -182,7 +183,7 @@ function AppContent() {
                                 <Route path="GestionRCAR" element={<GestionRCAR/>} />
                                 <Route path="GesionIR" element={<IRGestion/>}/>
                                 <Route path="GestionCredit" element={<GestionCredit/>}/>
-                                <Route path="SNTL" element={<SNTL />} />
+                                <Route path="GestionSNTL" element={<GestionSNTL />} />
                             </Route>
                             <Route path="affichageIndementes" element={<Indemente/>} />
                             <Route path="Cotisation" element={<Cotisation/>} />
@@ -190,6 +191,7 @@ function AppContent() {
                             <Route path="IRAffichage" element={<IRAffichage/>}/>
                             <Route path="Credit" element={<Credit />} />
                             <Route path="Retraite" element={<Retraite/>} />
+                            <Route path="SNTL" element={<SNTL/>} />
                             <Route path="assurances" element={<AssuranceManagement />} />
                             
 

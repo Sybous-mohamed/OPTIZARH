@@ -806,7 +806,7 @@ const GestionEtat = () => {
                         </button>
                     </div>
                     <button onClick={handleSave} disabled={loading || !hasUnsavedChanges} className={` cursor-pointer px-5 py-1.5 rounded-xl font-bold shadow-lg flex items-center gap-2 text-[11px] transition-all disabled:opacity-50 ${!hasUnsavedChanges ? 'bg-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700'} text-white`}>
-                        {loading ? <Loader size={14} className="animate-spin"/> : hasUnsavedChanges ? <Sparkles size={14}/> : <Save size={14}/>}
+                        {loading ? <Loader size={14} className="animate-spin"/> : hasUnsavedChanges ? <Save size={14}/> : <Save size={14}/>}
                         {!hasUnsavedChanges ? "SAUVEGARDÉ" : `SAUVEGARDER ${config.year}`}
                     </button>
                 </div>

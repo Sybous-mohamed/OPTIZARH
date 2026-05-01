@@ -1,5 +1,4 @@
 <?php
-
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -10,26 +9,22 @@ use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 
 
-
-
 use App\Http\Controllers\SuperAdmin\SuperAdminController;
 use App\Http\Controllers\SuperAdmin\DashboardController;
 use App\Http\Controllers\SuperAdmin\EmployeeController;
 use App\Http\Controllers\SuperAdmin\GestionEtatController;
 use App\Http\Controllers\SuperAdmin\GestionIndemniteController;
 use App\Http\Controllers\SuperAdmin\CotisationController;
-
-use App\Http\Controllers\SuperAdmin\IrController;
-
 use App\Http\Controllers\SuperAdmin\RCARController;
-use App\Http\Controllers\SuperAdmin\SntlSettingController;
-use App\Http\Controllers\SuperAdmin\AssuranceController;
-
-
-
-use App\Http\Controllers\SuperAdmin\ActivityLogController;
-use App\Http\Controllers\SuperAdmin\RetraiteController;
+use App\Http\Controllers\SuperAdmin\IrController;
 use App\Http\Controllers\SuperAdmin\CreditController;
+use App\Http\Controllers\SuperAdmin\SntlSettingController;
+
+use App\Http\Controllers\SuperAdmin\RetraiteController;
+use App\Http\Controllers\SuperAdmin\AssuranceController;
+use App\Http\Controllers\SuperAdmin\ActivityLogController;
+
+
 
 
 
@@ -72,25 +67,29 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware(['verified'])->group(function () {
         Route::middleware('role:superadmin')->group(function () {
 
-           Route::prefix('employees')->group(function () {
+            Route::get('/salary-years', function() {
+                return \App\Models\SuperAdmin\SalaryYear::orderBy('year', 'asc')->get();
+            });
+
+            Route::get('/superadmin/dashboard-stats', [DashboardController::class, 'getStats']);
+
+            Route::prefix('employees')->group(function () {
                 Route::get('/annees', [EmployeeController::class, 'getAnnees'])->name('employees.annees');
                 Route::get('/stats', [EmployeeController::class, 'stats'])->name('employees.stats');
                 Route::get('/export-pdf', [EmployeeController::class, 'exportPDF'])->name('employees.export-pdf');
                 Route::get('/classification', [EmployeeController::class, 'getClassification'])->name('employees.classification');
                 Route::post('/check-email', [EmployeeController::class, 'checkEmail'])->name('employees.check-email');
-                
-                // Routes CRUD - celles avec {id} APRÈS les routes spécifiques
                 Route::get('/', [EmployeeController::class, 'index'])->name('employees.index');
                 Route::post('/', [EmployeeController::class, 'store'])->name('employees.store');
                 Route::get('/{id}', [EmployeeController::class, 'show'])->name('employees.show');
                 Route::put('/{id}', [EmployeeController::class, 'update'])->name('employees.update');
                 Route::delete('/{id}', [EmployeeController::class, 'destroy'])->name('employees.destroy');
             });
+
             Route::prefix('gestionEtat')->group(function () {
                 Route::get('/years', [GestionEtatController::class, 'getYears']);
                 Route::post('/store', [GestionEtatController::class, 'store']);
                 Route::get('/get-by-year/{year}', [GestionEtatController::class, 'getByYear']);
-                
                 Route::get('/roles/{yearId}', [GestionEtatController::class, 'getRoles']);
                 Route::get('/grades/{roleId}', [GestionEtatController::class, 'getGrades']);
                 Route::get('/echelles/{gradeId}', [GestionEtatController::class, 'getEchelles']);
@@ -111,7 +110,6 @@ Route::middleware('auth:sanctum')->group(function () {
                 Route::get('/stats/{year}', [GestionEtatController::class, 'getStats']);
                 Route::post('/copy-year/{fromYear}/{toYear}', [GestionEtatController::class, 'copyYear']);
 
-
                 // Indemnités
                 Route::get('/gestionindemnites/{yearId}', [GestionIndemniteController::class, 'index']);
                 Route::get('/gestionindemnites/detail/{id}', [GestionIndemniteController::class, 'show']);  
@@ -121,17 +119,19 @@ Route::middleware('auth:sanctum')->group(function () {
                 Route::get('/years-with-indemnites', [GestionIndemniteController::class, 'getYearsWithIndemnites']);
             });
 
-            Route::get('/salary-years', function() {
-                return \App\Models\SuperAdmin\SalaryYear::orderBy('year', 'asc')->get();
+            Route::prefix('cotisations')->group(function () {
+                Route::get('/', [CotisationController::class, 'index']);
+                Route::post('/save', [CotisationController::class, 'store']);
+                Route::delete('/organisme/{id}', [CotisationController::class, 'destroyOrganisme']);
+                Route::delete('/rubrique/{id}', [CotisationController::class, 'destroyRubrique']);
+                Route::post('/favorite/{id}', [CotisationController::class, 'toggleFavorite']);
+                Route::get('/years-with-data', [CotisationController::class, 'getYearsWithData']);
             });
 
-            Route::post('/save-cotisations', [CotisationController::class, 'store']);
-            Route::get('/get-cotisations', [CotisationController::class, 'index']);
-            Route::delete('/organismes/{id}', [CotisationController::class, 'destroyOrganisme']);
-            Route::post('/favorite/{id}', [CotisationController::class, 'toggleFavorite']);
-            Route::delete('/rubriques/{id}', [CotisationController::class, 'destroyRubrique']);
+
 
             Route::prefix('rcar')->group(function () {
+                Route::get('/years-with-data', [RCARController::class, 'getYearsWithData']); 
                 Route::get('/config/{year}', [RCARController::class, 'getConfiguration']);
                 Route::post('/config/save', [RCARController::class, 'saveConfiguration']);
                 Route::delete('/type/{id}', [RCARController::class, 'deleteType']);
@@ -147,18 +147,50 @@ Route::middleware('auth:sanctum')->group(function () {
                 Route::get('/annees', [IrController::class, 'getAnnees']);
                 Route::get('/settings/{annee}', [IrController::class, 'getSettings']);
                 Route::get('/export/{annee}', [IrController::class, 'exportPdf']);
-                
                 Route::get('/annees-for-settings', [IrController::class, 'getAnneesForSettings']);
                 Route::get('/settings-for-edit/{annee}', [IrController::class, 'getSettingsForEdit']);
                 Route::post('/settings/{annee}', [IrController::class, 'updateSettings']);
                 Route::delete('/settings/{annee}', [IrController::class, 'destroy']);
-                
                 Route::get('/check-year/{annee}', [IrController::class, 'checkYear']);
                 Route::post('/copy-year', [IrController::class, 'copyYear']);
                 Route::get('/cached-settings/{annee}', [IrController::class, 'getCachedSettings']);
             });
 
-            // Assurance Sociale - Paramétrage
+
+            Route::prefix('retraite')->group(function () {
+                Route::get('/settings/{year}', [RetraiteController::class, 'getSettings']);
+                Route::post('/settings', [RetraiteController::class, 'storeOrUpdate']);
+                Route::get('/configs', [RetraiteController::class, 'index']);
+            });
+            Route::get('/retraite-settings/{year}', [RetraiteController::class, 'getSettings']);
+            Route::post('/retraite-settings', [RetraiteController::class, 'storeOrUpdate']);
+
+            // ==================== CREDIT TYPES ====================
+            Route::prefix('credit-types')->group(function () {
+                Route::get('/', [CreditController::class, 'getTypes']);
+                Route::post('/', [CreditController::class, 'storeType']);
+                Route::put('/{id}', [CreditController::class, 'updateType']);
+                Route::delete('/{id}', [CreditController::class, 'destroyType']);
+            });
+
+            // ==================== CREDIT CATEGORIES ====================
+            Route::prefix('credit-categories')->group(function () {
+                Route::get('/', [CreditController::class, 'getCategories']);
+                Route::post('/', [CreditController::class, 'storeCategory']);
+                Route::put('/{id}', [CreditController::class, 'updateCategory']);
+                Route::delete('/{id}', [CreditController::class, 'destroyCategory']);
+            });
+
+            // ==================== CREDITS ====================
+            Route::prefix('credits')->group(function () {
+                Route::get('/', [CreditController::class, 'index']);
+                Route::get('/years', [CreditController::class, 'getYears']);
+                Route::post('/', [CreditController::class, 'store']);
+                Route::put('/{id}', [CreditController::class, 'update']);
+                Route::delete('/{id}', [CreditController::class, 'destroy']);
+                Route::patch('/{id}/toggle', [CreditController::class, 'toggleStatus']);
+            });
+
             Route::prefix('assurances')->group(function () {
                 Route::get('/annees', [AssuranceController::class, 'getAnnees']);
                 Route::get('/get-by-year/{year}', [AssuranceController::class, 'getByYear']);
@@ -168,50 +200,11 @@ Route::middleware('auth:sanctum')->group(function () {
             });
 
             Route::prefix('sntl')->group(function () {
+                Route::get('/years-with-data', [SntlSettingController::class, 'getYearsWithData']);
                 Route::get('/configs', [SntlSettingController::class, 'index']);
                 Route::post('/save', [SntlSettingController::class, 'store']);
                 Route::delete('/configs/{id}', [SntlSettingController::class, 'destroy']);
             });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-            
-            Route::prefix('retraite')->group(function () {
-                // GET - récupérer les paramètres d'une année spécifique
-                Route::get('/settings/{year}', [RetraiteController::class, 'getSettings']);
-                
-                // POST - créer ou mettre à jour les paramètres
-                Route::post('/settings', [RetraiteController::class, 'storeOrUpdate']);
-                
-                // GET - récupérer toutes les configurations (optionnel)
-                Route::get('/configs', [RetraiteController::class, 'index']);
-            });
-            Route::get('/retraite-settings/{year}', [RetraiteController::class, 'getSettings']);
-            Route::post('/retraite-settings', [RetraiteController::class, 'storeOrUpdate']);
-
-            Route::get('/superadmin/dashboard-stats', [DashboardController::class, 'getStats']);
-            Route::prefix('credits')->group(function () {
-                Route::get('/', [CreditController::class, 'index']);
-                Route::post('/', [CreditController::class, 'store']);
-                Route::put('/{id}', [CreditController::class, 'update']);
-                Route::delete('/{id}', [CreditController::class, 'destroy']);
-                Route::patch('/{id}/toggle', [CreditController::class, 'toggleStatus']);
-            });
-
-
-
         });
         // Role: Admin
         Route::middleware('role:admin')->group(function () {});

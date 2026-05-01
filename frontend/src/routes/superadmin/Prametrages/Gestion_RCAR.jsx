@@ -1,61 +1,115 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Plus, Trash2, Save, Users, Layers, 
-  Grid, Database, DollarSign, FileText, Download, ChevronUp, ChevronDown, Layout, Loader2,
-  Star, Eye
+  Grid, Database, DollarSign, FileText, Download, ChevronDown,
+  Layout, Loader2, Star, Eye, Settings2, ArrowLeft
 } from 'lucide-react';
 import api from '../../../lib/apis/axiosConfig'; 
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { useTheme } from '../../../context/ThemeContext';
+import { useNotification } from '../../../context/NotificationContext';
 
 const GestionRCAR = () => {
+  const { darkMode } = useTheme();
+  const { showNotification } = useNotification();
+  
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(false);
-  const [selectedYear, setSelectedYear] = useState(2026);
+  const [selectedYear, setSelectedYear] = useState('');
+  const [selectedYearId, setSelectedYearId] = useState(null);
   const [rcarData, setRcarData] = useState({
     salary_year_id: null,
     types: [] 
   });
   const [availableYears, setAvailableYears] = useState([]);
-  const stats = [
-    { label: 'RÔLES', value: '12', icon: <Users size={20} />, color: 'text-blue-600', bg: 'bg-blue-50' },
-    { label: 'GRADES', value: '45', icon: <Layers size={20} />, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-    { label: 'ÉCHELLES', value: '22', icon: <Grid size={20} />, color: 'text-purple-600', bg: 'bg-purple-50' },
-    { label: 'ÉCHELONS', value: '110', icon: <Database size={20} />, color: 'text-orange-600', bg: 'bg-orange-50' },
-    { label: 'MASSE SALARIALE', value: '2.4M', icon: <DollarSign size={20} />, color: 'text-rose-600', bg: 'bg-rose-50' },
-  ];
+  const [isYearOpen, setIsYearOpen] = useState(false);
+  const yearRef = useRef(null);
 
+  // Dark mode classes
+  const bgClass = darkMode ? 'bg-[#0D0D0D]' : 'bg-[#F8FAFC]';
+  const cardClass = darkMode ? 'bg-[#1A1A1A] border-[#2A2A2A]' : 'bg-white border-gray-200';
+  const cardHeaderClass = darkMode ? 'bg-gradient-to-r from-indigo-700 to-indigo-600' : 'bg-gradient-to-r from-indigo-500 to-indigo-400';
+  const textClass = darkMode ? 'text-gray-100' : 'text-gray-800';
+  const textMutedClass = darkMode ? 'text-gray-500' : 'text-gray-500';
+  const borderClass = darkMode ? 'border-[#2A2A2A]' : 'border-gray-200';
+  const inputClass = darkMode 
+    ? 'w-full px-3 py-2 rounded-lg bg-[#252525] border border-[#333] text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500'
+    : 'w-full px-3 py-2 rounded-lg bg-gray-50 border border-gray-200 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500';
+  
+  const selectClass = darkMode 
+    ? 'bg-[#252525] border-[#333] text-white' 
+    : 'bg-gray-50 border-gray-200 text-gray-800';
+  
+  const buttonClass = "px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 cursor-pointer";
+  const primaryButtonClass = `${buttonClass} bg-gradient-to-r from-indigo-500 to-indigo-600 text-white hover:from-indigo-600 hover:to-indigo-700 shadow-md`;
+  const successButtonClass = `${buttonClass} bg-gradient-to-r from-emerald-500 to-emerald-600 text-white hover:from-emerald-600 hover:to-emerald-700 shadow-md`;
+  const dangerButtonClass = `${buttonClass} bg-gradient-to-r from-rose-500 to-rose-600 text-white hover:from-rose-600 hover:to-rose-700 shadow-md`;
+  const outlineButtonClass = `${buttonClass} border ${borderClass} ${textClass} hover:bg-gray-100 dark:hover:bg-[#252525] cursor-pointer`;
 
-    useEffect(() => {
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (yearRef.current && !yearRef.current.contains(event.target)) {
+        setIsYearOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  useEffect(() => {
     const fetchYears = async () => {
       try {
-        const response = await api.get('/api/salary-years'); // Had l-route déja khdawamna biha
+        const response = await api.get('/api/salary-years');
         setAvailableYears(response.data);
+        
+        const savedYear = localStorage.getItem('rcar_selected_year');
+        const savedYearId = localStorage.getItem('rcar_selected_year_id');
+        
+        if (savedYear && response.data.some(y => y.year == savedYear)) {
+          setSelectedYear(savedYear);
+          setSelectedYearId(savedYearId ? parseInt(savedYearId) : null);
+        } else if (response.data && response.data.length > 0) {
+          const lastYear = response.data[response.data.length - 1];
+          setSelectedYear(lastYear.year);
+          setSelectedYearId(lastYear.id);
+          localStorage.setItem('rcar_selected_year', lastYear.year);
+          localStorage.setItem('rcar_selected_year_id', lastYear.id);
+        }
       } catch (error) {
         console.error("Erreur fetching years:", error);
+        showNotification("❌ Erreur chargement des années", "error");
       }
     };
     fetchYears();
   }, []);
-  // --- ACTIONS FOR STAR (GLOBAL ACROSS YEARS) & EYE ---
+
+  const handleYearChange = (yearValue, yearId) => {
+    setSelectedYear(yearValue);
+    setSelectedYearId(yearId);
+    setIsYearOpen(false);
+    localStorage.setItem('rcar_selected_year', yearValue);
+    localStorage.setItem('rcar_selected_year_id', yearId);
+    showNotification(`📅 Année ${yearValue} sélectionnée`, "success");
+  };
+
   const handleToggleFavorite = async (typeId, currentStatus) => {
-    // 1. Update UI tmentally
     const updated = rcarData.types.map(t => 
       t.id === typeId ? { ...t, isFavorite: !currentStatus } : t
     );
     setRcarData({ ...rcarData, types: updated });
 
-    // 2. Call API bach t-appliquerha f ga3 les années (Global update)
     try {
       if (!String(typeId).startsWith('new-')) {
         await api.patch(`/api/rcar/type/${typeId}/toggle-favorite`, {
           is_favorite: !currentStatus
         });
+        showNotification(`⭐ ${!currentStatus ? 'Favori ajouté' : 'Favori retiré'}`, "success");
       }
     } catch (error) {
       console.error("Erreur favorite:", error);
-      // Revert UI if error
       fetchConfig(selectedYear);
+      showNotification("❌ Erreur", "error");
     }
   };
 
@@ -66,12 +120,11 @@ const GestionRCAR = () => {
     setRcarData({ ...rcarData, types: updated });
   };
 
-  // --- FETCH CONFIG ---
   const fetchConfig = async (year) => {
     setFetching(true);
     try {
       const response = await api.get(`/api/rcar/config/${year}`);
-      const data = response.data; 
+      const data = response.data;
 
       if (data && data.rcar_types) {
         setRcarData({
@@ -94,16 +147,18 @@ const GestionRCAR = () => {
       }
     } catch (error) {
       console.error("Erreur de chargement:", error);
+      showNotification("❌ Erreur chargement configuration", "error");
     } finally {
       setFetching(false);
     }
   };
 
   useEffect(() => {
-    fetchConfig(selectedYear);
+    if (selectedYear) {
+      fetchConfig(selectedYear);
+    }
   }, [selectedYear]);
 
-  // --- ACTIONS: ADD ---
   const addType = () => {
     const newType = { 
       id: `new-${Date.now()}`, 
@@ -113,6 +168,7 @@ const GestionRCAR = () => {
       details: [] 
     };
     setRcarData(prev => ({ ...prev, types: [...prev.types, newType] }));
+    showNotification("➕ Nouveau type ajouté", "success");
   };
 
   const addDetail = (typeId) => {
@@ -125,10 +181,10 @@ const GestionRCAR = () => {
     setRcarData(prev => ({ ...prev, types: updated }));
   };
 
-  // --- ACTIONS: DELETE ---
   const handleDeleteType = async (typeId) => {
     if (String(typeId).startsWith('new-')) {
       setRcarData(prev => ({ ...prev, types: prev.types.filter(t => t.id !== typeId) }));
+      showNotification("🗑️ Type supprimé", "success");
       return;
     }
 
@@ -136,8 +192,9 @@ const GestionRCAR = () => {
       try {
         await api.delete(`/api/rcar/type/${typeId}`);
         setRcarData(prev => ({ ...prev, types: prev.types.filter(t => t.id !== typeId) }));
+        showNotification("✅ Organisme supprimé", "success");
       } catch (error) {
-        alert("Erreur lors de la suppression de l'organisme");
+        showNotification("❌ Erreur lors de la suppression", "error");
       }
     }
   };
@@ -158,16 +215,16 @@ const GestionRCAR = () => {
           t.id === typeId ? { ...t, details: t.details.filter(d => d.id !== detailId) } : t
         );
         setRcarData(prev => ({ ...prev, types: updated }));
+        showNotification("✅ Ligne supprimée", "success");
       } catch (error) {
-        alert("Erreur lors de la suppression de la ligne");
+        showNotification("❌ Erreur lors de la suppression", "error");
       }
     }
   };
 
-  // --- SAVE ---
   const handleSave = async () => {
     if (!rcarData.salary_year_id) {
-      alert("Erreur: Aucun ID d'année trouvé.");
+      showNotification("❌ Erreur: Aucun ID d'année trouvé", "error");
       return;
     }
 
@@ -186,183 +243,205 @@ const GestionRCAR = () => {
 
     try {
       await api.post('/api/rcar/config/save', payload);
-      alert("Configuration RCAR enregistrée !");
+      showNotification("✅ Configuration RCAR enregistrée !", "success");
       fetchConfig(selectedYear);
     } catch (error) {
-      alert("Erreur de sauvegarde");
+      showNotification("❌ Erreur de sauvegarde", "error");
     } finally {
       setLoading(false);
     }
   };
 
   const exportToPDF = () => {
-  const doc = new jsPDF();
-  
-  doc.setFontSize(18);
-  doc.text(`Grille des Salaires RCAR - Année ${selectedYear}`, 14, 22);
-  
-  doc.setFontSize(11);
-  doc.setTextColor(100);
-  doc.text(`Document généré le : ${new Date().toLocaleDateString()}`, 14, 30);
+    const doc = new jsPDF();
+    
+    doc.setFontSize(18);
+    doc.setTextColor(0, 51, 102);
+    doc.text(`Grille des Salaires RCAR - Année ${selectedYear}`, 14, 22);
+    
+    doc.setFontSize(11);
+    doc.setTextColor(100);
+    doc.text(`Document généré le : ${new Date().toLocaleDateString()}`, 14, 30);
 
-  let finalY = 35;
+    let finalY = 35;
 
-  rcarData.types.forEach((type) => {
-    // Check space
-    if (finalY > 240) {
-      doc.addPage();
-      finalY = 20;
-    }
+    rcarData.types.forEach((type) => {
+      if (finalY > 240) {
+        doc.addPage();
+        finalY = 20;
+      }
 
-    doc.setFontSize(14);
-    doc.setTextColor(0, 51, 102); 
-    doc.text(type.label, 14, finalY + 10);
+      doc.setFontSize(14);
+      doc.setTextColor(0, 51, 102); 
+      doc.text(type.label, 14, finalY + 10);
 
-    const tableData = type.details.map(d => [
-      d.name || '---',
-      d.plafond ? `${d.plafond} DH` : '---',
-      `${d.percentage} %`
-    ]);
+      const tableData = type.details.map(d => [
+        d.name || '---',
+        d.plafond ? `${d.plafond} DH` : '---',
+        `${d.percentage} %`
+      ]);
 
-    // --- L-FIX HNA ---
-    autoTable(doc, {
-      startY: finalY + 15,
-      head: [['Désignation', 'Plafond (DH)', 'Taux (%)']],
-      body: tableData,
-      theme: 'grid',
-      headStyles: { fillColor: [0, 51, 102] },
-      styles: { fontSize: 10 },
-      margin: { left: 14 }
+      autoTable(doc, {
+        startY: finalY + 15,
+        head: [['Désignation', 'Plafond (DH)', 'Taux (%)']],
+        body: tableData,
+        theme: 'grid',
+        headStyles: { fillColor: [0, 51, 102] },
+        styles: { fontSize: 10 },
+        margin: { left: 14 }
+      });
+
+      finalY = doc.lastAutoTable.finalY + 5;
     });
 
-    // Updati finalY men l-ekher dyal l-tableau li t-generat
-    finalY = doc.lastAutoTable.finalY + 5;
-  });
+    doc.save(`Grille_RCAR_${selectedYear}.pdf`);
+    showNotification("📄 PDF exporté avec succès", "success");
+  };
 
-  doc.save(`Grille_RCAR_${selectedYear}.pdf`);
-};
-
+  const handleGoBack = () => {
+    window.history.back();
+  };
 
   return (
-    <div className="min-h-screen bg-[#f1f5f9] p-6 font-sans antialiased text-slate-900 pb-24">
+    <div className={`min-h-screen transition-colors duration-300 p-3 ${bgClass}`}>
       <div className="max-w-7xl mx-auto">
         
-        {/* HEADER */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-800 uppercase">Grille des Salaires RCAR</h1>
-            <p className="text-slate-500 text-sm italic">Gestion et paramétrage des taux de RCAR</p>
-          </div>
-        </div>
-
-        {/* QUICK STATS */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
-          {stats.map((stat, i) => (
-            <div key={i} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-              <div className={`w-10 h-10 ${stat.bg} ${stat.color} rounded-lg flex items-center justify-center mb-3`}>
-                {stat.icon}
-              </div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{stat.label}</p>
-              <h3 className="text-xl font-bold text-slate-800">{stat.value}</h3>
+        {/* HEADER avec bouton retour */}
+        <div className="mb-6">
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={handleGoBack}
+              className={`p-2 rounded-xl transition-all cursor-pointer ${darkMode ? 'bg-[#252525] hover:bg-[#333] border border-[#333]' : 'bg-gray-100 hover:bg-gray-200 border border-gray-200'} hover:scale-105`}
+              title="Retour"
+            >
+              <ArrowLeft size={20} className={textClass} />
+            </button>
+            <div className="flex items-center gap-2">
+              <Settings2 size={24} className="text-indigo-500" />
+              <h1 className={`text-xl font-bold ${textClass}`}>Grille des Salaires RCAR</h1>
             </div>
-          ))}
+          </div>
+          <p className={`text-sm ${textMutedClass} mt-1 ml-12`}>
+            Gestion et paramétrage des taux de RCAR
+          </p>
         </div>
 
         {/* CONTROLS */}
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 mb-6 flex flex-wrap items-center justify-between gap-4 shadow-sm">
-          <div className="flex items-center gap-4">
-            {/* YEAR PICKER - VERSION SELECT DYNAMIC */}
-            <div className="flex items-center bg-slate-50 border border-slate-200 rounded-lg px-4 py-2">
-              <span className="text-[11px] font-bold text-slate-400 uppercase mr-4 tracking-tight">Année</span>
-              <div className="relative flex items-center">
-                <select 
-                  value={selectedYear}
-                  onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-                  className="bg-transparent text-xl font-bold text-[#003366] outline-none cursor-pointer appearance-none pr-6 z-10"
-                >
-                  {availableYears.map(y => (
-                    <option key={y.id} value={y.year || y.annee}>
-                      {y.year || y.annee}
-                    </option>
+        <div className={`${cardClass} rounded-xl border ${borderClass} p-4 mb-6 shadow-sm`}>
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="relative" ref={yearRef}>
+              <button 
+                onClick={() => setIsYearOpen(!isYearOpen)}
+                className={`h-10 px-4 rounded-xl font-medium outline-none cursor-pointer min-w-[140px] transition-all ${selectClass} border ${borderClass} ${textClass} text-sm flex items-center justify-between gap-3 hover:border-indigo-400`}
+              >
+                <span className="truncate">{selectedYear || 'Sélectionner année'}</span>
+                <ChevronDown size={16} className={`text-indigo-500 transition-transform duration-200 ${isYearOpen ? 'rotate-180' : ''}`} />
+              </button>
+              
+              {isYearOpen && (
+                <div className={`absolute top-full left-0 right-0 mt-2 rounded-xl border ${borderClass} ${cardClass} z-50 max-h-60 overflow-y-auto shadow-xl`}>
+                  {availableYears.map((y) => (
+                    <div 
+                      key={y.id}
+                      onClick={() => handleYearChange(y.year, y.id)}
+                      className={`px-4 py-2.5 cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-sm transition-colors ${
+                        selectedYear === y.year 
+                          ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 font-medium' 
+                          : textClass
+                      }`}
+                    >
+                      {y.year}
+                    </div>
                   ))}
-                </select>
-                <ChevronDown size={16} className="absolute right-0 text-slate-400 pointer-events-none" />
-              </div>
+                </div>
+              )}
             </div>
-            <button
-            onClick={exportToPDF}
-            className="flex items-center gap-2 bg-rose-500 text-white px-4 py-2.5 rounded-lg text-xs font-bold hover:bg-rose-600 transition-all shadow-md uppercase">
+
+            <button onClick={exportToPDF} className={`${dangerButtonClass} cursor-pointer`}>
               <Download size={16} /> Exporter PDF
             </button>
-            <button onClick={addType} className="bg-emerald-600 text-white px-4 py-2.5 rounded-lg text-xs font-bold flex items-center gap-2 hover:bg-emerald-700 transition-all shadow-md uppercase">
+            
+            <button onClick={addType} className={`${successButtonClass} cursor-pointer`}>
               <Plus size={16} /> Nouveau Type
             </button>
+            
+            {fetching && <Loader2 className="animate-spin text-indigo-500" size={20} />}
           </div>
-          {fetching && <Loader2 className="animate-spin text-blue-600" size={20} />}
         </div>
 
-        {/* DATA AREA */}
+        {/* DATA AREA - TABLEAU CORRIGÉ */}
         <div className="space-y-6 min-h-[300px]">
           {rcarData.types.length === 0 && !fetching ? (
-            <div className="bg-white rounded-3xl border-2 border-dashed border-slate-200 p-12 flex flex-col items-center justify-center text-center">
-              <div className="bg-slate-50 p-6 rounded-full mb-6"><Layout size={48} className="text-slate-300" /></div>
-              <h2 className="text-xl font-bold text-slate-700 mb-2">Aucune configuration trouvée</h2>
-              <button onClick={addType} className="bg-[#003366] text-white px-8 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-[#002244] transition-all">
+            <div className={`${cardClass} rounded-2xl border-2 border-dashed ${borderClass} p-12 flex flex-col items-center justify-center text-center`}>
+              <div className={`p-6 rounded-full ${darkMode ? 'bg-[#252525]' : 'bg-gray-50'} mb-6`}>
+                <Layout size={48} className="text-gray-300" />
+              </div>
+              <h2 className={`text-xl font-bold ${textClass} mb-2`}>Aucune configuration trouvée</h2>
+              <button onClick={addType} className={`${primaryButtonClass} cursor-pointer`}>
                 <Plus size={20} /> Ajouter le premier type
               </button>
             </div>
           ) : (
             rcarData.types.map((type) => (
-              <div key={type.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex justify-between items-center">
-                  <div className="flex items-center gap-3">
-                    <div className="bg-[#003366] p-1.5 rounded text-white"><FileText size={16}/></div>
-                    <input 
-                      className="bg-transparent font-bold text-slate-700 outline-none border-b border-transparent focus:border-blue-500 px-1"
-                      value={type.label}
-                      onChange={(e) => {
-                        const updated = rcarData.types.map(t => t.id === type.id ? {...t, label: e.target.value} : t);
-                        setRcarData({...rcarData, types: updated});
-                      }}
-                    />
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <button 
-                      onClick={() => handleToggleFavorite(type.id, type.isFavorite)}
-                      className={`transition-colors ${type.isFavorite ? 'text-amber-500' : 'text-slate-300 hover:text-amber-500'}`}
-                      title="Appliquer à toutes les années"
-                    >
-                      <Star size={18} fill={type.isFavorite ? "currentColor" : "none"} />
-                    </button>
-                    <button 
-                      onClick={() => handleToggleView(type.id)}
-                      className={`transition-colors ${type.isVisible ? 'text-blue-500' : 'text-slate-300 hover:text-blue-500'}`}
-                    >
-                      <Eye size={18} />
-                    </button>
-                    <button onClick={() => handleDeleteType(type.id)} className="text-slate-300 hover:text-rose-500 ml-2">
-                      <Trash2 size={18}/>
-                    </button>
+              <div key={type.id} className={`${cardClass} rounded-xl border ${borderClass} overflow-hidden shadow-sm`}>
+                <div className={`${cardHeaderClass} px-4 py-3`}>
+                  <div className="flex justify-between items-center flex-wrap gap-2">
+                    <div className="flex items-center gap-3 flex-1 min-w-[200px]">
+                      <FileText size={16} className="text-white flex-shrink-0" />
+                      <input 
+                        className="bg-transparent font-bold text-white outline-none border-b border-transparent focus:border-white/50 px-1 py-1 text-sm w-full max-w-md"
+                        value={type.label}
+                        onChange={(e) => {
+                          const updated = rcarData.types.map(t => t.id === type.id ? {...t, label: e.target.value} : t);
+                          setRcarData({...rcarData, types: updated});
+                        }}
+                      />
+                    </div>
+                    <div className="flex items-center gap-3 flex-shrink-0">
+                      <button 
+                        onClick={() => handleToggleFavorite(type.id, type.isFavorite)}
+                        className={`transition-colors cursor-pointer ${type.isFavorite ? 'text-amber-400' : 'text-white/50 hover:text-amber-400'}`}
+                        title="Appliquer à toutes les années"
+                      >
+                        <Star size={16} fill={type.isFavorite ? "currentColor" : "none"} />
+                      </button>
+                      <button 
+                        onClick={() => handleToggleView(type.id)}
+                        className={`transition-colors cursor-pointer ${type.isVisible ? 'text-white' : 'text-white/50 hover:text-white'}`}
+                      >
+                        <Eye size={16} />
+                      </button>
+                      <button onClick={() => handleDeleteType(type.id)} className="text-white/50 hover:text-rose-400 transition-colors cursor-pointer">
+                        <Trash2 size={16}/>
+                      </button>
+                    </div>
                   </div>
                 </div>
 
                 {type.isVisible && (
-                  <div className="p-6">
-                    <table className="w-full text-left">
+                  <div className="p-4 overflow-x-auto">
+                    <table className="w-full min-w-[600px] border-collapse">
                       <thead>
-                        <tr className="text-[10px] font-black text-slate-400 uppercase border-b border-slate-100">
-                          <th className="pb-3 pl-2 w-1/2">Désignation</th>
-                          <th className="pb-3 px-4">Plafond (DH)</th>
-                          <th className="pb-3 px-4">Taux (%)</th>
-                          <th className="pb-3 w-10"></th>
+                        <tr className={`border-b ${borderClass}`}>
+                          <th className={`text-left py-3 px-2 text-xs font-semibold ${textMutedClass} w-2/5`}>
+                            Désignation
+                          </th>
+                          <th className={`text-left py-3 px-3 text-xs font-semibold ${textMutedClass} w-1/4`}>
+                            Plafond (DH)
+                          </th>
+                          <th className={`text-left py-3 px-3 text-xs font-semibold ${textMutedClass} w-1/4`}>
+                            Taux (%)
+                          </th>
+                          <th className={`py-3 w-10 ${textMutedClass}`}></th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-50">
+                      <tbody>
                         {type.details.map((det) => (
-                          <tr key={det.id} className="group">
-                            <td className="py-3 pr-4">
+                          <tr key={det.id} className={`border-b ${borderClass} last:border-0`}>
+                            <td className="py-2 px-2">
                               <input 
-                                className="w-full bg-slate-50 border border-slate-100 rounded-lg p-2.5 text-sm focus:bg-white outline-none"
+                                className={`w-full rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${inputClass}`}
+                                placeholder="Ex: Salaire de base"
                                 value={det.name}
                                 onChange={(e) => {
                                   const updated = rcarData.types.map(t => t.id === type.id ? {
@@ -372,10 +451,11 @@ const GestionRCAR = () => {
                                 }}
                               />
                             </td>
-                            <td className="py-3 px-4">
+                            <td className="py-2 px-3">
                               <input 
                                 type="number"
-                                className="w-full bg-slate-50 border border-slate-100 rounded-lg p-2.5 text-sm font-bold"
+                                placeholder="0"
+                                className={`w-full rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${inputClass}`}
                                 value={det.plafond}
                                 onChange={(e) => {
                                   const updated = rcarData.types.map(t => t.id === type.id ? {
@@ -385,11 +465,13 @@ const GestionRCAR = () => {
                                 }}
                               />
                             </td>
-                            <td className="py-3 px-4">
-                              <div className="flex items-center bg-slate-50 border border-slate-100 rounded-lg px-2">
+                            <td className="py-2 px-3">
+                              <div className="flex items-center gap-1">
                                 <input 
                                   type="number"
-                                  className="w-full bg-transparent p-2.5 text-sm font-bold text-indigo-600 outline-none"
+                                  step="0.1"
+                                  placeholder="0"
+                                  className={`w-full rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${inputClass}`}
                                   value={det.percentage}
                                   onChange={(e) => {
                                     const updated = rcarData.types.map(t => t.id === type.id ? {
@@ -398,19 +480,33 @@ const GestionRCAR = () => {
                                     setRcarData({...rcarData, types: updated});
                                   }}
                                 />
-                                <span className="text-slate-400 font-bold text-xs">%</span>
+                                <span className={`text-xs font-bold ${textMutedClass}`}>%</span>
                               </div>
                             </td>
-                            <td className="py-3 text-right">
-                              <button onClick={() => handleDeleteDetail(type.id, det.id)} className="p-2 text-slate-300 hover:text-rose-500 transition-colors">
-                                <Trash2 size={16} />
+                            <td className="py-2 text-center">
+                              <button 
+                                onClick={() => handleDeleteDetail(type.id, det.id)} 
+                                className={`p-2 ${textMutedClass} hover:text-rose-500 transition-colors cursor-pointer`}
+                                title="Supprimer"
+                              >
+                                <Trash2 size={14} />
                               </button>
                             </td>
                           </tr>
                         ))}
+                        {type.details.length === 0 && (
+                          <tr>
+                            <td colSpan="4" className={`py-8 text-center ${textMutedClass}`}>
+                              Aucune ligne configurée
+                            </td>
+                          </tr>
+                        )}
                       </tbody>
                     </table>
-                    <button onClick={() => addDetail(type.id)} className="mt-4 text-[11px] font-black text-indigo-600 flex items-center gap-1 hover:text-indigo-800 uppercase">
+                    <button 
+                      onClick={() => addDetail(type.id)} 
+                      className={`mt-4 text-xs font-semibold text-indigo-600 dark:text-indigo-400 flex items-center gap-1 hover:text-indigo-800 dark:hover:text-indigo-300 transition-colors cursor-pointer`}
+                    >
                       <Plus size={14} /> Ajouter une ligne
                     </button>
                   </div>
@@ -422,8 +518,12 @@ const GestionRCAR = () => {
 
         {/* FOOTER */}
         {rcarData.types.length > 0 && (
-          <div className="mt-12 flex justify-end">
-            <button onClick={handleSave} disabled={loading || fetching} className="flex items-center gap-3 bg-[#003366] text-white px-10 py-3 rounded-xl text-sm font-black hover:bg-[#002244] shadow-lg disabled:opacity-50 transition-all">
+          <div className="mt-8 flex justify-end">
+            <button 
+              onClick={handleSave} 
+              disabled={loading || fetching} 
+              className={`${primaryButtonClass} disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer px-8 py-3`}
+            >
               {loading ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
               {loading ? "ENREGISTREMENT..." : "SAUVEGARDER LE PARAMÉTRAGE"}
             </button>
