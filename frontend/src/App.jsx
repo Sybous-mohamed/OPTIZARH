@@ -14,9 +14,6 @@ import Register from './routes/auth/Register';
 import SuperAdminRegister from './routes/superadmin/SuperAdminRegister'; 
 import ForgotPassword from './routes/auth/ForgotPassword';
 import ResetPassword from './routes/auth/ResetPassword';
-import VerifyEmail from './routes/auth/VerifyEmail';
-import VerifyNotice from './routes/auth/VerifyNotice';
-
 
 // SuperAdmin Components
 import SuperAdminLayout from "../src/layout/SuperAdminLayout";
@@ -28,27 +25,19 @@ import Parametrages from './routes/superadmin/Prametrages/Parmetrages';
     import GestionCotisation from './routes/superadmin/Prametrages/Gestion_Cotisation';
     import GestionRCAR from './routes/superadmin/Prametrages/Gestion_RCAR';
     import IRGestion from "./routes/superadmin/Prametrages/GestionIR";
-    import GestionCredit from './routes/superadmin/Credit'; //
+    import GestionCredit from './routes/superadmin/Credit';
     import SNTL from "./routes/superadmin/Prametrages/SNTL";
 import Indemente from "./routes/superadmin/AffichageIndementes";
-import Cotisation from "./routes/superadmin/Cotisation";//
-import RCAR from "./routes/superadmin/RCAR";//
+import Cotisation from "./routes/superadmin/Cotisation";
+import RCAR from "./routes/superadmin/RCAR";
 import IRAffichage from "./routes/superadmin/IRAffichage";
-import Credit from "./routes/superadmin/Credit";//
+import Credit from "./routes/superadmin/Credit";
 import Retraite from "./routes/superadmin/Retraite";
 import AssuranceManagement from './routes/superadmin/AssuranceManagement';
 import SNTLPage from "./routes/superadmin/SNTL";
 
-
 import Logs from "./routes/superadmin/Logs";
-import Parametres from './routes/superadmin/Settings'//
-
-
-
-
-
-
-
+import Parametres from './routes/superadmin/Settings'
 
 //Admin Components
 import AdminDashboard from './routes/Admin/Dashboard';
@@ -59,53 +48,38 @@ import EmployeeDashboard from './routes/employee/Dashboard';
 
 /*
 |--------------------------------------------------------------------------
-|                           Protected Route
+|                             Protected Route
 |--------------------------------------------------------------------------
 */
 const ProtectedRoute = ({ allowedRoles }) => {
     const token = localStorage.getItem('token');
     const role = localStorage.getItem('role');
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
 
     if (!token) return <Navigate to="/auth/login" replace />;
-    if (role !== 'superadmin' && user.email_verified_at === null) {
-        return <Navigate to="/auth/verify-notice" replace />;
-    }
 
+    // Hyedna l-check dyal email_verified_at bach idouz l-user direct
     if (allowedRoles && !allowedRoles.includes(role)) {
         return <Navigate to="/" replace />;
     }
     return <Outlet />;
 };
+
 /*
 |--------------------------------------------------------------------------
-|                            Public Route 
+|                              Public Route 
 |--------------------------------------------------------------------------
 */
 const PublicRoute = ({ children, isFirstRun }) => {
     const token = localStorage.getItem('token');
     const role = localStorage.getItem('role');
-    const userStr = localStorage.getItem('user');
-    const user = userStr ? JSON.parse(userStr) : null;
     const currentPath = window.location.pathname;
 
     if (isFirstRun && !currentPath.includes('setup')) {
         return <Navigate to="/auth/setup" replace />;
     }
 
-    const isVerifyPage = currentPath.includes('verify-notice') || currentPath.includes('verify-email');
-    if (isVerifyPage) {
-        return children;
-    }
-
-    if (token && role && user && !user.email_verified_at && role !== 'superadmin') {
-        if (currentPath.includes('login') || currentPath.includes('register')) {
-            return <Navigate to="/auth/verify-notice" replace />;
-        }
-        return children;
-    }
-
-    if (token && role && (role === 'superadmin' || (user && user.email_verified_at))) {
+    // Hyedna ga3 l-check dyal verification hna
+    if (token && role) {
         const paths = {
             superadmin: "/SuperAdmin/Dashboard",
             admin: "/Admin/Dashboard",
@@ -119,7 +93,6 @@ const PublicRoute = ({ children, isFirstRun }) => {
     }
     return children;
 };
-
 
 function AppContent() {
     const { setLoading } = useLoading();
@@ -155,7 +128,7 @@ function AppContent() {
                 <Routes>
                     <Route path="/" element={isFirstRun ? <Navigate to="/auth/setup" replace /> : <Navigate to="/auth/login" replace />} />
 
-                    {/* 2.Auth Routes */}
+                    {/* Auth Routes */}
                     <Route path="/auth">
                         <Route index element={<Navigate to="/auth/login" replace />} />
                         <Route path="setup" element={isFirstRun ? <SuperAdminRegister /> : <Navigate to="/auth/login" replace />} />
@@ -164,8 +137,7 @@ function AppContent() {
                         <Route path="register/:role" element={<PublicRoute isFirstRun={isFirstRun}><Register /></PublicRoute>} />
                         <Route path="forgot-password" element={<PublicRoute isFirstRun={isFirstRun}><ForgotPassword /></PublicRoute>} />
                         <Route path="reset-password/:token" element={<ResetPassword />} />
-                        <Route path="verify-notice" element={<VerifyNotice />} />
-                        <Route path="verify-email" element={<VerifyEmail />} />
+                        {/* Hyedna VerifyNotice w VerifyEmail mn hna */}
                         <Route path="*" element={<Navigate to="/auth/login" replace />} />
                     </Route>
 
@@ -193,8 +165,6 @@ function AppContent() {
                             <Route path="Retraite" element={<Retraite/>} />
                             <Route path="assurances" element={<AssuranceManagement />} />
                             <Route path="SNTL" element={<SNTLPage />} />
-                            
-
                             <Route path="Logs" element={<Logs/>}/>
                             <Route path="Parametres" element={<Parametres/>}/>
                         </Route>
@@ -224,7 +194,6 @@ function AppContent() {
                         </Route>
                     </Route>
 
-                    {/* Fallback */}
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
             </Router>
