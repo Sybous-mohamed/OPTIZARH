@@ -51,7 +51,7 @@ Route::get('/verify-email/{id}/{hash}', VerifyEmailController::class)
 */
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/activity-logs', [ActivityLogController::class, 'index']);
-
+     Route::delete('/activity-logs/{id}', [ActivityLogController::class, 'destroy']);
     // Account & Status
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', function (Request $request) {

@@ -1,20 +1,46 @@
 import React, { useState, useEffect } from 'react';
 import api from "../../lib/apis/axiosConfig";
 import { icons } from '../../lib/icons/icons';
+import { Trash2, Clock, Search, Loader2, Settings2, ArrowLeft, Activity, Calendar, User, FileText } from 'lucide-react';
+import { useNotification } from '../../context/NotificationContext';
+import { useTheme } from '../../context/ThemeContext';
+import DeleteConfirmModal from '../../lib/components/DeleteConfirmModal';
+
 export default function Logs() {
+    const { darkMode } = useTheme();
+    const { showNotification } = useNotification();
     const [activities, setActivities] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
     const [limit, setLimit] = useState(10);
 
+    // Dark mode classes
+    const bgClass = darkMode ? 'bg-[#0D0D0D]' : 'bg-gray-50';
+    const cardClass = darkMode ? 'bg-[#1A1A1A] border-[#2A2A2A]' : 'bg-white border-gray-100';
+    const textClass = darkMode ? 'text-gray-100' : 'text-slate-900';
+    const textMutedClass = darkMode ? 'text-gray-500' : 'text-gray-500';
+    const borderClass = darkMode ? 'border-[#2A2A2A]' : 'border-gray-100';
+    const inputClass = darkMode 
+        ? 'pl-10 pr-4 py-2 bg-[#252525] border border-[#333] rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none w-80 shadow-sm transition-all text-white placeholder-gray-500'
+        : 'pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none w-80 shadow-sm transition-all';
+
+    // State dial Confirmation Modal
+    const [confirmConfig, setConfirmConfig] = useState({
+        isOpen: false,
+        onConfirm: () => {},
+        title: "",
+        message: ""
+    });
+
     const fetchActivities = async (newLimit = 10) => {
         setLoading(true);
         try {
             const response = await api.get(`/api/activity-logs?limit=${newLimit}`);
-            setActivities(response.data.data || []); 
+            setActivities(response.data.data || []);
             setLimit(newLimit);
         } catch (error) {
             console.error("Erreur fetch logs:", error);
+            showNotification("Erreur lors du chargement des logs", "error");
         } finally {
             setLoading(false);
         }
@@ -24,125 +50,188 @@ export default function Logs() {
         fetchActivities(10);
     }, []);
 
+    const closeConfirm = () => setConfirmConfig({ ...confirmConfig, isOpen: false });
+
+    const openDeleteModal = (id) => {
+        setConfirmConfig({
+            isOpen: true,
+            title: "Supprimer l'activité",
+            message: "Êtes-vous sûr de vouloir supprimer définitivement ce log ? Cette action est irréversible.",
+            onConfirm: () => handleDelete(id)
+        });
+    };
+
+    const handleDelete = async (id) => {
+        try {
+            await api.delete(`/api/activity-logs/${id}`);
+            setActivities(prev => prev.filter(log => log.id !== id));
+            showNotification("Log supprimé avec succès", "success");
+        } catch (error) {
+            console.error("Erreur suppression:", error);
+            showNotification("Échec de la suppression", "error");
+        } finally {
+            closeConfirm();
+        }
+    };
     const filteredLogs = activities.filter(log => {
         const search = searchTerm.toLowerCase();
         const userName = log.user?.full_name?.toLowerCase() || "système";
         const titre = log.titre?.toLowerCase() || "";
         const type = log.action_type?.toLowerCase() || "";
-        
         return userName.includes(search) || titre.includes(search) || type.includes(search);
     });
 
+    // Get color based on action type
+    const getActionColor = (actionType) => {
+        const colors = {
+            'CREATE': 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+            'UPDATE': 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+            'DELETE': 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400',
+            'LOGIN': 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400',
+            'LOGOUT': 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400',
+        };
+        return colors[actionType] || 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400';
+    };
+
     return (
-        <div className="p-8 bg-gray-50 min-h-screen font-sans dark:bg-black transition-colors duration-300">
-            {/* Header Section */}
-            <div className="flex justify-between items-center mb-10">
-                <div>
-                    <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tight dark:text-white">Journal d'activités</h1>
-                    <p className="text-gray-500 text-sm mt-1 dark:text-gray-400">
+        <div className={`min-h-screen transition-colors duration-300 p-6 ${bgClass}`}>
+            <div className="max-w-7xl mx-auto">
+                
+                {/* Header avec bouton retour */}
+                <div className="mb-8">
+                    <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2">
+                            <Settings2 size={24} className="text-indigo-500" />
+                            <h1 className={`text-2xl font-bold ${textClass}`}>Journal d'activités</h1>
+                        </div>
+                    </div>
+                    <p className={`text-sm ${textMutedClass} mt-1 ml-12`}>
                         Traçabilité complète des actions effectuées sur <span className="font-bold text-indigo-600 dark:text-indigo-400">OptizaRH</span>
                     </p>
                 </div>
-
-                {/* Search Bar */}
-                <div className="relative">
-                    <input 
-                        type="text"
-                        placeholder="Rechercher par utilisateur ou action..."
-                        className="pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none w-80 shadow-sm transition-all dark:bg-[#111] dark:border-white/10 dark:text-white dark:placeholder:text-gray-600"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                    <span className="absolute left-3 top-2.5 text-gray-400">{icons.search}</span>
-                </div>
-            </div>
-
-            {/* Main Content Card */}
-            <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden dark:bg-[#0D0D0D] dark:border-white/5 transition-all">
-                <div className="p-8 border-b border-gray-50 flex justify-between items-center bg-white dark:bg-[#0D0D0D] dark:border-white/5">
-                    <div className="flex items-center gap-3">
-                        <span className="text-indigo-600 p-2 bg-indigo-50 rounded-lg dark:bg-indigo-500/10 dark:text-indigo-400">{icons.ClockIcon}</span>
-                        <h2 className="text-lg font-black text-slate-800 dark:text-white">Historique Système</h2>
-                    </div>
-                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest bg-gray-50 px-3 py-1 rounded-full dark:bg-white/5 dark:text-gray-500">
-                        {filteredLogs.length} Actions trouvées
-                    </span>
-                </div>
-
-                <div className="p-8">
-                    {loading ? (
-                        <div className="py-20 text-center text-gray-400 font-bold animate-pulse uppercase tracking-widest dark:text-gray-600">Chargement...</div>
-                    ) : filteredLogs.length > 0 ? (
-                        <div className="space-y-10 relative before:absolute before:inset-0 before:left-[23px] before:w-[2px] before:bg-gray-50 dark:before:bg-white/[0.03] before:h-full">
-                            {filteredLogs.map((log) => (
-                                <div key={log.id} className="relative flex items-start justify-between group pl-12">
-                                    
-                                    {/* Indicator Dot (Action Type) */}
-                                    <div className="absolute left-0 top-1.5 w-[48px] h-[48px] rounded-2xl border-4 border-white dark:border-black shadow-sm bg-indigo-50 flex items-center justify-center z-10 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-300 dark:bg-[#1A1A1A] dark:text-indigo-400">
-                                        <span className="text-[10px] font-black uppercase italic">
-                                            {log.action_type?.substring(0, 3) || 'LOG'}
-                                        </span>
-                                    </div>
-
-                                    <div className="flex-1 ml-4">
-                                        <h3 className="font-black text-slate-800 text-[15px] dark:text-gray-100">{log.titre}</h3>
-                                        <p className="text-sm text-gray-400 mt-1.5 leading-relaxed max-w-3xl dark:text-gray-500">
-                                            {log.description}
-                                        </p>
-                                    </div>
-
-                                    {/* Right Section: Date & User Name */}
-                                    <div className="text-right flex flex-col justify-center min-w-[170px]">
-                                        <div className="bg-slate-900 text-white px-3 py-1.5 rounded-lg inline-block shadow-sm dark:bg-violet-600/20 dark:border dark:border-violet-500/30">
-                                            <p className="text-[11px] font-black uppercase tracking-tight dark:text-violet-400">
-                                                {log.created_at ? new Date(log.created_at).toLocaleDateString('fr-FR', {
-                                                    day: '2-digit', 
-                                                    month: 'short', 
-                                                    year: 'numeric',
-                                                    hour: '2-digit', 
-                                                    minute: '2-digit'
-                                                }).toUpperCase() : 'N/A'}
-                                            </p>
-                                        </div>
-                                        
-                                        <p className="text-[10px] font-black mt-2 flex items-center justify-end gap-1 uppercase">
-                                            <span className="text-indigo-600 dark:text-violet-500">PAR:</span> 
-                                            <span className="text-slate-500 dark:text-gray-400 font-bold">
-                                                {log.user && (log.user.full_name || log.user.name) ? (log.user.full_name || log.user.name) : 'SYSTÈME'}
-                                            </span>
-                                        </p>
-                                    </div>
-                                </div>
-                            ))}
+                {/* Main Card */}
+                <div className={`${cardClass} rounded-2xl border ${borderClass} shadow-sm overflow-hidden`}>
+                    <div className={`p-6 border-b ${borderClass} flex justify-between items-center flex-wrap gap-4`}>
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-lg bg-indigo-100 dark:bg-indigo-900/30">
+                                <Clock size={20} className="text-indigo-600 dark:text-indigo-400" />
+                            </div>
+                            <div>
+                                <h2 className={`text-lg font-bold ${textClass}`}>Historique Système</h2>
+                                <p className={`text-xs ${textMutedClass}`}>Chronologie des actions récentes</p>
+                            </div>
                         </div>
-                    ) : (
-                        <div className="py-20 text-center border-2 border-dashed border-gray-100 rounded-3xl dark:border-white/5">
-                            <p className="text-gray-400 text-sm font-bold dark:text-gray-600">Aucune correspondance pour "{searchTerm}"</p>
+                        
+                        <div className="relative">
+                            <input 
+                                type="text"
+                                placeholder="Rechercher par utilisateur..."
+                                className={inputClass}
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                            <Search size={18} className={`absolute left-3 top-2.5 ${textMutedClass}`} />
+                        </div>
+                    </div>
+
+                    <div className="p-6">
+                        {loading ? (
+                            <div className="py-20 text-center flex flex-col items-center gap-3">
+                                <Loader2 className="animate-spin text-indigo-600" size={32} />
+                                <span className={`font-bold uppercase tracking-widest text-xs ${textMutedClass}`}>Chargement...</span>
+                            </div>
+                        ) : filteredLogs.length > 0 ? (
+                            <div className="space-y-6">
+                                {filteredLogs.map((log) => (
+                                    <div key={log.id} className={`p-5 rounded-xl border ${borderClass} hover:shadow-md transition-all group`}>
+                                        <div className="flex flex-wrap items-start justify-between gap-4">
+                                            <div className="flex items-start gap-4 flex-1">
+                                                <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${getActionColor(log.action_type)}`}>
+                                                    <span className="text-[10px] font-black uppercase">
+                                                        {log.action_type?.substring(0, 3) || 'LOG'}
+                                                    </span>
+                                                </div>
+                                                <div className="flex-1">
+                                                    <div className="flex items-center gap-2 flex-wrap mb-2">
+                                                        <h3 className={`font-bold text-base ${textClass}`}>{log.titre}</h3>
+                                                        <span className={`text-[10px] px-2 py-0.5 rounded-full ${getActionColor(log.action_type)}`}>
+                                                            {log.action_type || 'ACTION'}
+                                                        </span>
+                                                    </div>
+                                                    <p className={`text-sm ${textMutedClass} leading-relaxed`}>
+                                                        {log.description}
+                                                    </p>
+                                                    <div className="flex items-center gap-4 mt-3">
+                                                        <p className={`text-[10px] font-bold flex items-center gap-1 uppercase ${textMutedClass}`}>
+                                                            <span className="text-indigo-600 dark:text-indigo-400">PAR:</span> 
+                                                            <span className={`font-medium ${textClass}`}>{log.user?.full_name || 'SYSTÈME'}</span>
+                                                        </p>
+                                                        <div className={`text-[10px] px-2 py-1 rounded-lg ${darkMode ? 'bg-[#252525] text-gray-400' : 'bg-gray-100 text-gray-600'} flex items-center gap-1`}>
+                                                            <Calendar size={10} />
+                                                            {new Date(log.created_at).toLocaleString('fr-FR', { 
+                                                                day: '2-digit', 
+                                                                month: 'short', 
+                                                                year: 'numeric',
+                                                                hour: '2-digit', 
+                                                                minute: '2-digit' 
+                                                            })}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <button 
+                                                onClick={() => openDeleteModal(log.id)}
+                                                className="p-2 text-gray-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                                                title="Supprimer"
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className={`py-20 text-center border-2 border-dashed ${borderClass} rounded-2xl`}>
+                                <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 ${darkMode ? 'bg-[#252525]' : 'bg-gray-100'}`}>
+                                    <Search size={32} className="text-gray-300" />
+                                </div>
+                                <p className={`font-medium ${textMutedClass}`}>Aucun log trouvé</p>
+                                <p className={`text-xs ${textMutedClass} mt-1`}>Aucune activité correspondant à votre recherche</p>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Footer Pagination */}
+                    {activities.length > 0 && (
+                        <div className={`p-4 border-t ${borderClass} text-center`}>
+                            {limit === 10 && activities.length >= 10 ? (
+                                <button 
+                                    onClick={() => fetchActivities(100)} 
+                                    className="text-indigo-600 dark:text-indigo-400 font-bold text-xs uppercase tracking-widest hover:underline transition-all cursor-pointer"
+                                >
+                                    Voir tout ({activities.length} / {limit})
+                                </button>
+                            ) : limit > 10 ? (
+                                <button 
+                                    onClick={() => fetchActivities(10)} 
+                                    className="text-gray-400 font-bold text-xs uppercase tracking-widest hover:underline transition-all cursor-pointer"
+                                >
+                                    Réduire
+                                </button>
+                            ) : null}
                         </div>
                     )}
                 </div>
 
-                {/* Pagination Footer */}
-                <div className="p-8 bg-gray-50/50 border-t border-gray-50 text-center dark:bg-white/[0.01] dark:border-white/5">
-                {limit === 10 && activities.length >= 10 ? (
-                <button 
-                    onClick={() => fetchActivities(100)} 
-                    className="text-indigo-600 font-black text-xs uppercase tracking-widest hover:underline dark:text-indigo-400">
-                    Voir tout l'historique
-                </button>
-            ) : limit > 10 ? (
-                <button 
-                    onClick={() => fetchActivities(10)} 
-                    className="text-gray-400 font-black text-xs uppercase tracking-widest hover:underline dark:text-gray-600">
-                    Réduire à 10 derniers
-                </button>
-            ) : null}
-                    {/* <button 
-                        onClick={() => fetchActivities(limit + 20)}
-                        className="px-6 py-2 bg-white border border-gray-200 text-slate-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-900 hover:text-white transition-all shadow-sm dark:bg-[#111] dark:border-white/10 dark:text-gray-400 dark:hover:bg-white dark:hover:text-black">
-                        {loading ? "Chargement..." : "Charger plus"}
-                    </button> */}
-                </div>
+                {/* Modal de Confirmation */}
+                <DeleteConfirmModal 
+                    isOpen={confirmConfig.isOpen}
+                    onClose={closeConfirm}
+                    onConfirm={confirmConfig.onConfirm}
+                    title={confirmConfig.title}
+                    message={confirmConfig.message}
+                    darkMode={darkMode}
+                />
             </div>
         </div>
     );

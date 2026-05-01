@@ -13,4 +13,25 @@ class ActivityLogController extends Controller
         $logs = ActivityLog::with('user')->orderBy('created_at', 'desc')->paginate($limit);
         return response()->json($logs);
     }
+
+    public function destroy($id)
+    {
+        try {
+            $log = ActivityLog::find($id);
+            if (!$log) {
+                return response()->json([
+                    'message' => 'Activité introuvable.'
+                ], 404);
+            }
+            $log->delete();
+            return response()->json([
+                'message' => 'Log supprimé avec succès.'
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Erreur lors de la suppression.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
 }
