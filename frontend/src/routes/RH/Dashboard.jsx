@@ -9,6 +9,7 @@ const ProfilePage = () => {
     const email = userData.email || "Email non spécifié";
     const role = localStorage.getItem('role') || "Rôle non défini";
 
+    
     const handleLogout = () => {
         localStorage.clear();
         window.location.href = '/login';
