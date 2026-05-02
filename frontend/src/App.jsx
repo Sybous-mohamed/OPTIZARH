@@ -25,7 +25,7 @@ import Parametrages from './routes/superadmin/Prametrages/Parmetrages';
     import GestionCotisation from './routes/superadmin/Prametrages/Gestion_Cotisation';
     import GestionRCAR from './routes/superadmin/Prametrages/Gestion_RCAR';
     import IRGestion from "./routes/superadmin/Prametrages/GestionIR";
-    import GestionCredit from './routes/superadmin/Credit';
+    import GestionCredit from './routes/superadmin/Prametrages/GestionCredit'; 
     import SNTL from "./routes/superadmin/Prametrages/SNTL";
 import Indemente from "./routes/superadmin/AffichageIndementes";
 import Cotisation from "./routes/superadmin/Cotisation";
