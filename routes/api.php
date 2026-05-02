@@ -162,21 +162,32 @@ Route::middleware('auth:sanctum')->group(function () {
                 Route::delete('/configs/{id}', [SntlSettingController::class, 'destroy']);
             });
 
+             // ==================== CREDIT TYPES ====================
+            Route::prefix('credit-types')->group(function () {
+                Route::get('/', [CreditController::class, 'getTypes']);
+                Route::post('/', [CreditController::class, 'storeType']);
+                Route::put('/{id}', [CreditController::class, 'updateType']);
+                Route::delete('/{id}', [CreditController::class, 'destroyType']);
+            });
 
+            // ==================== CREDIT CATEGORIES ====================
+            Route::prefix('credit-categories')->group(function () {
+                Route::get('/', [CreditController::class, 'getCategories']);
+                Route::post('/', [CreditController::class, 'storeCategory']);
+                Route::put('/{id}', [CreditController::class, 'updateCategory']);
+                Route::delete('/{id}', [CreditController::class, 'destroyCategory']);
+            });
 
+            // ==================== CREDITS ====================
+            Route::prefix('credits')->group(function () {
+                Route::get('/', [CreditController::class, 'index']);
+                Route::get('/years', [CreditController::class, 'getYears']);
+                Route::post('/', [CreditController::class, 'store']);
+                Route::put('/{id}', [CreditController::class, 'update']);
+                Route::delete('/{id}', [CreditController::class, 'destroy']);
+                Route::patch('/{id}/toggle', [CreditController::class, 'toggleStatus']);
+            });
 
-
-
-
-
-
-
-
-
-
-
-
-            
             Route::prefix('retraite')->group(function () {
                 // GET - récupérer les paramètres d'une année spécifique
                 Route::get('/settings/{year}', [RetraiteController::class, 'getSettings']);
