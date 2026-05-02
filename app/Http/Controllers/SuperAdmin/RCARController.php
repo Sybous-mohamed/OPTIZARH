@@ -106,6 +106,7 @@ class RcarController extends Controller
                     RcarDetail::create([
                         'rcar_type_id' => $newType->id,
                         'designation'  => $detail->designation,
+                        'type' => $detail['type'] ?? 'salariale', 
                         'plafond'      => $detail->plafond,
                         'percentage'   => $detail->percentage,
                     ]);

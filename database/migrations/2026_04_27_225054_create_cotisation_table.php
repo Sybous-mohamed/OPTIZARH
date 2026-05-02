@@ -10,7 +10,6 @@ return new class extends Migration
         Schema::create('cotisations', function (Blueprint $table) {
             $table->id();
             $table->foreignId('organisme_id')->constrained('organisme')->onDelete('cascade');
-            $table->string('type'); 
             $table->string('name'); 
             $table->decimal('taux', 5, 2); 
             $table->decimal('plafond', 10, 2)->nullable(); 

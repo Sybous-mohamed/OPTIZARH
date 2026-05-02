@@ -51,7 +51,7 @@ Route::get('/verify-email/{id}/{hash}', VerifyEmailController::class)
 */
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/activity-logs', [ActivityLogController::class, 'index']);
-     Route::delete('/activity-logs/{id}', [ActivityLogController::class, 'destroy']);
+    Route::delete('/activity-logs/{id}', [ActivityLogController::class, 'destroy']);
     // Account & Status
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', function (Request $request) {
@@ -67,7 +67,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware(['verified'])->group(function () {
         Route::middleware('role:superadmin')->group(function () {
 
-            Route::get('/salary-years', function() {
+            Route::get('/salary-years', function () {
                 return \App\Models\SuperAdmin\SalaryYear::orderBy('year', 'asc')->get();
             });
 
@@ -112,7 +112,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
                 // Indemnités
                 Route::get('/gestionindemnites/{yearId}', [GestionIndemniteController::class, 'index']);
-                Route::get('/gestionindemnites/detail/{id}', [GestionIndemniteController::class, 'show']);  
+                Route::get('/gestionindemnites/detail/{id}', [GestionIndemniteController::class, 'show']);
                 Route::post('/gestionindemnites', [GestionIndemniteController::class, 'store']);
                 Route::put('/gestionindemnites/{id}', [GestionIndemniteController::class, 'update']);
                 Route::delete('/gestionindemnites/{id}', [GestionIndemniteController::class, 'destroy']);
@@ -131,7 +131,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
 
             Route::prefix('rcar')->group(function () {
-                Route::get('/years-with-data', [RCARController::class, 'getYearsWithData']); 
+                Route::get('/years-with-data', [RCARController::class, 'getYearsWithData']);
                 Route::get('/config/{year}', [RCARController::class, 'getConfiguration']);
                 Route::post('/config/save', [RCARController::class, 'saveConfiguration']);
                 Route::delete('/type/{id}', [RCARController::class, 'deleteType']);
@@ -142,7 +142,7 @@ Route::middleware('auth:sanctum')->group(function () {
                 Route::delete('/{id}/{user_id?}', [RCARController::class, 'destroy']);
                 Route::patch('/type/{id}/toggle-favorite', [RCARController::class, 'toggleFavorite']);
             });
-            
+
             Route::prefix('ir')->group(function () {
                 Route::get('/annees', [IrController::class, 'getAnnees']);
                 Route::get('/settings/{annee}', [IrController::class, 'getSettings']);
@@ -189,6 +189,7 @@ Route::middleware('auth:sanctum')->group(function () {
                 Route::put('/{id}', [CreditController::class, 'update']);
                 Route::delete('/{id}', [CreditController::class, 'destroy']);
                 Route::patch('/{id}/toggle', [CreditController::class, 'toggleStatus']);
+                Route::get('/active/{year}', [CreditController::class, 'getActiveCreditsByYear']);
             });
 
             Route::prefix('assurances')->group(function () {
@@ -204,11 +205,13 @@ Route::middleware('auth:sanctum')->group(function () {
                 Route::get('/configs', [SntlSettingController::class, 'index']);
                 Route::post('/save', [SntlSettingController::class, 'store']);
                 Route::delete('/configs/{id}', [SntlSettingController::class, 'destroy']);
+                Route::get('/configs/{year}', [SntlSettingController::class, 'getByYear']);
             });
+
         });
         // Role: Admin
-        Route::middleware('role:admin')->group(function () {});
+        Route::middleware('role:admin')->group(function () { });
         // Role: RH
-        Route::middleware('role:rh')->group(function () {});
+        Route::middleware('role:rh')->group(function () { });
     });
 });

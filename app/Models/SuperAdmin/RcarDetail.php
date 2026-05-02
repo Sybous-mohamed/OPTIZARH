@@ -8,7 +8,5 @@ class RcarDetail extends Model
 {
     protected $table = 'rcar_details';
 
-    protected $fillable = ['rcar_type_id', 'designation', 'plafond', 'percentage'];
-    //
+    protected $fillable = ['rcar_type_id', 'designation', 'type', 'plafond', 'percentage'];
 }
-

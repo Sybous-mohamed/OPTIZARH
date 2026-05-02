@@ -127,4 +127,21 @@ public function getYearsWithData()
         return response()->json($allYears);
     }
 }
+public function getByYear($year)
+{
+    try {
+        $yearObj = SalaryYear::where('year', $year)->first();
+        if (!$yearObj) {
+            return response()->json([]);
+        }
+        
+        $configs = SntlSetting::where('salary_year_id', $yearObj->id)
+            ->where('is_active', true)
+            ->get();
+        
+        return response()->json($configs);
+    } catch (\Exception $e) {
+        return response()->json([]);
+    }
+}
 }

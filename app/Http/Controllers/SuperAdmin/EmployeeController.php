@@ -7,7 +7,6 @@ use App\Models\SuperAdmin\Employee;
 use App\Models\SuperAdmin\SalaryYear;
 use App\Http\Controllers\Controller;
 use Barryvdh\DomPDF\Facade\Pdf;
-use Illuminate\Validation\Rule;
 
 class EmployeeController extends Controller
 {
@@ -17,6 +16,7 @@ class EmployeeController extends Controller
         $annees = SalaryYear::orderBy('year', 'desc')->get();
         return response()->json($annees);
     }
+
     public function getClassification(Request $request)
     {
         $anneeId = $request->annee_id;
@@ -57,10 +57,6 @@ class EmployeeController extends Controller
                 });
             }
 
-            if ($request->filled('departement') && $request->departement !== 'Tous') {
-                $query->where('departement', $request->departement);
-            }
-
             if ($request->filled('statut') && $request->statut !== 'Tous') {
                 $query->where('statut', $request->statut);
             }
@@ -73,46 +69,56 @@ class EmployeeController extends Controller
     }
 
     public function store(Request $request)
-{
-    try {
-        $validated = $request->validate([
-            'prenom' => 'required|string|max:255',
-            'nom' => 'required|string|max:255',
-            'email' => 'required|email|unique:employees,email',
-            'telephone' => 'nullable|string|max:20',
-            'date_naissance' => 'nullable|date',
-            'adresse' => 'nullable|string',
-            'situation_familiale' => 'nullable|string',
-            'departement' => 'nullable|string',
-            'date_embauche' => 'nullable|date',
-            'poste' => 'nullable|string',
-            'type_contrat' => 'nullable|string',
-            'annee_id' => 'required|exists:salary_years,id',
-            'role_id' => 'nullable|exists:roles,id',
-            'grade_id' => 'nullable|exists:grades,id',
-            'echelle_id' => 'nullable|exists:echelles,id',
-            'echelon_id' => 'nullable|exists:echelons,id',
-            'grade' => 'nullable|string',
-            'echelle' => 'nullable|string',
-            'echelon' => 'nullable|string',  
-            'salaire' => 'nullable|numeric',
-            'indice' => 'nullable|numeric',
-            'statut' => 'nullable|string|in:ACTIF,CONGÉ,DÉPART'
-        ]);
+    {
+        try {
+            $validated = $request->validate([
+                'prenom' => 'required|string|max:255',
+                'nom' => 'required|string|max:255',
+                'email' => 'required|email|unique:employees,email',
+                'telephone' => 'nullable|string|max:20',
+                'date_naissance' => 'nullable|date',
+                'adresse' => 'nullable|string',
+                'situation_familiale' => 'nullable|string',
+                'nombre_enfants' => 'nullable|integer|min:0|max:20',
+                'departement' => 'nullable|string',
+                'date_embauche' => 'nullable|date',
+                'poste' => 'nullable|string',
+                'type_contrat' => 'nullable|string',
+                'annee_id' => 'required|exists:salary_years,id',
+                'role_id' => 'nullable|exists:roles,id',
+                'grade_id' => 'nullable|exists:grades,id',
+                'echelle_id' => 'nullable|exists:echelles,id',
+                'echelon_id' => 'nullable|exists:echelons,id',
+                'grade' => 'nullable|string',
+                'echelle' => 'nullable|string',
+                'echelon' => 'nullable|string',  
+                'salaire' => 'nullable|numeric|min:0',
+                'indice' => 'nullable|numeric|min:0',
+                'statut' => 'nullable|string|in:ACTIF,CONGÉ,DÉPART',
+                'cotisation_type' => 'nullable|string',
+                'cotisation_id' => 'nullable|integer',
+                'cotisation_rubrique_id' => 'nullable|integer',
+                'cotisation_label' => 'nullable|string',
+                'cotisation_taux' => 'nullable|numeric|min:0|max:100',
+                'rcar_type_id' => 'nullable|exists:rcar_types,id',
+                'rcar_type_label' => 'nullable|string|max:255',
+                'rcar_taux' => 'nullable|numeric|min:0|max:100'
+            ]);
 
-        if (isset($validated['echelon']) && $validated['echelon'] !== null) {
-            $validated['echelon'] = (string) $validated['echelon'];
+            if (isset($validated['echelon']) && $validated['echelon'] !== null) {
+                $validated['echelon'] = (string) $validated['echelon'];
+            }
+
+            $employee = Employee::create($validated);
+            return response()->json($employee, 201);
+            
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json(['errors' => $e->errors()], 422);
+        } catch (\Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 500);
         }
-
-        $employee = Employee::create($validated);
-        return response()->json($employee, 201);
-        
-    } catch (\Illuminate\Validation\ValidationException $e) {
-        return response()->json(['errors' => $e->errors()], 422);
-    } catch (\Exception $e) {
-        return response()->json(['message' => $e->getMessage()], 500);
     }
-}
+
     public function show($id)
     {
         try {
@@ -141,6 +147,7 @@ class EmployeeController extends Controller
                 'date_naissance' => 'nullable|date',
                 'adresse' => 'nullable|string|max:500',
                 'situation_familiale' => 'nullable|string|max:50',
+                'nombre_enfants' => 'nullable|integer|min:0|max:20',
                 'departement' => 'nullable|string|max:100',
                 'date_embauche' => 'nullable|date',
                 'poste' => 'nullable|string|max:255',
@@ -155,7 +162,15 @@ class EmployeeController extends Controller
                 'echelon' => 'nullable|string|max:50',
                 'salaire' => 'nullable|numeric|min:0',
                 'indice' => 'nullable|numeric|min:0',
-                'statut' => 'nullable|string|in:ACTIF,CONGÉ,DÉPART'
+                'statut' => 'nullable|string|in:ACTIF,CONGÉ,DÉPART',
+                'cotisation_type' => 'nullable|string',
+                'cotisation_id' => 'nullable|integer',
+                'cotisation_rubrique_id' => 'nullable|integer',
+                'cotisation_label' => 'nullable|string',
+                'cotisation_taux' => 'nullable|numeric|min:0|max:100',
+                'rcar_type_id' => 'nullable|exists:rcar_types,id',
+                'rcar_type_label' => 'nullable|string|max:255',
+                'rcar_taux' => 'nullable|numeric|min:0|max:100'
             ];
             
             if ($request->has('email') && $request->email !== $employee->email) {
@@ -213,48 +228,44 @@ class EmployeeController extends Controller
         }
     }
 
-public function exportPDF(Request $request)
-{
-    try {
-        $query = Employee::query();
-        
-        if ($request->filled('annee_id')) {
-            $query->where('annee_id', $request->annee_id);
+    public function exportPDF(Request $request)
+    {
+        try {
+            $query = Employee::query();
+            
+            if ($request->filled('annee_id')) {
+                $query->where('annee_id', $request->annee_id);
+            }
+            
+            if ($request->filled('search')) {
+                $search = $request->search;
+                $query->where(function($q) use ($search) {
+                    $q->where('prenom', 'like', "%$search%")
+                      ->orWhere('nom', 'like', "%$search%")
+                      ->orWhere('email', 'like', "%$search%");
+                });
+            }
+            
+            if ($request->filled('statut') && $request->statut !== 'Tous') {
+                $query->where('statut', $request->statut);
+            }
+            
+            $employees = $query->orderBy('nom', 'asc')->get();
+            $anneeName = $request->annee_id ? SalaryYear::find($request->annee_id)?->year : 'Toutes';
+            
+            $pdf = Pdf::loadView('pdf.employees', [
+                'employees' => $employees,
+                'date' => now()->format('d/m/Y H:i'),
+                'annee' => $anneeName,
+                'total' => $employees->count()
+            ]);
+            $pdf->setPaper('a4', 'landscape');
+            
+            return $pdf->download('employes_' . now()->format('Ymd_His') . '.pdf');
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
         }
-        
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->where('prenom', 'like', "%$search%")
-                  ->orWhere('nom', 'like', "%$search%")
-                  ->orWhere('email', 'like', "%$search%");
-            });
-        }
-        
-        if ($request->filled('departement') && $request->departement !== 'Tous') {
-            $query->where('departement', $request->departement);
-        }
-        
-        if ($request->filled('statut') && $request->statut !== 'Tous') {
-            $query->where('statut', $request->statut);
-        }
-        
-        $employees = $query->orderBy('nom', 'asc')->get();
-        $anneeName = $request->annee_id ? SalaryYear::find($request->annee_id)?->year : 'Toutes';
-        
-        $pdf = Pdf::loadView('pdf.employees', [
-            'employees' => $employees,
-            'date' => now()->format('d/m/Y H:i'),
-            'annee' => $anneeName,
-            'total' => $employees->count()
-        ]);
-        $pdf->setPaper('a4', 'landscape');
-        
-        return $pdf->download('employes_' . now()->format('Ymd_His') . '.pdf');
-    } catch (\Exception $e) {
-        return response()->json(['error' => $e->getMessage()], 500);
     }
-}
     
     public function checkEmail(Request $request)
     {

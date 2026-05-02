@@ -17,6 +17,7 @@ return new class extends Migration
             $table->date('date_naissance')->nullable();
             $table->string('adresse')->nullable();
             $table->string('situation_familiale')->nullable();
+            $table->integer('nombre_enfants')->default(0);
             $table->string('departement')->nullable();
             $table->date('date_embauche')->nullable();
             $table->string('poste')->nullable();
@@ -37,7 +38,28 @@ return new class extends Migration
             $table->decimal('indice', 10, 2)->nullable();
             
             $table->string('statut')->default('ACTIF');
+            
+            // Cotisations
+            $table->string('cotisation_type')->nullable();
+            $table->unsignedBigInteger('cotisation_id')->nullable();
+            $table->unsignedBigInteger('cotisation_rubrique_id')->nullable();
+            $table->string('cotisation_label')->nullable();
+            $table->decimal('cotisation_taux', 5, 2)->nullable();
+            
+            // RCAR
+            $table->unsignedBigInteger('rcar_type_id')->nullable();
+            $table->string('rcar_type_label')->nullable();
+            $table->decimal('rcar_taux', 5, 2)->nullable();
+            
             $table->timestamps();
+            
+            // Foreign keys
+            $table->foreign('annee_id')->references('id')->on('salary_years')->onDelete('set null');
+            $table->foreign('role_id')->references('id')->on('roles')->onDelete('set null');
+            $table->foreign('grade_id')->references('id')->on('grades')->onDelete('set null');
+            $table->foreign('echelle_id')->references('id')->on('echelles')->onDelete('set null');
+            $table->foreign('echelon_id')->references('id')->on('echelons')->onDelete('set null');
+            $table->foreign('rcar_type_id')->references('id')->on('rcar_types')->onDelete('set null');
         });
     }
 

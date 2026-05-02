@@ -205,4 +205,18 @@ class CreditController extends Controller
         $credit->save();
         return response()->json($credit);
     }
+
+public function getActiveCreditsByYear($year)
+{
+    try {
+        $credits = Credit::where('year', $year)
+            ->where('status', 'Actif')
+            ->with(['type', 'category'])
+            ->get();
+        
+        return response()->json($credits);
+    } catch (\Exception $e) {
+        return response()->json([]);
+    }
+}
 }

@@ -17,6 +17,8 @@ public function up(): void
         $table->string('sector')->nullable();
         $table->integer('employee_count')->nullable();
         $table->string('role')->default('admin');
+        $table->timestamp('email_verified_at')->nullable();
+        $table->rememberToken(); 
         $table->timestamps();
     });
 }
