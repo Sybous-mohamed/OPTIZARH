@@ -8,7 +8,6 @@ use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 
-
 use App\Http\Controllers\SuperAdmin\SuperAdminController;
 use App\Http\Controllers\SuperAdmin\DashboardController;
 use App\Http\Controllers\SuperAdmin\EmployeeController;
@@ -19,7 +18,6 @@ use App\Http\Controllers\SuperAdmin\RCARController;
 use App\Http\Controllers\SuperAdmin\IrController;
 use App\Http\Controllers\SuperAdmin\CreditController;
 use App\Http\Controllers\SuperAdmin\SntlSettingController;
-
 use App\Http\Controllers\SuperAdmin\RetraiteController;
 use App\Http\Controllers\SuperAdmin\AssuranceController;
 use App\Http\Controllers\SuperAdmin\ActivityLogController;

@@ -1,7 +1,7 @@
 import React, { useState, useEffect ,useRef  } from 'react';
 import { 
   Plus, Trash2, Save, Building2, Loader2, 
-  Star, Eye, EyeOff, Download, Calendar, AlertCircle ,ChevronDown 
+  Star, Eye, EyeOff, Download, Calendar, AlertCircle ,ChevronDown , ArrowLeft
 } from 'lucide-react';
 import api from '../../../lib/apis/axiosConfig';
 import { jsPDF } from "jspdf";
@@ -9,6 +9,7 @@ import autoTable from 'jspdf-autotable';
 import { useTheme } from '../../../context/ThemeContext';
 import { useNotification } from '../../../context/NotificationContext';
 import DeleteConfirmModal from '../../../lib/components/DeleteConfirmModal';
+import { useNavigate } from 'react-router-dom';
 
 const GestionCotisation = () => {
   const { darkMode } = useTheme();
@@ -27,7 +28,8 @@ const GestionCotisation = () => {
     isOpen: false, type: null, id: null, name: '', orgId: null 
   });
   const [isYearOpen, setIsYearOpen] = useState(false);
-const yearRef = useRef(null);
+    const yearRef = useRef(null);
+    const navigate = useNavigate();
 
   // Dark mode classes
   const bgClass = darkMode ? 'bg-[#0D0D0D]' : 'bg-[#F8FAFC]';
@@ -69,7 +71,7 @@ const yearRef = useRef(null);
       }
     } catch (error) {
       console.error("Erreur chargement:", error);
-      showNotification("❌ Erreur chargement des données", "error");
+      showNotification(" Erreur chargement des données", "error");
     } finally {
       setFetching(false);
     }
@@ -178,7 +180,7 @@ const yearRef = useRef(null);
         setConfig({...config, organismes: config.organismes.filter(o => o.id !== deleteModal.id)});
         showNotification(`🗑️ Organisme "${deleteModal.name}" supprimé`, "success");
       } catch (error) {
-        showNotification("❌ Erreur lors de la suppression", "error");
+        showNotification(" Erreur lors de la suppression", "error");
       } finally {
         setLoading(false);
       }
@@ -194,7 +196,7 @@ const yearRef = useRef(null);
         setConfig({...config, organismes: updated});
         showNotification(`🗑️ Rubrique "${deleteModal.name}" supprimée`, "success");
       } catch (error) {
-        showNotification("❌ Erreur lors de la suppression", "error");
+        showNotification(" Erreur lors de la suppression", "error");
       } finally {
         setLoading(false);
       }
@@ -208,11 +210,11 @@ const yearRef = useRef(null);
     for (const org of config.organismes) {
       for (const rub of org.rubriques) {
         if (!validateTaux(rub.taux)) {
-          showNotification(`❌ Taux invalide pour "${rub.label || 'sans nom'}" (0-100%)`, "error");
+          showNotification(` Taux invalide pour "${rub.label || 'sans nom'}" (0-100%)`, "error");
           hasError = true;
         }
         if (!validatePlafond(rub.plafond)) {
-          showNotification(`❌ Plafond invalide pour "${rub.label || 'sans nom'}" (positif)`, "error");
+          showNotification(` Plafond invalide pour "${rub.label || 'sans nom'}" (positif)`, "error");
           hasError = true;
         }
       }
@@ -223,9 +225,9 @@ const yearRef = useRef(null);
     try {
       await api.post('/api/cotisations/save', config);
       await fetchData();
-      showNotification(`✅ Configuration ${config.year} enregistrée`, "success");
+      showNotification(`Configuration ${config.year} enregistrée`, "success");
     } catch (error) {
-      showNotification("❌ Erreur lors de l'enregistrement", "error");
+      showNotification(" Erreur lors de l'enregistrement", "error");
     } finally {
       setLoading(false);
     }
@@ -246,7 +248,7 @@ const yearRef = useRef(null);
         showNotification(response.data.message, "success");
       }
     } catch (error) {
-      showNotification("❌ Erreur lors de la propagation", "error");
+      showNotification(" Erreur lors de la propagation", "error");
     }
   };
 
@@ -294,12 +296,19 @@ const yearRef = useRef(null);
 
   return (
     <div className={`min-h-screen transition-colors duration-300 ${bgClass}`}>
-      <div className="max-w-7xl mx-auto p-4 pb-32">
+      <div className="max-w-7xl mx-auto pb-32">
         
         {/* HEADER */}
         <div className={`${cardClass} rounded-2xl border ${borderClass} p-4 mb-6 shadow-sm`}>
           <div className="flex flex-wrap items-center justify-between gap-4">
+
             <div className="flex items-center gap-4">
+                <button 
+                    onClick={() => navigate(-1)}
+                    className={`cursor-pointer p-2 rounded-xl transition-all ${darkMode ? 'bg-[#1A1A1A] border-[#2A2A2A] hover:bg-[#252525]' : 'bg-white border-gray-200 hover:bg-gray-50'} border shadow-sm`}
+                >
+                    <ArrowLeft size={18} className={textClass} />
+                </button>
                 <div className="relative" ref={yearRef}>
                 <button 
                     onClick={() => setIsYearOpen(!isYearOpen)}

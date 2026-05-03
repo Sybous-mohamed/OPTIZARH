@@ -776,7 +776,7 @@ export default function EmployeeManagement() {
         if (Object.keys(newErrors).length > 0) {
             const firstErrorField = Object.keys(newErrors)[0];
             scrollToError(firstErrorField);
-            showNotification(`❌ ${newErrors[firstErrorField]}`, "error");
+            showNotification(` ${newErrors[firstErrorField]}`, "error");
             return false;
         }
         
@@ -973,12 +973,12 @@ export default function EmployeeManagement() {
         }
         
         if (!validateForm()) {
-            showNotification("❌ Veuillez corriger les erreurs", "error");
+            showNotification(" Veuillez corriger les erreurs", "error");
             return;
         }
         
         if (!selectedAnneeId) {
-            showNotification("❌ Aucune année sélectionnée", "error");
+            showNotification(" Aucune année sélectionnée", "error");
             return;
         }
         
@@ -1013,10 +1013,10 @@ export default function EmployeeManagement() {
             
             if (isEdit) {
                 await axiosClient.put(`/api/employees/${currentId}`, submitData);
-                showNotification("✅ Employé modifié avec succès", "success");
+                showNotification("Employé modifié avec succès", "success");
             } else {
                 await axiosClient.post('/api/employees', submitData);
-                showNotification("✅ Employé ajouté avec succès", "success");
+                showNotification("Employé ajouté avec succès", "success");
             }
             
             resetForm();
@@ -1026,11 +1026,11 @@ export default function EmployeeManagement() {
             if (error.response?.data?.errors) {
                 const errors = error.response.data.errors;
                 Object.keys(errors).forEach(key => {
-                    showNotification(`❌ ${key}: ${errors[key][0]}`, "error");
+                    showNotification(` ${key}: ${errors[key][0]}`, "error");
                 });
                 setErrors(errors);
             } else {
-                showNotification(error.response?.data?.message || "❌ Erreur lors de l'enregistrement", "error");
+                showNotification(error.response?.data?.message || " Erreur lors de l'enregistrement", "error");
             }
         } finally {
             setLoading(false);
@@ -1094,7 +1094,7 @@ export default function EmployeeManagement() {
             showNotification("📄 PDF exporté avec succès", "success");
         } catch (error) {
             console.error(error);
-            showNotification("❌ Erreur lors de l'export PDF", "error");
+            showNotification(" Erreur lors de l'export PDF", "error");
         } finally {
             setLoading(false);
         }

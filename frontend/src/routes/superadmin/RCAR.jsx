@@ -91,7 +91,7 @@ const ConsulterRCAR = () => {
         }
       } catch (error) { 
         console.error(error);
-        showNotification("❌ Erreur chargement des années", "error");
+        showNotification(" Erreur chargement des années", "error");
       }
     };
     fetchYears();
@@ -120,12 +120,12 @@ const ConsulterRCAR = () => {
     setSelectedYear(yearValue);
     setIsYearOpen(false);
     localStorage.setItem('consulter_rcar_selected_year', yearValue);
-    showNotification(`📅 Année ${yearValue} sélectionnée`, "success");
+    showNotification(` Année ${yearValue} sélectionnée`, "success");
   };
 
   const exportToPDF = () => {
     if (rcarData.length === 0) {
-      showNotification("❌ Aucune donnée à exporter", "error");
+      showNotification(" Aucune donnée à exporter", "error");
       return;
     }
 

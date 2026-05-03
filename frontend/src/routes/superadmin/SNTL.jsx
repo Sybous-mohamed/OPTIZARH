@@ -73,7 +73,7 @@ const ConsultationSNTL = () => {
         setInitialLoading(false);
       } catch (err) { 
         console.error(err);
-        showNotification("❌ Erreur chargement des années", "error");
+        showNotification(" Erreur chargement des années", "error");
         setInitialLoading(false);
       }
     };
@@ -86,7 +86,7 @@ const ConsultationSNTL = () => {
     setIsYearOpen(false);
     localStorage.setItem('consultation_sntl_selected_year', yearValue);
     localStorage.setItem('consultation_sntl_selected_year_id', yearId);
-    showNotification(`📅 Année ${yearValue} sélectionnée`, "success");
+    showNotification(` Année ${yearValue} sélectionnée`, "success");
   };
 
   // Charger les données SNTL
@@ -122,7 +122,7 @@ const ConsultationSNTL = () => {
 
   const exportPDF = () => {
     if (filteredData.length === 0) {
-      showNotification("❌ Aucune donnée à exporter", "error");
+      showNotification(" Aucune donnée à exporter", "error");
       return;
     }
     

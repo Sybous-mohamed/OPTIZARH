@@ -78,7 +78,7 @@ const GestionRetraite = () => {
         }
       } catch (err) {
         console.error("Erreur lors du chargement des années");
-        showNotification("❌ Erreur chargement des années", "error");
+        showNotification(" Erreur chargement des années", "error");
       }
     };
     fetchYears();
@@ -112,18 +112,18 @@ const GestionRetraite = () => {
     setSelectedYear(yearValue);
     setIsYearOpen(false);
     localStorage.setItem('retraite_selected_year', yearValue);
-    showNotification(`📅 Année ${yearValue} sélectionnée`, "success");
+    showNotification(` Année ${yearValue} sélectionnée`, "success");
   };
 
   const handleSave = async () => {
     setLoading(true);
     try {
       await api.post('/api/retraite/settings', { year: selectedYear, ...retraiteData });
-      showNotification("✅ Paramètres enregistrés avec succès !", "success");
+      showNotification("Paramètres enregistrés avec succès !", "success");
       setIsEditing(false);
       setLastModified(new Date().toISOString());
     } catch (err) {
-      showNotification("❌ Erreur lors de l'enregistrement", "error");
+      showNotification(" Erreur lors de l'enregistrement", "error");
     } finally {
       setLoading(false);
     }
@@ -161,7 +161,7 @@ const GestionRetraite = () => {
       
     } catch (error) {
       console.error("Détails de l'erreur PDF:", error);
-      showNotification("❌ Erreur lors de la génération du PDF", "error");
+      showNotification(" Erreur lors de la génération du PDF", "error");
     }
   };
 

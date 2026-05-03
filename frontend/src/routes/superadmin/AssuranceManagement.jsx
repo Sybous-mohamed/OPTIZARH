@@ -101,9 +101,9 @@ export default function AssuranceManagement() {
             try {
                 await axiosClient.delete(`/api/assurances/assurance/${id}`);
                 setAssurancesList(assurancesList.filter(a => a.id !== id));
-                showNotification("✅ Assurance supprimée avec succès", "success");
+                showNotification("Assurance supprimée avec succès", "success");
             } catch (err) {
-                showNotification("❌ Erreur lors de la suppression", "error");
+                showNotification(" Erreur lors de la suppression", "error");
             } finally {
                 setLoading(false);
             }
@@ -154,9 +154,9 @@ export default function AssuranceManagement() {
                     }
                     return a;
                 }));
-                showNotification("✅ Tranche supprimée", "success");
+                showNotification("Tranche supprimée", "success");
             } catch (err) {
-                showNotification("❌ Erreur lors de la suppression", "error");
+                showNotification(" Erreur lors de la suppression", "error");
             } finally {
                 setLoading(false);
             }
@@ -210,11 +210,11 @@ const handleSave = async () => {
     // Validation
     for (const assurance of assurancesList) {
         if (!assurance.name) {
-            showNotification("❌ Toutes les assurances doivent avoir un nom", "error");
+            showNotification(" Toutes les assurances doivent avoir un nom", "error");
             return;
         }
         if (!assurance.code) {
-            showNotification(`❌ Code requis pour ${assurance.name}`, "error");
+            showNotification(` Code requis pour ${assurance.name}`, "error");
             return;
         }
     }
@@ -251,12 +251,12 @@ const handleSave = async () => {
         const response = await axiosClient.post('/api/assurances/store', submitData);
         console.log("Response:", response.data);
         
-        showNotification(`✅ Configuration ${selectedAnnee} enregistrée avec succès`, "success");
+        showNotification(`Configuration ${selectedAnnee} enregistrée avec succès`, "success");
         setHasUnsavedChanges(false);
         fetchConfig(selectedAnnee);
     } catch (err) {
         console.error("Error details:", err.response?.data);
-        showNotification(err.response?.data?.error || "❌ Erreur lors de la sauvegarde", "error");
+        showNotification(err.response?.data?.error || " Erreur lors de la sauvegarde", "error");
     } finally {
         setLoading(false);
     }

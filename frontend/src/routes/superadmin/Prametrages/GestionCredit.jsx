@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
-  Plus, Trash2, Edit2, Save, X, Loader2, 
-  Tag, Layers, Settings2, AlertCircle, CheckCircle, ChevronDown,
-  CreditCard, DollarSign, Percent, Calendar, Eye 
+  Plus, Trash2, Edit2, X, Loader2, 
+  Tag, Layers, CreditCard, Search, 
+  CheckCircle, ChevronDown, Banknote, Percent, Clock,
+  Save, ArrowLeft
 } from 'lucide-react';
 import api from '../../../lib/apis/axiosConfig';
 import { useNotification } from '../../../context/NotificationContext';
@@ -13,70 +14,87 @@ const GestionCredit = () => {
   const { darkMode } = useTheme();
   const { showNotification } = useNotification();
   
+  // États
   const [types, setTypes] = useState([]);
   const [categories, setCategories] = useState([]);
   const [credits, setCredits] = useState([]);
   const [salaryYears, setSalaryYears] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('types');
+  const [searchTerm, setSearchTerm] = useState('');
   
+  // Édition
   const [editingType, setEditingType] = useState(null);
   const [editingCategory, setEditingCategory] = useState(null);
   const [editingCredit, setEditingCredit] = useState(null);
   const [deleteModal, setDeleteModal] = useState({ isOpen: false, type: null, id: null, name: '' });
   
+  // Formulaire d'édition crédit
+  const [editCreditForm, setEditCreditForm] = useState({
+    id: null,
+    name: '', type_id: '', type_name: '', category_id: '', category_name: '',
+    max_amount: '', interest_rate: '', max_duration: '', description: '', year: ''
+  });
+  const [editAvailableCategories, setEditAvailableCategories] = useState([]);
+  const [isEditYearOpen, setIsEditYearOpen] = useState(false);
+  const [isEditTypeOpen, setIsEditTypeOpen] = useState(false);
+  const [isEditCategoryOpen, setIsEditCategoryOpen] = useState(false);
+  const editYearRef = useRef(null);
+  const editTypeRef = useRef(null);
+  const editCategoryRef = useRef(null);
+  
+  // Nouveau Type
+  const [showNewTypeForm, setShowNewTypeForm] = useState(false);
   const [newTypeName, setNewTypeName] = useState('');
   const [newTypeCode, setNewTypeCode] = useState('');
   const [selectedCategoriesForType, setSelectedCategoriesForType] = useState([]);
-  const [showAddType, setShowAddType] = useState(false);
   
+  // Nouvelle Catégorie
+  const [showNewCategoryForm, setShowNewCategoryForm] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newCategoryCode, setNewCategoryCode] = useState('');
-  const [showAddCategory, setShowAddCategory] = useState(false);
   
-  const [showAddCredit, setShowAddCredit] = useState(false);
-  const [creditForm, setCreditForm] = useState({
-    name: '',
-    type_id: '',
-    category_id: '',
-    max_amount: '',
-    interest_rate: '',
-    max_duration: '',
-    description: '',
-    year: ''
-  });
+  // Nouveau Crédit
+  const [showNewCreditForm, setShowNewCreditForm] = useState(false);
   const [availableCategories, setAvailableCategories] = useState([]);
   const [isYearOpen, setIsYearOpen] = useState(false);
+  const [isTypeOpen, setIsTypeOpen] = useState(false);
+  const [isCategoryOpen, setIsCategoryOpen] = useState(false);
   const yearRef = useRef(null);
+  const typeRef = useRef(null);
+  const categoryRef = useRef(null);
+  
+  const [creditForm, setCreditForm] = useState({
+    name: '', type_id: '', type_name: '', category_id: '', category_name: '',
+    max_amount: '', interest_rate: '', max_duration: '', description: '', year: ''
+  });
 
+  // Fermeture dropdowns
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (yearRef.current && !yearRef.current.contains(event.target)) {
-        setIsYearOpen(false);
-      }
+    const handler = (e) => {
+      if (yearRef.current && !yearRef.current.contains(e.target)) setIsYearOpen(false);
+      if (typeRef.current && !typeRef.current.contains(e.target)) setIsTypeOpen(false);
+      if (categoryRef.current && !categoryRef.current.contains(e.target)) setIsCategoryOpen(false);
+      if (editYearRef.current && !editYearRef.current.contains(e.target)) setIsEditYearOpen(false);
+      if (editTypeRef.current && !editTypeRef.current.contains(e.target)) setIsEditTypeOpen(false);
+      if (editCategoryRef.current && !editCategoryRef.current.contains(e.target)) setIsEditCategoryOpen(false);
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  const bgClass = darkMode ? 'bg-[#0D0D0D]' : 'bg-[#F8FAFC]';
+  // Classes
+  const bgClass = darkMode ? 'bg-[#0D0D0D]' : 'bg-gray-50';
   const cardClass = darkMode ? 'bg-[#1A1A1A] border-[#2A2A2A]' : 'bg-white border-gray-200';
   const textClass = darkMode ? 'text-gray-100' : 'text-gray-800';
-  const textMutedClass = darkMode ? 'text-gray-500' : 'text-gray-500';
+  const textMuted = darkMode ? 'text-gray-500' : 'text-gray-400';
   const borderClass = darkMode ? 'border-[#2A2A2A]' : 'border-gray-200';
-  const inputClass = darkMode 
-    ? 'w-full px-3 py-2 rounded-lg bg-[#252525] border border-[#333] text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500'
-    : 'w-full px-3 py-2 rounded-lg bg-gray-50 border border-gray-200 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500';
-  
-  const selectClass = darkMode 
-    ? 'bg-[#252525] border-[#333] text-white' 
-    : 'bg-gray-50 border-gray-200 text-gray-800';
-  
-  const buttonClass = "px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 cursor-pointer";
-  const primaryButtonClass = `${buttonClass} bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 shadow-md`;
-  const successButtonClass = `${buttonClass} bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-700 hover:to-teal-700 shadow-md`;
-  const outlineButtonClass = `${buttonClass} border ${borderClass} ${textClass} hover:bg-gray-100 dark:hover:bg-[#252525]`;
+  const inputClass = `w-full px-3 py-2 rounded-lg border ${borderClass} ${darkMode ? 'bg-[#252525] text-white' : 'bg-gray-50 text-gray-800'} focus:outline-none focus:ring-2 focus:ring-indigo-500`;
 
+  const btnPrimary = "px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition-all flex items-center gap-2 cursor-pointer";
+  const btnSuccess = "px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-all flex items-center gap-2 cursor-pointer";
+  const btnOutline = `px-4 py-2 rounded-lg border ${borderClass} ${textClass} hover:bg-gray-100 dark:hover:bg-[#252525] transition-all flex items-center gap-2 cursor-pointer`;
+
+  // Récupération données
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -90,16 +108,8 @@ const GestionCredit = () => {
       setCategories(categoriesRes.data || []);
       setCredits(creditsRes.data || []);
       setSalaryYears(yearsRes.data || []);
-      
-      if (yearsRes.data && yearsRes.data.length > 0 && !creditForm.year) {
-        const lastYear = yearsRes.data[yearsRes.data.length - 1]?.year;
-        if (lastYear) {
-          setCreditForm(prev => ({ ...prev, year: lastYear }));
-        }
-      }
     } catch (error) {
-      console.error(error);
-      showNotification("❌ Erreur chargement des données", "error");
+      showNotification("❌ Erreur chargement", "error");
     } finally {
       setLoading(false);
     }
@@ -107,143 +117,159 @@ const GestionCredit = () => {
 
   useEffect(() => { fetchData(); }, []);
 
+  // Mise à jour catégories disponibles pour nouveau crédit
   useEffect(() => {
     if (creditForm.type_id) {
-      const selectedType = types.find(t => t.id === parseInt(creditForm.type_id));
-      setAvailableCategories(selectedType?.categories || []);
-      if (creditForm.category_id && !selectedType?.categories?.some(c => c.id === parseInt(creditForm.category_id))) {
-        setCreditForm({...creditForm, category_id: ''});
+      const selected = types.find(t => t.id === parseInt(creditForm.type_id));
+      setAvailableCategories(selected?.categories || []);
+      if (creditForm.category_id && !selected?.categories?.some(c => c.id === parseInt(creditForm.category_id))) {
+        setCreditForm(prev => ({ ...prev, category_id: '', category_name: '' }));
       }
     } else {
       setAvailableCategories([]);
     }
   }, [creditForm.type_id, types]);
 
-  const addType = async () => {
-    if (!newTypeName.trim()) {
-      showNotification("❌ Le nom du type est requis", "error");
-      return;
+  // Mise à jour catégories disponibles pour édition crédit
+  useEffect(() => {
+    if (editCreditForm.type_id) {
+      const selected = types.find(t => t.id === parseInt(editCreditForm.type_id));
+      setEditAvailableCategories(selected?.categories || []);
+      if (editCreditForm.category_id && !selected?.categories?.some(c => c.id === parseInt(editCreditForm.category_id))) {
+        setEditCreditForm(prev => ({ ...prev, category_id: '', category_name: '' }));
+      }
+    } else {
+      setEditAvailableCategories([]);
     }
-    
+  }, [editCreditForm.type_id, types]);
+
+  // Types CRUD
+  const addType = async () => {
+    if (!newTypeName.trim()) return showNotification("❌ Nom requis", "error");
     try {
-      const response = await api.post('/api/credit-types', {
+      const res = await api.post('/api/credit-types', {
         name: newTypeName,
         code: newTypeCode.toUpperCase() || newTypeName.toUpperCase().replace(/\s/g, '_'),
         category_ids: selectedCategoriesForType
       });
-      setTypes([...types, response.data]);
-      setNewTypeName('');
-      setNewTypeCode('');
-      setSelectedCategoriesForType([]);
-      setShowAddType(false);
-      showNotification(`✅ Type "${newTypeName}" ajouté`, "success");
-    } catch (error) {
-      showNotification(error.response?.data?.error || "❌ Erreur", "error");
-    }
+      setTypes([...types, res.data]);
+      setNewTypeName(''); setNewTypeCode(''); setSelectedCategoriesForType([]);
+      setShowNewTypeForm(false);
+      showNotification("✅ Type ajouté", "success");
+    } catch (error) { showNotification("❌ Erreur", "error"); }
   };
 
   const updateType = async (id, name) => {
     try {
-      const response = await api.put(`/api/credit-types/${id}`, { name });
-      setTypes(types.map(t => t.id === id ? response.data : t));
+      const res = await api.put(`/api/credit-types/${id}`, { name });
+      setTypes(types.map(t => t.id === id ? res.data : t));
       setEditingType(null);
-      showNotification(`✅ Type modifié`, "success");
-    } catch (error) {
-      showNotification("❌ Erreur", "error");
-    }
+      showNotification("✅ Type modifié", "success");
+    } catch (error) { showNotification("❌ Erreur", "error"); }
   };
 
-  const updateTypeCategories = async (id, categoryIds) => {
-    try {
-      const response = await api.put(`/api/credit-types/${id}`, { category_ids: categoryIds });
-      setTypes(types.map(t => t.id === id ? response.data : t));
-      showNotification(`✅ Catégories mises à jour`, "success");
-    } catch (error) {
-      showNotification("❌ Erreur", "error");
-    }
-  };
+  const deleteType = (id, name) => setDeleteModal({ isOpen: true, type: 'type', id, name });
 
-  const deleteType = (id, name) => {
-    setDeleteModal({ isOpen: true, type: 'type', id, name });
-  };
-
+  // Categories CRUD
   const addCategory = async () => {
-    if (!newCategoryName.trim()) {
-      showNotification("❌ Le nom de la catégorie est requis", "error");
-      return;
-    }
-    
+    if (!newCategoryName.trim()) return showNotification("❌ Nom requis", "error");
     try {
-      const response = await api.post('/api/credit-categories', {
+      const res = await api.post('/api/credit-categories', {
         name: newCategoryName,
         code: newCategoryCode.toUpperCase() || newCategoryName.toUpperCase().replace(/\s/g, '_')
       });
-      setCategories([...categories, response.data]);
-      setNewCategoryName('');
-      setNewCategoryCode('');
-      setShowAddCategory(false);
-      showNotification(`✅ Catégorie "${newCategoryName}" ajoutée`, "success");
-    } catch (error) {
-      showNotification(error.response?.data?.error || "❌ Erreur", "error");
-    }
+      setCategories([...categories, res.data]);
+      setNewCategoryName(''); setNewCategoryCode('');
+      setShowNewCategoryForm(false);
+      showNotification("✅ Catégorie ajoutée", "success");
+    } catch (error) { showNotification("❌ Erreur", "error"); }
   };
 
   const updateCategory = async (id, name) => {
     try {
-      const response = await api.put(`/api/credit-categories/${id}`, { name });
-      setCategories(categories.map(c => c.id === id ? response.data : c));
+      const res = await api.put(`/api/credit-categories/${id}`, { name });
+      setCategories(categories.map(c => c.id === id ? res.data : c));
       setEditingCategory(null);
-      showNotification(`✅ Catégorie modifiée`, "success");
-    } catch (error) {
-      showNotification("❌ Erreur", "error");
-    }
+      showNotification("✅ Catégorie modifiée", "success");
+    } catch (error) { showNotification("❌ Erreur", "error"); }
   };
 
-  const deleteCategory = (id, name) => {
-    setDeleteModal({ isOpen: true, type: 'category', id, name });
-  };
+  const deleteCategory = (id, name) => setDeleteModal({ isOpen: true, type: 'category', id, name });
 
+  // Credits CRUD
   const addCredit = async () => {
     if (!creditForm.name || !creditForm.type_id || !creditForm.category_id || !creditForm.max_amount || !creditForm.interest_rate || !creditForm.max_duration || !creditForm.year) {
-      showNotification("❌ Tous les champs sont requis", "error");
-      return;
+      return showNotification("❌ Tous les champs sont requis", "error");
     }
-    
     try {
-      const response = await api.post('/api/credits', creditForm);
-      setCredits([...credits, response.data]);
-      setCreditForm({
-        name: '',
-        type_id: '',
-        category_id: '',
-        max_amount: '',
-        interest_rate: '',
-        max_duration: '',
-        description: '',
-        year: salaryYears.length > 0 ? salaryYears[salaryYears.length - 1]?.year : ''
+      const res = await api.post('/api/credits', {
+        name: creditForm.name, type_id: creditForm.type_id, category_id: creditForm.category_id,
+        max_amount: creditForm.max_amount, interest_rate: creditForm.interest_rate,
+        max_duration: creditForm.max_duration, description: creditForm.description, year: creditForm.year
       });
-      setShowAddCredit(false);
-      showNotification(`✅ Crédit "${creditForm.name}" ajouté`, "success");
+      setCredits([...credits, res.data]);
+      setCreditForm({ name: '', type_id: '', type_name: '', category_id: '', category_name: '', max_amount: '', interest_rate: '', max_duration: '', description: '', year: '' });
+      setShowNewCreditForm(false);
+      showNotification("✅ Crédit ajouté", "success");
       fetchData();
-    } catch (error) {
-      showNotification(error.response?.data?.error || "❌ Erreur", "error");
-    }
+    } catch (error) { showNotification("❌ Erreur", "error"); }
   };
 
-  const updateCredit = async (id, data) => {
+  // Fonction pour ouvrir le formulaire d'édition crédit
+  const openEditCredit = (credit) => {
+    setEditCreditForm({
+      id: credit.id,
+      name: credit.name || '',
+      type_id: credit.type_id || '',
+      type_name: credit.type?.name || '',
+      category_id: credit.category_id || '',
+      category_name: credit.category?.name || '',
+      max_amount: credit.max_amount || '',
+      interest_rate: credit.interest_rate || '',
+      max_duration: credit.max_duration || '',
+      description: credit.description || '',
+      year: credit.year || ''
+    });
+    setEditingCredit(credit.id);
+  };
+
+  // Fonction pour mettre à jour un crédit
+  const updateCredit = async () => {
+    if (!editCreditForm.name || !editCreditForm.type_id || !editCreditForm.category_id || !editCreditForm.max_amount || !editCreditForm.interest_rate || !editCreditForm.max_duration || !editCreditForm.year) {
+      return showNotification("❌ Tous les champs sont requis", "error");
+    }
     try {
-      const response = await api.put(`/api/credits/${id}`, data);
-      setCredits(credits.map(c => c.id === id ? response.data : c));
+      const res = await api.put(`/api/credits/${editCreditForm.id}`, {
+        name: editCreditForm.name,
+        type_id: editCreditForm.type_id,
+        category_id: editCreditForm.category_id,
+        max_amount: editCreditForm.max_amount,
+        interest_rate: editCreditForm.interest_rate,
+        max_duration: editCreditForm.max_duration,
+        description: editCreditForm.description,
+        year: editCreditForm.year
+      });
+      setCredits(credits.map(c => c.id === editCreditForm.id ? res.data : c));
       setEditingCredit(null);
-      showNotification(`✅ Crédit modifié`, "success");
-    } catch (error) {
-      showNotification("❌ Erreur", "error");
-    }
+      setEditCreditForm({
+        id: null, name: '', type_id: '', type_name: '', category_id: '', category_name: '',
+        max_amount: '', interest_rate: '', max_duration: '', description: '', year: ''
+      });
+      showNotification("✅ Crédit modifié", "success");
+      fetchData();
+    } catch (error) { showNotification("❌ Erreur", "error"); }
   };
 
-  const deleteCredit = (id, name) => {
-    setDeleteModal({ isOpen: true, type: 'credit', id, name });
+  // Annuler l'édition
+  const cancelEditCredit = () => {
+    setEditingCredit(null);
+    setEditCreditForm({
+      id: null, name: '', type_id: '', type_name: '', category_id: '', category_name: '',
+      max_amount: '', interest_rate: '', max_duration: '', description: '', year: ''
+    });
   };
+
+  const deleteCredit = (id, name) => setDeleteModal({ isOpen: true, type: 'credit', id, name });
 
   const confirmDelete = async () => {
     try {
@@ -253,521 +279,392 @@ const GestionCredit = () => {
       } else if (deleteModal.type === 'category') {
         await api.delete(`/api/credit-categories/${deleteModal.id}`);
         setCategories(categories.filter(c => c.id !== deleteModal.id));
-      } else if (deleteModal.type === 'credit') {
+      } else {
         await api.delete(`/api/credits/${deleteModal.id}`);
         setCredits(credits.filter(c => c.id !== deleteModal.id));
       }
-      showNotification(`✅ Supprimé`, "success");
-    } catch (error) {
-      showNotification(error.response?.data?.error || "❌ Erreur", "error");
-    }
+      showNotification("✅ Supprimé", "success");
+    } catch (error) { showNotification("❌ Erreur", "error"); }
     setDeleteModal({ isOpen: false, type: null, id: null, name: '' });
   };
 
-  if (loading) {
-    return (
-      <div className={`min-h-screen flex items-center justify-center ${bgClass}`}>
-        <Loader2 className="animate-spin text-indigo-500" size={40} />
-      </div>
-    );
-  }
+  const formatMoney = (n) => {
+    if (!n) return '0 DH';
+    if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M DH';
+    if (n >= 1e3) return (n / 1e3).toFixed(1) + 'k DH';
+    return n.toLocaleString('fr-FR') + ' DH';
+  };
+
+  const filteredCredits = credits.filter(c => 
+    c.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    c.type?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    c.category?.name?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  if (loading) return <div className={`min-h-screen flex items-center justify-center ${bgClass}`}><Loader2 className="animate-spin text-indigo-500" size={40} /></div>;
 
   return (
-    <div className={`min-h-screen transition-colors duration-300 p-6 ${bgClass}`}>
+    <div className={`min-h-screen ${bgClass}`}>
       <div className="max-w-7xl mx-auto">
         
-        {/* Header simplifié */}
-        <div className="mb-6">
-          <div className="flex items-center gap-2">
-            <Settings2 size={24} className="text-indigo-500" />
-            <h1 className={`text-xl font-bold ${textClass}`}>Paramétrage des Crédits</h1>
+        {/* Header avec bouton retour */}
+        <div className="flex items-center gap-3 mb-6">
+          <button 
+            onClick={() => window.history.back()}
+            className={`p-2 rounded-xl transition-all cursor-pointer ${darkMode ? 'bg-[#252525] hover:bg-[#333] border border-[#333]' : 'bg-gray-100 hover:bg-gray-200 border border-gray-200'} hover:scale-105`}
+            title="Retour"
+          >
+            <ArrowLeft size={20} className={textClass} />
+          </button>
+          <div className="p-2 rounded-xl bg-indigo-100 dark:bg-indigo-900/30">
+            <CreditCard size={22} className="text-indigo-600 dark:text-indigo-400" />
           </div>
-          <p className={`text-sm ${textMutedClass} mt-1`}>
-            Gérez les types, catégories et produits de crédit par année
-          </p>
+          <div>
+            <h1 className={`text-xl font-bold ${textClass}`}>Gestion des Crédits</h1>
+            <p className={`text-sm ${textMuted}`}>Types • Catégories • Produits de crédit</p>
+          </div>
         </div>
 
-        {/* Tabs compacts */}
-        <div className="flex gap-2 mb-6 border-b border-gray-200 dark:border-[#2A2A2A] pb-2">
-          <button
-            onClick={() => setActiveTab('types')}
-            className={`px-4 py-2 font-medium transition-all rounded-lg flex items-center gap-2 ${
-              activeTab === 'types' 
-                ? 'bg-indigo-600 text-white' 
-                : `${textMutedClass} hover:bg-gray-100 dark:hover:bg-[#252525]`
-            }`}
-          >
-            <Tag size={16} />
-            Types ({types.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('categories')}
-            className={`px-4 py-2 font-medium transition-all rounded-lg flex items-center gap-2 ${
-              activeTab === 'categories' 
-                ? 'bg-indigo-600 text-white' 
-                : `${textMutedClass} hover:bg-gray-100 dark:hover:bg-[#252525]`
-            }`}
-          >
-            <Layers size={16} />
-            Catégories ({categories.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('credits')}
-            className={`px-4 py-2 font-medium transition-all rounded-lg flex items-center gap-2 ${
-              activeTab === 'credits' 
-                ? 'bg-indigo-600 text-white' 
-                : `${textMutedClass} hover:bg-gray-100 dark:hover:bg-[#252525]`
-            }`}
-          >
-            <CreditCard size={16} />
-            Crédits ({credits.length})
-          </button>
-        </div>
-
-        {/* ==================== TYPES TAB ==================== */}
-        {activeTab === 'types' && (
-          <div className={`${cardClass} rounded-xl border ${borderClass} overflow-hidden`}>
-            <div className={`p-4 border-b ${borderClass} flex justify-between items-center flex-wrap gap-2`}>
-              <h2 className={`font-bold ${textClass}`}>Types de crédit</h2>
-              <button onClick={() => setShowAddType(true)} className={primaryButtonClass}>
-                <Plus size={16} /> Nouveau type
-              </button>
+        {/* ==================== SECTION TYPES ==================== */}
+        <div className={`${cardClass} rounded-xl border overflow-hidden mb-6`}>
+          <div className="p-4 border-b flex justify-between items-center">
+            <div className="flex items-center gap-2">
+              <Tag size={18} className="text-indigo-500" />
+              <h2 className={`font-semibold ${textClass}`}>Types de crédit</h2>
+              <span className={`text-xs px-2 py-0.5 rounded-full ${darkMode ? 'bg-[#252525]' : 'bg-gray-100'} ${textMuted}`}>{types.length}</span>
             </div>
+            <button onClick={() => setShowNewTypeForm(!showNewTypeForm)} className={btnPrimary}>
+              {showNewTypeForm ? <X size={16} /> : <Plus size={16} />}
+              {showNewTypeForm ? 'Fermer' : 'Nouveau type'}
+            </button>
+          </div>
 
-            {showAddType && (
-              <div className={`p-4 border-b ${borderClass} ${darkMode ? 'bg-[#252525]/50' : 'bg-gray-50'}`}>
-                <div className="space-y-3">
-                  <input
-                    type="text"
-                    placeholder="Nom du type (ex: Crédit Principal)"
-                    value={newTypeName}
-                    onChange={(e) => setNewTypeName(e.target.value)}
-                    className={inputClass}
-                  />
-                  <input
-                    type="text"
-                    placeholder="Code (ex: PRINCIPAL)"
-                    value={newTypeCode}
-                    onChange={(e) => setNewTypeCode(e.target.value.toUpperCase())}
-                    className={inputClass}
-                  />
-                  
-                  <div>
-                    <label className={`text-xs font-medium ${textMutedClass} mb-1 block`}>Catégories associées</label>
-                    <div className="flex flex-wrap gap-2 p-2 border rounded-lg">
-                      {categories.map(cat => {
-                        const isSelected = selectedCategoriesForType.includes(cat.id);
-                        return (
-                          <button
-                            key={cat.id}
-                            type="button"
-                            onClick={() => {
-                              if (isSelected) {
-                                setSelectedCategoriesForType(selectedCategoriesForType.filter(id => id !== cat.id));
-                              } else {
-                                setSelectedCategoriesForType([...selectedCategoriesForType, cat.id]);
-                              }
-                            }}
-                            className={`text-xs px-2 py-1 rounded-full transition-all ${
-                              isSelected 
-                                ? 'bg-indigo-600 text-white' 
-                                : darkMode 
-                                  ? 'bg-[#252525] text-gray-400 hover:bg-[#333]' 
-                                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                            }`}
-                          >
-                            {cat.name}
-                          </button>
+          {/* Formulaire ajout type */}
+          {showNewTypeForm && (
+            <div className="p-4 border-b bg-gray-50 dark:bg-[#252525]/50">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <input placeholder="Nom (ex: Crédit Standard)" value={newTypeName} onChange={e => setNewTypeName(e.target.value)} className={inputClass} />
+                <input placeholder="Code (ex: STD)" value={newTypeCode} onChange={e => setNewTypeCode(e.target.value.toUpperCase())} className={inputClass} />
+                <div className="md:col-span-2">
+                  <p className={`text-xs ${textMuted} mb-2`}>Catégories associées</p>
+                  <div className="flex flex-wrap gap-2 p-2 border rounded-lg">
+                    {categories.map(cat => (
+                      <button key={cat.id} onClick={() => {
+                        setSelectedCategoriesForType(prev =>
+                          prev.includes(cat.id) ? prev.filter(id => id !== cat.id) : [...prev, cat.id]
                         );
-                      })}
-                    </div>
-                  </div>
-                  
-                  <div className="flex gap-2">
-                    <button onClick={addType} className={primaryButtonClass}>
-                      <CheckCircle size={16} /> Ajouter
-                    </button>
-                    <button onClick={() => { setShowAddType(false); setNewTypeName(''); setNewTypeCode(''); setSelectedCategoriesForType([]); }} className={outlineButtonClass}>
-                      <X size={16} /> Annuler
-                    </button>
+                      }} className={`text-xs px-2 py-1 rounded-full transition-all cursor-pointer ${selectedCategoriesForType.includes(cat.id) ? 'bg-indigo-600 text-white' : darkMode ? 'bg-[#252525] text-gray-400' : 'bg-gray-100 text-gray-600'}`}>
+                        {cat.name}
+                      </button>
+                    ))}
                   </div>
                 </div>
-              </div>
-            )}
-
-            <div className="divide-y dark:divide-[#2A2A2A]">
-              {types.length === 0 ? (
-                <div className={`p-8 text-center ${textMutedClass}`}>Aucun type configuré</div>
-              ) : (
-                types.map((type) => (
-                  <div key={type.id} className="p-4">
-                    <div className="flex items-center justify-between flex-wrap gap-2">
-                      {editingType === type.id ? (
-                        <div className="flex-1 flex items-center gap-2">
-                          <input
-                            type="text"
-                            defaultValue={type.name}
-                            className="flex-1 px-3 py-1.5 rounded-lg border dark:bg-[#252525] dark:border-[#333] text-sm outline-none focus:ring-2 focus:ring-indigo-500"
-                            onKeyDown={(e) => { if (e.key === 'Enter') updateType(type.id, e.target.value); }}
-                            onBlur={(e) => updateType(type.id, e.target.value)}
-                            autoFocus
-                          />
-                          <button onClick={() => setEditingType(null)} className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg">
-                            <X size={14} />
-                          </button>
-                        </div>
-                      ) : (
-                        <>
-                          <div>
-                            <p className={`font-medium ${textClass}`}>{type.name}</p>
-                            <p className={`text-xs font-mono ${textMutedClass}`}>{type.code}</p>
-                            <div className="flex flex-wrap gap-1 mt-2">
-                              {type.categories?.map(cat => (
-                                <span key={cat.id} className={`text-[9px] px-1.5 py-0.5 rounded-full ${darkMode ? 'bg-indigo-900/30 text-indigo-400' : 'bg-indigo-100 text-indigo-700'}`}>
-                                  {cat.name}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                          <div className="flex gap-1">
-                            <button onClick={() => setEditingType(type.id)} className="p-1.5 text-gray-400 hover:text-indigo-500 rounded-lg" title="Modifier">
-                              <Edit2 size={14} />
-                            </button>
-                            <button onClick={() => deleteType(type.id, type.name)} className="p-1.5 text-gray-400 hover:text-red-500 rounded-lg" title="Supprimer">
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                    
-                    <div className="mt-3 pt-2 border-t">
-                      <label className={`text-xs ${textMutedClass} mb-2 block`}>Catégories associées :</label>
-                      <div className="flex flex-wrap gap-2">
-                        {categories.map(cat => {
-                          const isSelected = type.categories?.some(c => c.id === cat.id);
-                          return (
-                            <button
-                              key={cat.id}
-                              onClick={() => {
-                                const currentIds = type.categories?.map(c => c.id) || [];
-                                const newIds = isSelected 
-                                  ? currentIds.filter(id => id !== cat.id)
-                                  : [...currentIds, cat.id];
-                                updateTypeCategories(type.id, newIds);
-                              }}
-                              className={`text-xs px-2 py-1 rounded-full transition-all ${
-                                isSelected 
-                                  ? 'bg-indigo-600 text-white' 
-                                  : darkMode 
-                                    ? 'bg-[#252525] text-gray-400 hover:bg-[#333]' 
-                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                              }`}
-                            >
-                              {cat.name}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* ==================== CATEGORIES TAB ==================== */}
-        {activeTab === 'categories' && (
-          <div className={`${cardClass} rounded-xl border ${borderClass} overflow-hidden`}>
-            <div className={`p-4 border-b ${borderClass} flex justify-between items-center flex-wrap gap-2`}>
-              <h2 className={`font-bold ${textClass}`}>Catégories de crédit</h2>
-              <button onClick={() => setShowAddCategory(true)} className={primaryButtonClass}>
-                <Plus size={16} /> Nouvelle catégorie
-              </button>
-            </div>
-
-            {showAddCategory && (
-              <div className={`p-4 border-b ${borderClass} ${darkMode ? 'bg-[#252525]/50' : 'bg-gray-50'}`}>
-                <div className="space-y-3">
-                  <input
-                    type="text"
-                    placeholder="Nom de la catégorie (ex: Immobilier)"
-                    value={newCategoryName}
-                    onChange={(e) => setNewCategoryName(e.target.value)}
-                    className={inputClass}
-                  />
-                  <input
-                    type="text"
-                    placeholder="Code (ex: IMMO)"
-                    value={newCategoryCode}
-                    onChange={(e) => setNewCategoryCode(e.target.value.toUpperCase())}
-                    className={inputClass}
-                  />
-                  <div className="flex gap-2">
-                    <button onClick={addCategory} className={primaryButtonClass}>
-                      <CheckCircle size={16} /> Ajouter
-                    </button>
-                    <button onClick={() => { setShowAddCategory(false); setNewCategoryName(''); setNewCategoryCode(''); }} className={outlineButtonClass}>
-                      <X size={16} /> Annuler
-                    </button>
-                  </div>
+                <div className="md:col-span-2 flex gap-2">
+                  <button onClick={addType} className={btnSuccess}><CheckCircle size={16} /> Enregistrer</button>
+                  <button onClick={() => { setShowNewTypeForm(false); setNewTypeName(''); setNewTypeCode(''); setSelectedCategoriesForType([]); }} className={btnOutline}>Annuler</button>
                 </div>
               </div>
-            )}
+            </div>
+          )}
 
-            <div className="divide-y dark:divide-[#2A2A2A]">
-              {categories.length === 0 ? (
-                <div className={`p-8 text-center ${textMutedClass}`}>Aucune catégorie configurée</div>
-              ) : (
-                categories.map((cat) => (
-                  <div key={cat.id} className="p-4 flex items-center justify-between flex-wrap gap-2">
-                    {editingCategory === cat.id ? (
-                      <div className="flex-1 flex items-center gap-2">
-                        <input
-                          type="text"
-                          defaultValue={cat.name}
-                          className="flex-1 px-3 py-1.5 rounded-lg border dark:bg-[#252525] dark:border-[#333] text-sm outline-none focus:ring-2 focus:ring-indigo-500"
-                          onKeyDown={(e) => { if (e.key === 'Enter') updateCategory(cat.id, e.target.value); }}
-                          onBlur={(e) => updateCategory(cat.id, e.target.value)}
-                          autoFocus
-                        />
-                        <button onClick={() => setEditingCategory(null)} className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg">
-                          <X size={14} />
-                        </button>
+          {/* Liste types */}
+          <div className="divide-y">
+            {types.length === 0 ? (
+              <div className="p-6 text-center text-gray-400">Aucun type</div>
+            ) : (
+              types.map(type => (
+                <div key={type.id} className="p-3 hover:bg-gray-50 dark:hover:bg-[#252525]/30 transition">
+                  <div className="flex justify-between items-center">
+                    {editingType === type.id ? (
+                      <div className="flex-1 flex gap-2">
+                        <input defaultValue={type.name} className="flex-1 px-3 py-1 rounded-lg border text-sm focus:ring-2 focus:ring-indigo-500" autoFocus onBlur={e => updateType(type.id, e.target.value)} />
+                        <button onClick={() => setEditingType(null)} className="p-1 text-gray-400 cursor-pointer"><X size={14} /></button>
                       </div>
                     ) : (
                       <>
                         <div>
-                          <p className={`font-medium ${textClass}`}>{cat.name}</p>
-                          <p className={`text-xs font-mono ${textMutedClass}`}>{cat.code}</p>
-                          <div className="flex flex-wrap gap-1 mt-2">
-                            {cat.types?.map(type => (
-                              <span key={type.id} className={`text-[9px] px-1.5 py-0.5 rounded-full ${darkMode ? 'bg-purple-900/30 text-purple-400' : 'bg-purple-100 text-purple-700'}`}>
-                                {type.name}
-                              </span>
-                            ))}
+                          <p className={`font-medium ${textClass}`}>{type.name}</p>
+                          <code className={`text-xs ${textMuted}`}>{type.code}</code>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {type.categories?.map(cat => <span key={cat.id} className="text-[9px] px-1.5 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400">{cat.name}</span>)}
                           </div>
                         </div>
                         <div className="flex gap-1">
-                          <button onClick={() => setEditingCategory(cat.id)} className="p-1.5 text-gray-400 hover:text-indigo-500 rounded-lg" title="Modifier">
-                            <Edit2 size={14} />
-                          </button>
-                          <button onClick={() => deleteCategory(cat.id, cat.name)} className="p-1.5 text-gray-400 hover:text-red-500 rounded-lg" title="Supprimer">
-                            <Trash2 size={14} />
-                          </button>
+                          <button onClick={() => setEditingType(type.id)} className="p-1.5 text-gray-400 hover:text-indigo-500 rounded-lg cursor-pointer"><Edit2 size={14} /></button>
+                          <button onClick={() => deleteType(type.id, type.name)} className="p-1.5 text-gray-400 hover:text-red-500 rounded-lg cursor-pointer"><Trash2 size={14} /></button>
                         </div>
                       </>
                     )}
                   </div>
-                ))
-              )}
-            </div>
+                </div>
+              ))
+            )}
           </div>
-        )}
+        </div>
 
-        {/* ==================== CREDITS TAB ==================== */}
-        {activeTab === 'credits' && (
-          <div className={`${cardClass} rounded-xl border ${borderClass} overflow-hidden`}>
-            <div className={`p-4 border-b ${borderClass} flex justify-between items-center flex-wrap gap-2`}>
-              <h2 className={`font-bold ${textClass}`}>Produits de crédit</h2>
-              <button onClick={() => setShowAddCredit(true)} className={successButtonClass}>
-                <Plus size={16} /> Nouveau crédit
-              </button>
+        {/* ==================== SECTION CATEGORIES ==================== */}
+        <div className={`${cardClass} rounded-xl border overflow-hidden mb-6`}>
+          <div className="p-4 border-b flex justify-between items-center">
+            <div className="flex items-center gap-2">
+              <Layers size={18} className="text-purple-500" />
+              <h2 className={`font-semibold ${textClass}`}>Catégories de crédit</h2>
+              <span className={`text-xs px-2 py-0.5 rounded-full ${darkMode ? 'bg-[#252525]' : 'bg-gray-100'} ${textMuted}`}>{categories.length}</span>
             </div>
+            <button onClick={() => setShowNewCategoryForm(!showNewCategoryForm)} className={btnPrimary}>
+              {showNewCategoryForm ? <X size={16} /> : <Plus size={16} />}
+              {showNewCategoryForm ? 'Fermer' : 'Nouvelle catégorie'}
+            </button>
+          </div>
 
-            {showAddCredit && (
-              <div className={`p-4 border-b ${borderClass} ${darkMode ? 'bg-[#252525]/50' : 'bg-gray-50'}`}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <input
-                    type="text"
-                    placeholder="Nom du crédit"
-                    value={creditForm.name}
-                    onChange={(e) => setCreditForm({...creditForm, name: e.target.value})}
-                    className={inputClass}
-                  />
-                  <select
-                    value={creditForm.type_id}
-                    onChange={(e) => setCreditForm({...creditForm, type_id: e.target.value, category_id: ''})}
-                    className={inputClass}
-                  >
-                    <option value="">Sélectionner un type</option>
-                    {types.map(type => (
-                      <option key={type.id} value={type.id}>{type.name}</option>
-                    ))}
-                  </select>
-                  <select
-                    value={creditForm.category_id}
-                    onChange={(e) => setCreditForm({...creditForm, category_id: e.target.value})}
-                    className={inputClass}
-                    disabled={!creditForm.type_id}
-                  >
-                    <option value="">Sélectionner une catégorie</option>
-                    {availableCategories.map(cat => (
-                      <option key={cat.id} value={cat.id}>{cat.name}</option>
-                    ))}
-                  </select>
-                  <input
-                    type="number"
-                    placeholder="Montant max (DH)"
-                    value={creditForm.max_amount}
-                    onChange={(e) => setCreditForm({...creditForm, max_amount: e.target.value})}
-                    className={inputClass}
-                  />
-                  <input
-                    type="number"
-                    step="0.1"
-                    placeholder="Taux d'intérêt (%)"
-                    value={creditForm.interest_rate}
-                    onChange={(e) => setCreditForm({...creditForm, interest_rate: e.target.value})}
-                    className={inputClass}
-                  />
-                  <input
-                    type="number"
-                    placeholder="Durée max (mois)"
-                    value={creditForm.max_duration}
-                    onChange={(e) => setCreditForm({...creditForm, max_duration: e.target.value})}
-                    className={inputClass}
-                  />
-                  
-                  {/* Sélecteur d'année personnalisé */}
-                  <div className="relative" ref={yearRef}>
-                    <button 
-                      onClick={() => setIsYearOpen(!isYearOpen)}
-                      className={`w-full px-3 py-2 rounded-lg font-medium outline-none cursor-pointer transition-all ${selectClass} border ${borderClass} ${textClass} text-sm flex items-center justify-between gap-3 hover:border-indigo-400`}
-                    >
-                      <span className="truncate">
-                        {creditForm.year ? `📅 ${creditForm.year}` : 'Sélectionner une année'}
-                      </span>
-                      <ChevronDown size={16} className={`text-indigo-500 transition-transform duration-200 ${isYearOpen ? 'rotate-180' : ''}`} />
-                    </button>
-                    
-                    {isYearOpen && (
-                      <div className={`absolute top-full left-0 right-0 mt-2 rounded-xl border ${borderClass} ${cardClass} z-50 max-h-60 overflow-y-auto shadow-xl`}>
-                        {salaryYears.map((yearObj) => (
-                          <div 
-                            key={yearObj.id || yearObj.year}
-                            onClick={() => {
-                              setCreditForm({...creditForm, year: yearObj.year});
-                              setIsYearOpen(false);
-                            }}
-                            className={`px-4 py-2.5 cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-sm transition-colors ${
-                              creditForm.year === yearObj.year 
-                                ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 font-medium' 
-                                : textClass
-                            }`}
-                          >
-                            📅 {yearObj.year}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  
-                  <textarea
-                    placeholder="Description (optionnelle)"
-                    value={creditForm.description}
-                    onChange={(e) => setCreditForm({...creditForm, description: e.target.value})}
-                    className={`${inputClass} col-span-1 md:col-span-2`}
-                    rows="2"
-                  />
-                  <div className="flex gap-2 col-span-1 md:col-span-2">
-                    <button onClick={addCredit} className={successButtonClass}>
-                      <CheckCircle size={16} /> Ajouter le crédit
-                    </button>
-                    <button onClick={() => { 
-                      setShowAddCredit(false); 
-                      setCreditForm({ 
-                        name: '', type_id: '', category_id: '', 
-                        max_amount: '', interest_rate: '', max_duration: '', 
-                        description: '', 
-                        year: salaryYears.length > 0 ? salaryYears[salaryYears.length - 1]?.year : '' 
-                      }); 
-                    }} className={outlineButtonClass}>
-                      <X size={16} /> Annuler
-                    </button>
-                  </div>
+          {/* Formulaire ajout catégorie */}
+          {showNewCategoryForm && (
+            <div className="p-4 border-b bg-gray-50 dark:bg-[#252525]/50">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <input placeholder="Nom (ex: Immobilier)" value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} className={inputClass} />
+                <input placeholder="Code (ex: IMMO)" value={newCategoryCode} onChange={e => setNewCategoryCode(e.target.value.toUpperCase())} className={inputClass} />
+                <div className="md:col-span-2 flex gap-2">
+                  <button onClick={addCategory} className={btnSuccess}><CheckCircle size={16} /> Enregistrer</button>
+                  <button onClick={() => { setShowNewCategoryForm(false); setNewCategoryName(''); setNewCategoryCode(''); }} className={btnOutline}>Annuler</button>
                 </div>
               </div>
-            )}
+            </div>
+          )}
 
-            <div className="divide-y dark:divide-[#2A2A2A]">
-              {credits.length === 0 ? (
-                <div className={`p-8 text-center ${textMutedClass}`}>Aucun crédit configuré</div>
-              ) : (
-                credits.map((credit) => (
-                  <div key={credit.id} className="p-4">
-                    {editingCredit === credit.id ? (
-                      <div className="space-y-3">
-                        <input
-                          type="text"
-                          defaultValue={credit.name}
-                          className={inputClass}
-                          onBlur={(e) => updateCredit(credit.id, { name: e.target.value })}
-                          autoFocus
-                        />
+          {/* Liste catégories */}
+          <div className="divide-y">
+            {categories.length === 0 ? (
+              <div className="p-6 text-center text-gray-400">Aucune catégorie</div>
+            ) : (
+              categories.map(cat => (
+                <div key={cat.id} className="p-3 hover:bg-gray-50 dark:hover:bg-[#252525]/30 transition">
+                  <div className="flex justify-between items-center">
+                    {editingCategory === cat.id ? (
+                      <div className="flex-1 flex gap-2">
+                        <input defaultValue={cat.name} className="flex-1 px-2 py-1 rounded-lg border text-sm focus:ring-2 focus:ring-indigo-500" autoFocus onBlur={e => updateCategory(cat.id, e.target.value)} />
+                        <button onClick={() => setEditingCategory(null)} className="p-1 text-gray-400 cursor-pointer"><X size={14} /></button>
                       </div>
                     ) : (
-                      <div className="flex items-center justify-between flex-wrap gap-2">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <p className={`font-bold ${textClass}`}>{credit.name}</p>
-                            <span className={`text-xs px-2 py-0.5 rounded-full ${darkMode ? 'bg-indigo-900/30 text-indigo-400' : 'bg-indigo-100 text-indigo-700'}`}>
-                              {credit.type?.name}
-                            </span>
-                            <span className={`text-xs px-2 py-0.5 rounded-full ${darkMode ? 'bg-purple-900/30 text-purple-400' : 'bg-purple-100 text-purple-700'}`}>
-                              {credit.category?.name}
-                            </span>
-                            <span className={`text-xs px-2 py-0.5 rounded-full ${darkMode ? 'bg-amber-900/30 text-amber-400' : 'bg-amber-100 text-amber-700'}`}>
-                              📅 {credit.year}
-                            </span>
-                            <span className={`text-xs px-2 py-0.5 rounded-full ${
-                              credit.status === 'Actif' 
-                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                            }`}>
-                              {credit.status}
-                            </span>
-                          </div>
-                          <div className="flex gap-4 mt-2 text-sm">
-                            <span className={textMutedClass}>
-                              <DollarSign size={14} className="inline" /> {new Intl.NumberFormat('fr-MA').format(credit.max_amount)} DH
-                            </span>
-                            <span className={textMutedClass}>
-                              <Percent size={14} className="inline" /> {credit.interest_rate}%
-                            </span>
-                            <span className={textMutedClass}>
-                              <Calendar size={14} className="inline" /> {credit.max_duration} mois
-                            </span>
-                          </div>
-                          {credit.description && (
-                            <p className={`text-xs ${textMutedClass} mt-1`}>{credit.description}</p>
-                          )}
-                        </div>
+                      <>
+                        <div><p className={`font-medium ${textClass}`}>{cat.name}</p><code className={`text-xs ${textMuted}`}>{cat.code}</code></div>
                         <div className="flex gap-1">
-                          <button onClick={() => setEditingCredit(credit.id)} className="p-1.5 text-gray-400 hover:text-indigo-500 rounded-lg" title="Modifier">
-                            <Edit2 size={14} />
-                          </button>
-                          <button onClick={() => deleteCredit(credit.id, credit.name)} className="p-1.5 text-gray-400 hover:text-red-500 rounded-lg" title="Supprimer">
-                            <Trash2 size={14} />
-                          </button>
+                          <button onClick={() => setEditingCategory(cat.id)} className="p-1.5 text-gray-400 hover:text-indigo-500 rounded-lg cursor-pointer"><Edit2 size={14} /></button>
+                          <button onClick={() => deleteCategory(cat.id, cat.name)} className="p-1.5 text-gray-400 hover:text-red-500 rounded-lg cursor-pointer"><Trash2 size={14} /></button>
                         </div>
-                      </div>
+                      </>
                     )}
                   </div>
-                ))
-              )}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* ==================== SECTION CREDITS ==================== */}
+        <div className={`${cardClass} rounded-xl border overflow-hidden`}>
+          <div className="p-4 border-b flex flex-wrap justify-between items-center gap-3">
+            <div className="flex items-center gap-2">
+              <CreditCard size={18} className="text-emerald-500" />
+              <h2 className={`font-semibold ${textClass}`}>Produits de crédit</h2>
+              <span className={`text-xs px-2 py-0.5 rounded-full ${darkMode ? 'bg-[#252525]' : 'bg-gray-100'} ${textMuted}`}>{credits.length}</span>
+            </div>
+            <div className="flex gap-2">
+              <div className="relative">
+                <Search size={14} className={`absolute left-3 top-1/2 -translate-y-1/2 ${textMuted}`} />
+                <input placeholder="Rechercher..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className={`pl-9 pr-3 py-2 rounded-lg border ${inputClass} text-sm w-48 md:w-64`} />
+              </div>
+              <button onClick={() => setShowNewCreditForm(!showNewCreditForm)} className={btnSuccess}>
+                {showNewCreditForm ? <X size={16} /> : <Plus size={16} />}
+                {showNewCreditForm ? 'Fermer' : 'Nouveau crédit'}
+              </button>
             </div>
           </div>
-        )}
+
+          {/* Formulaire ajout crédit */}
+          {showNewCreditForm && (
+            <div className="p-4 border-b bg-gray-50 dark:bg-[#252525]/50">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <input placeholder="Nom du crédit" value={creditForm.name} onChange={e => setCreditForm({...creditForm, name: e.target.value})} className={inputClass} />
+                
+                {/* Type selector */}
+                <div className="relative" ref={typeRef}>
+                  <button onClick={() => setIsTypeOpen(!isTypeOpen)} className={`w-full px-3 py-2 rounded-lg border ${borderClass} text-sm flex justify-between items-center cursor-pointer ${darkMode ? 'bg-[#252525] text-white' : 'bg-gray-50 text-gray-800'}`}>
+                    {creditForm.type_name || (types.find(t => t.id === parseInt(creditForm.type_id))?.name) || 'Sélectionner un type'}
+                    <ChevronDown size={14} />
+                  </button>
+                  {isTypeOpen && (
+                    <div className={`absolute top-full left-0 right-0 mt-1 rounded-lg border ${borderClass} ${cardClass} z-50 max-h-48 overflow-auto`}>
+                      {types.map(t => (
+                        <div key={t.id} onClick={() => { setCreditForm({...creditForm, type_id: t.id, type_name: t.name, category_id: '', category_name: ''}); setIsTypeOpen(false); }} className={`px-3 py-2 cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-sm ${creditForm.type_id === t.id ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600' : textClass}`}>
+                          {t.name}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Category selector */}
+                <div className="relative" ref={categoryRef}>
+                  <button onClick={() => setIsCategoryOpen(!isCategoryOpen)} disabled={!creditForm.type_id} className={`w-full px-3 py-2 rounded-lg border ${borderClass} text-sm flex justify-between items-center cursor-pointer ${!creditForm.type_id ? 'opacity-50 cursor-not-allowed' : darkMode ? 'bg-[#252525] text-white' : 'bg-gray-50 text-gray-800'}`}>
+                    {creditForm.category_name || (availableCategories.find(c => c.id === parseInt(creditForm.category_id))?.name) || 'Sélectionner une catégorie'}
+                    <ChevronDown size={14} />
+                  </button>
+                  {isCategoryOpen && (
+                    <div className={`absolute top-full left-0 right-0 mt-1 rounded-lg border ${borderClass} ${cardClass} z-50 max-h-48 overflow-auto`}>
+                      {availableCategories.map(c => (
+                        <div key={c.id} onClick={() => { setCreditForm({...creditForm, category_id: c.id, category_name: c.name}); setIsCategoryOpen(false); }} className={`px-3 py-2 cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-sm ${creditForm.category_id === c.id ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600' : textClass}`}>
+                          {c.name}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <input type="number" placeholder="Montant max (DH)" value={creditForm.max_amount} onChange={e => setCreditForm({...creditForm, max_amount: e.target.value})} className={inputClass} />
+                <input type="number" step="0.1" placeholder="Taux d'intérêt (%)" value={creditForm.interest_rate} onChange={e => setCreditForm({...creditForm, interest_rate: e.target.value})} className={inputClass} />
+                <input type="number" placeholder="Durée max (mois)" value={creditForm.max_duration} onChange={e => setCreditForm({...creditForm, max_duration: e.target.value})} className={inputClass} />
+                
+                {/* Year selector */}
+                <div className="relative" ref={yearRef}>
+                  <button onClick={() => setIsYearOpen(!isYearOpen)} className={`w-full px-3 py-2 rounded-lg border ${borderClass} text-sm flex justify-between items-center cursor-pointer ${darkMode ? 'bg-[#252525] text-white' : 'bg-gray-50 text-gray-800'}`}>
+                    {creditForm.year ? ` ${creditForm.year}` : 'Sélectionner une année'}
+                    <ChevronDown size={14} />
+                  </button>
+                  {isYearOpen && (
+                    <div className={`absolute top-full left-0 right-0 mt-1 rounded-lg border ${borderClass} ${cardClass} z-50 max-h-48 overflow-auto`}>
+                      {salaryYears.map(y => (
+                        <div key={y.id} onClick={() => { setCreditForm({...creditForm, year: y.year}); setIsYearOpen(false); }} className={`px-3 py-2 cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-sm ${creditForm.year === y.year ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600' : textClass}`}>
+                           {y.year}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <textarea placeholder="Description (optionnelle)" value={creditForm.description} onChange={e => setCreditForm({...creditForm, description: e.target.value})} className={`${inputClass} md:col-span-2`} rows="2" />
+                <div className="md:col-span-2 flex gap-2">
+                  <button onClick={addCredit} className={btnSuccess}><Save size={16} /> Ajouter le crédit</button>
+                  <button onClick={() => { setShowNewCreditForm(false); setCreditForm({name: '', type_id: '', type_name: '', category_id: '', category_name: '', max_amount: '', interest_rate: '', max_duration: '', description: '', year: ''}); }} className={btnOutline}>Annuler</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Liste crédits avec bouton modifier */}
+          <div className="divide-y">
+            {filteredCredits.length === 0 ? (
+              <div className="p-8 text-center text-gray-400">Aucun crédit</div>
+            ) : (
+              filteredCredits.map(credit => (
+                <div key={credit.id} className="p-3 hover:bg-gray-50 dark:hover:bg-[#252525]/30 transition">
+                  {editingCredit === credit.id ? (
+                    // Formulaire d'édition crédit
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <input placeholder="Nom" value={editCreditForm.name} onChange={e => setEditCreditForm({...editCreditForm, name: e.target.value})} className={inputClass} />
+                        
+                        {/* Type selector édition */}
+                        <div className="relative" ref={editTypeRef}>
+                          <button onClick={() => setIsEditTypeOpen(!isEditTypeOpen)} className={`w-full px-3 py-2 rounded-lg border ${borderClass} text-sm flex justify-between items-center cursor-pointer ${darkMode ? 'bg-[#252525] text-white' : 'bg-gray-50 text-gray-800'}`}>
+                            {editCreditForm.type_name || (types.find(t => t.id === parseInt(editCreditForm.type_id))?.name) || 'Type'}
+                            <ChevronDown size={14} />
+                          </button>
+                          {isEditTypeOpen && (
+                            <div className={`absolute top-full left-0 right-0 mt-1 rounded-lg border ${borderClass} ${cardClass} z-50 max-h-48 overflow-auto`}>
+                              {types.map(t => (
+                                <div key={t.id} onClick={() => { setEditCreditForm({...editCreditForm, type_id: t.id, type_name: t.name, category_id: '', category_name: ''}); setIsEditTypeOpen(false); }} className={`px-3 py-2 cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-sm`}>
+                                  {t.name}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Category selector édition */}
+                        <div className="relative" ref={editCategoryRef}>
+                          <button onClick={() => setIsEditCategoryOpen(!isEditCategoryOpen)} disabled={!editCreditForm.type_id} className={`w-full px-3 py-2 rounded-lg border ${borderClass} text-sm flex justify-between items-center cursor-pointer ${!editCreditForm.type_id ? 'opacity-50 cursor-not-allowed' : darkMode ? 'bg-[#252525] text-white' : 'bg-gray-50 text-gray-800'}`}>
+                            {editCreditForm.category_name || (editAvailableCategories.find(c => c.id === parseInt(editCreditForm.category_id))?.name) || 'Catégorie'}
+                            <ChevronDown size={14} />
+                          </button>
+                          {isEditCategoryOpen && (
+                            <div className={`absolute top-full left-0 right-0 mt-1 rounded-lg border ${borderClass} ${cardClass} z-50 max-h-48 overflow-auto`}>
+                              {editAvailableCategories.map(c => (
+                                <div key={c.id} onClick={() => { setEditCreditForm({...editCreditForm, category_id: c.id, category_name: c.name}); setIsEditCategoryOpen(false); }} className={`px-3 py-2 cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-sm`}>
+                                  {c.name}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        <input type="number" placeholder="Montant max" value={editCreditForm.max_amount} onChange={e => setEditCreditForm({...editCreditForm, max_amount: e.target.value})} className={inputClass} />
+                        <input type="number" step="0.1" placeholder="Taux" value={editCreditForm.interest_rate} onChange={e => setEditCreditForm({...editCreditForm, interest_rate: e.target.value})} className={inputClass} />
+                        <input type="number" placeholder="Durée (mois)" value={editCreditForm.max_duration} onChange={e => setEditCreditForm({...editCreditForm, max_duration: e.target.value})} className={inputClass} />
+                        
+                        {/* Year selector édition */}
+                        <div className="relative" ref={editYearRef}>
+                          <button onClick={() => setIsEditYearOpen(!isEditYearOpen)} className={`w-full px-3 py-2 rounded-lg border ${borderClass} text-sm flex justify-between items-center cursor-pointer ${darkMode ? 'bg-[#252525] text-white' : 'bg-gray-50 text-gray-800'}`}>
+                            {editCreditForm.year ? ` ${editCreditForm.year}` : 'Année'}
+                            <ChevronDown size={14} />
+                          </button>
+                          {isEditYearOpen && (
+                            <div className={`absolute top-full left-0 right-0 mt-1 rounded-lg border ${borderClass} ${cardClass} z-50 max-h-48 overflow-auto`}>
+                              {salaryYears.map(y => (
+                                <div key={y.id} onClick={() => { setEditCreditForm({...editCreditForm, year: y.year}); setIsEditYearOpen(false); }} className={`px-3 py-2 cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-sm`}>
+                                   {y.year}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        <textarea placeholder="Description" value={editCreditForm.description} onChange={e => setEditCreditForm({...editCreditForm, description: e.target.value})} className={`${inputClass} md:col-span-2`} rows="2" />
+                        <div className="md:col-span-2 flex gap-2">
+                          <button onClick={updateCredit} className={btnSuccess}><Save size={16} /> Enregistrer</button>
+                          <button onClick={cancelEditCredit} className={btnOutline}>Annuler</button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    // Affichage normal du crédit
+                    <div className="flex justify-between items-start gap-2">
+                      <div className="flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className={`font-semibold ${textClass}`}>{credit.name}</p>
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400">{credit.type?.name}</span>
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400">{credit.category?.name}</span>
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">{credit.year}</span>
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${credit.status === 'Actif' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700' : 'bg-rose-100 dark:bg-rose-900/30 text-rose-700'}`}>{credit.status}</span>
+                        </div>
+                        <div className="flex gap-3 mt-2 text-sm">
+                          <span className={textMuted}><Banknote size={12} className="inline mr-1" />{formatMoney(credit.max_amount)}</span>
+                          <span className={textMuted}><Percent size={12} className="inline mr-1" />{credit.interest_rate}%</span>
+                          <span className={textMuted}><Clock size={12} className="inline mr-1" />{credit.max_duration} mois</span>
+                        </div>
+                        {credit.description && <p className={`text-xs ${textMuted} mt-1`}>{credit.description}</p>}
+                      </div>
+                      <div className="flex gap-1">
+                        <button onClick={() => openEditCredit(credit)} className="p-1.5 text-gray-400 hover:text-indigo-500 rounded-lg cursor-pointer" title="Modifier">
+                          <Edit2 size={14} />
+                        </button>
+                        <button onClick={() => deleteCredit(credit.id, credit.name)} className="p-1.5 text-gray-400 hover:text-red-500 rounded-lg cursor-pointer" title="Supprimer">
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
       </div>
 
       <DeleteConfirmModal
         isOpen={deleteModal.isOpen}
         onClose={() => setDeleteModal({ isOpen: false, type: null, id: null, name: '' })}
         onConfirm={confirmDelete}
-        title={`Supprimer ${deleteModal.type === 'type' ? 'le type' : deleteModal.type === 'category' ? 'la catégorie' : 'le crédit'}`}
-        message={`Êtes-vous sûr de vouloir supprimer "${deleteModal.name}" ?`}
+        title="Confirmation"
+        message={`Supprimer "${deleteModal.name}" ?`}
         darkMode={darkMode}
       />
     </div>

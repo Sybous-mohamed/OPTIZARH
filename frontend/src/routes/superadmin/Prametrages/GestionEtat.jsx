@@ -203,7 +203,7 @@ const GestionEtat = () => {
             
         } catch (error) {
             console.error("Erreur toggle star:", error);
-            showNotification("❌ Erreur lors de la modification", "error");
+            showNotification(" Erreur lors de la modification", "error");
         } finally {
             setLoading(false);
         }
@@ -228,7 +228,7 @@ const GestionEtat = () => {
         const newYear = parseInt(config.year) + amount;
         
         if (newYear < 1900 || newYear > 2200) {
-            showNotification(`❌ Année ${newYear} invalide. Limite: 1900-2200`, "error");
+            showNotification(` Année ${newYear} invalide. Limite: 1900-2200`, "error");
             return;
         }
         
@@ -353,7 +353,7 @@ const GestionEtat = () => {
             return true;
         } catch (error) {
             console.error("Erreur suppression poste:", error);
-            showNotification("❌ Erreur lors de la suppression", "error");
+            showNotification(" Erreur lors de la suppression", "error");
             return false;
         } finally {
             setDeleting({ type: null, id: null });
@@ -379,7 +379,7 @@ const GestionEtat = () => {
             return true;
         } catch (error) {
             console.error("Erreur suppression grade:", error);
-            showNotification("❌ Erreur lors de la suppression", "error");
+            showNotification(" Erreur lors de la suppression", "error");
             return false;
         } finally {
             setDeleting({ type: null, id: null });
@@ -407,7 +407,7 @@ const GestionEtat = () => {
             return true;
         } catch (error) {
             console.error("Erreur suppression échelle:", error);
-            showNotification("❌ Erreur lors de la suppression", "error");
+            showNotification(" Erreur lors de la suppression", "error");
             return false;
         } finally {
             setDeleting({ type: null, id: null });
@@ -437,7 +437,7 @@ const GestionEtat = () => {
             return true;
         } catch (error) {
             console.error("Erreur suppression échelon:", error);
-            showNotification("❌ Erreur lors de la suppression", "error");
+            showNotification(" Erreur lors de la suppression", "error");
             return false;
         } finally {
             setDeleting({ type: null, id: null });
@@ -596,10 +596,10 @@ const GestionEtat = () => {
             await api.post('/api/gestionEtat/store', cleanConfig);
             setIsDataSaved(true);
             setHasUnsavedChanges(false);
-            showNotification(`✅ Configuration ${config.year} enregistrée avec succès!`, "success");
+            showNotification(`Configuration ${config.year} enregistrée avec succès!`, "success");
             await fetchYearData(); 
         } catch (error) {
-            showNotification("❌ Erreur lors de la sauvegarde", "error");
+            showNotification(" Erreur lors de la sauvegarde", "error");
         } finally {
             setLoading(false);
         }
@@ -628,7 +628,7 @@ const GestionEtat = () => {
             showNotification("📄 PDF exporté avec succès!", "success");
         } catch (error) {
             console.error("Erreur export PDF:", error);
-            showNotification("❌ Erreur lors de l'export PDF", "error");
+            showNotification(" Erreur lors de l'export PDF", "error");
         } finally {
             setLoading(false);
         }
@@ -780,7 +780,7 @@ const GestionEtat = () => {
                                         year: yearNum,
                                         copy_from_year: null
                                     });
-                                    showNotification(`✅ Année ${yearNum} ajoutée avec succès`, "success");
+                                    showNotification(`Année ${yearNum} ajoutée avec succès`, "success");
                                     fetchYearData(); 
                                     
                                 } catch (err) {

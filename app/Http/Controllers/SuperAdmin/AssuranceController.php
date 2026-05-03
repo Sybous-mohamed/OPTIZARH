@@ -17,6 +17,13 @@ class AssuranceController extends Controller
     {
         try {
             $annees = SalaryYear::orderBy('year', 'desc')->get();
+            
+            $this->logActivity(
+                'Consultation années assurances',
+                'READ',
+                'Récupération de la liste des années pour les assurances'
+            );
+            
             return response()->json($annees);
         } catch (\Exception $e) {
             Log::error('getAnnees: ' . $e->getMessage());
@@ -41,6 +48,12 @@ class AssuranceController extends Controller
                 ->where('annee_id', $annee->id)
                 ->orderBy('name')
                 ->get();
+
+            $this->logActivity(
+                'Consultation assurances',
+                'READ',
+                "Récupération de la configuration des assurances pour l'année {$year}"
+            );
 
             return response()->json([
                 'annee' => $year,
@@ -74,6 +87,8 @@ class AssuranceController extends Controller
                 // Supprimer les anciennes données
                 Assurance::where('annee_id', $annee->id)->delete();
 
+                $assurancesCount = 0;
+
                 foreach ($request->assurances as $assData) {
                     // Créer l'assurance
                     $assurance = Assurance::create([
@@ -89,6 +104,8 @@ class AssuranceController extends Controller
                         'plafond_annuel' => $assData['plafond_annuel'] ?? null,
                         'description' => $assData['description'] ?? null
                     ]);
+
+                    $assurancesCount++;
 
                     // Ajouter les tranches si existent
                     if (isset($assData['tranches']) && is_array($assData['tranches']) && count($assData['tranches']) > 0) {
@@ -110,11 +127,22 @@ class AssuranceController extends Controller
 
                 Cache::forget('assurances_' . $annee->id);
 
+                $this->logActivity(
+                    'Configuration assurances',
+                    'UPDATE',
+                    "Mise à jour de la configuration des assurances pour l'année {$request->annee} ({$assurancesCount} assurance(s))"
+                );
+
                 return response()->json(['message' => 'Configuration enregistrée avec succès'], 201);
             });
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json(['errors' => $e->errors()], 422);
         } catch (\Exception $e) {
+            $this->logActivity(
+                'Configuration assurances',
+                'ERROR',
+                "Erreur lors de l'enregistrement: " . $e->getMessage()
+            );
             Log::error('Store error: ' . $e->getMessage());
             return response()->json(['error' => $e->getMessage()], 500);
         }
@@ -124,9 +152,22 @@ class AssuranceController extends Controller
     {
         try {
             $assurance = Assurance::findOrFail($id);
+            $assuranceName = $assurance->name;
             $assurance->delete();
+            
+            $this->logActivity(
+                'Suppression assurance',
+                'DELETE',
+                "Suppression de l'assurance : {$assuranceName}"
+            );
+            
             return response()->json(['message' => 'Assurance supprimée avec succès']);
         } catch (\Exception $e) {
+            $this->logActivity(
+                'Suppression assurance',
+                'ERROR',
+                "Erreur lors de la suppression: " . $e->getMessage()
+            );
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
@@ -135,7 +176,15 @@ class AssuranceController extends Controller
     {
         try {
             $tranche = AssuranceTranche::findOrFail($id);
+            $trancheName = $tranche->tranche_name;
             $tranche->delete();
+            
+            $this->logActivity(
+                'Suppression tranche assurance',
+                'DELETE',
+                "Suppression de la tranche : {$trancheName}"
+            );
+            
             return response()->json(['message' => 'Tranche supprimée avec succès']);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);

@@ -251,10 +251,10 @@ const ConsultationCredits = () => {
               onChange={(e) => setSelectedYear(e.target.value)}
               className={`px-3 py-2 rounded-lg border ${inputClass} ${borderClass} outline-none text-sm cursor-pointer`}
             >
-              <option value="">📅 Toutes les années</option>
+              <option value=""> Toutes les années</option>
               {availableYears.map((year) => (
                 <option key={year} value={year}>
-                  📅 {year}
+                   {year}
                 </option>
               ))}
             </select>
@@ -329,7 +329,7 @@ const ConsultationCredits = () => {
                           </span>
                           {credit.year && (
                             <span className={`text-[10px] px-2 py-0.5 rounded-full ${darkMode ? 'bg-amber-900/30 text-amber-400' : 'bg-amber-100 text-amber-700'}`}>
-                              📅 {credit.year}
+                               {credit.year}
                             </span>
                           )}
                         </div>

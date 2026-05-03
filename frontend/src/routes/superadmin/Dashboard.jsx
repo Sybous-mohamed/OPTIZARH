@@ -75,8 +75,8 @@ export default function Dashboard() {
             setAvailableYears(years);
             
         } catch (err) {
-            console.error("❌ Erreur API:", err);
-            showNotification("❌ Erreur chargement dashboard", "error");
+            console.error(" Erreur API:", err);
+            showNotification(" Erreur chargement dashboard", "error");
             setAvailableYears([2026]);
         } finally {
             setLoading(false);

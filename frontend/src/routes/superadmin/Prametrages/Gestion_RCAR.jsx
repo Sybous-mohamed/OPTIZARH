@@ -2,13 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Plus, Trash2, Save, Users, Layers, 
   Grid, Database, DollarSign, FileText, Download, ChevronDown,
-  Layout, Loader2, Star, Eye, Settings2, ArrowLeft
+  Layout, Loader2, Star, Eye, Settings2, ArrowLeft, AlertCircle
 } from 'lucide-react';
 import api from '../../../lib/apis/axiosConfig'; 
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { useTheme } from '../../../context/ThemeContext';
 import { useNotification } from '../../../context/NotificationContext';
+import DeleteConfirmModal from '../../../lib/components/DeleteConfirmModal';
 
 const GestionRCAR = () => {
   const { darkMode } = useTheme();
@@ -25,6 +26,15 @@ const GestionRCAR = () => {
   const [availableYears, setAvailableYears] = useState([]);
   const [isYearOpen, setIsYearOpen] = useState(false);
   const yearRef = useRef(null);
+  
+  // Modal de confirmation
+  const [deleteModal, setDeleteModal] = useState({
+    isOpen: false,
+    type: null, // 'type' or 'detail'
+    typeId: null,
+    detailId: null,
+    name: ''
+  });
 
   // Dark mode classes
   const bgClass = darkMode ? 'bg-[#0D0D0D]' : 'bg-[#F8FAFC]';
@@ -47,6 +57,29 @@ const GestionRCAR = () => {
   const dangerButtonClass = `${buttonClass} bg-gradient-to-r from-rose-500 to-rose-600 text-white hover:from-rose-600 hover:to-rose-700 shadow-md`;
   const outlineButtonClass = `${buttonClass} border ${borderClass} ${textClass} hover:bg-gray-100 dark:hover:bg-[#252525] cursor-pointer`;
 
+  // ============================================================
+  // FONCTIONS DE VALIDATION
+  // ============================================================
+  
+  const validateTaux = (value) => {
+    let numValue = parseFloat(value);
+    if (isNaN(numValue)) return 0;
+    if (numValue < 0) return 0;
+    if (numValue > 100) return 100;
+    return numValue;
+  };
+  
+  const validatePlafond = (value) => {
+    if (value === '' || value === null) return '';
+    let numValue = parseFloat(value);
+    if (isNaN(numValue)) return '';
+    if (numValue < 0) return '';
+    return numValue;
+  };
+
+  // ============================================================
+  // GESTION DES CLICS EXTERNES
+  // ============================================================
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (yearRef.current && !yearRef.current.contains(event.target)) {
@@ -57,6 +90,9 @@ const GestionRCAR = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // ============================================================
+  // CHARGEMENT DES ANNÉES
+  // ============================================================
   useEffect(() => {
     const fetchYears = async () => {
       try {
@@ -93,33 +129,9 @@ const GestionRCAR = () => {
     showNotification(`📅 Année ${yearValue} sélectionnée`, "success");
   };
 
-  const handleToggleFavorite = async (typeId, currentStatus) => {
-    const updated = rcarData.types.map(t => 
-      t.id === typeId ? { ...t, isFavorite: !currentStatus } : t
-    );
-    setRcarData({ ...rcarData, types: updated });
-
-    try {
-      if (!String(typeId).startsWith('new-')) {
-        await api.patch(`/api/rcar/type/${typeId}/toggle-favorite`, {
-          is_favorite: !currentStatus
-        });
-        showNotification(`⭐ ${!currentStatus ? 'Favori ajouté' : 'Favori retiré'}`, "success");
-      }
-    } catch (error) {
-      console.error("Erreur favorite:", error);
-      fetchConfig(selectedYear);
-      showNotification("❌ Erreur", "error");
-    }
-  };
-
-  const handleToggleView = (typeId) => {
-    const updated = rcarData.types.map(t => 
-      t.id === typeId ? { ...t, isVisible: !t.isVisible } : t
-    );
-    setRcarData({ ...rcarData, types: updated });
-  };
-
+  // ============================================================
+  // CHARGEMENT DE LA CONFIGURATION
+  // ============================================================
   const fetchConfig = async (year) => {
     setFetching(true);
     try {
@@ -159,6 +171,9 @@ const GestionRCAR = () => {
     }
   }, [selectedYear]);
 
+  // ============================================================
+  // GESTION DES TYPES
+  // ============================================================
   const addType = () => {
     const newType = { 
       id: `new-${Date.now()}`, 
@@ -171,6 +186,84 @@ const GestionRCAR = () => {
     showNotification("➕ Nouveau type ajouté", "success");
   };
 
+  const openDeleteTypeModal = (typeId, typeName) => {
+    setDeleteModal({
+      isOpen: true,
+      type: 'type',
+      typeId: typeId,
+      detailId: null,
+      name: typeName
+    });
+  };
+
+  const openDeleteDetailModal = (typeId, detailId, detailName) => {
+    setDeleteModal({
+      isOpen: true,
+      type: 'detail',
+      typeId: typeId,
+      detailId: detailId,
+      name: detailName
+    });
+  };
+
+  const closeDeleteModal = () => {
+    setDeleteModal({
+      isOpen: false,
+      type: null,
+      typeId: null,
+      detailId: null,
+      name: ''
+    });
+  };
+
+  const confirmDelete = async () => {
+    if (deleteModal.type === 'type') {
+      const typeId = deleteModal.typeId;
+      
+      if (String(typeId).startsWith('new-')) {
+        setRcarData(prev => ({ ...prev, types: prev.types.filter(t => t.id !== typeId) }));
+        showNotification("🗑️ Type supprimé", "success");
+        closeDeleteModal();
+        return;
+      }
+
+      try {
+        await api.delete(`/api/rcar/type/${typeId}`);
+        setRcarData(prev => ({ ...prev, types: prev.types.filter(t => t.id !== typeId) }));
+        showNotification("✅ Organisme supprimé avec succès", "success");
+      } catch (error) {
+        showNotification("❌ Erreur lors de la suppression", "error");
+      }
+    } else if (deleteModal.type === 'detail') {
+      const { typeId, detailId } = deleteModal;
+      
+      if (String(detailId).startsWith('det-')) {
+        const updated = rcarData.types.map(t => 
+          t.id === typeId ? { ...t, details: t.details.filter(d => d.id !== detailId) } : t
+        );
+        setRcarData(prev => ({ ...prev, types: updated }));
+        showNotification("🗑️ Ligne supprimée", "success");
+        closeDeleteModal();
+        return;
+      }
+
+      try {
+        await api.delete(`/api/rcar/detail/${detailId}`);
+        const updated = rcarData.types.map(t => 
+          t.id === typeId ? { ...t, details: t.details.filter(d => d.id !== detailId) } : t
+        );
+        setRcarData(prev => ({ ...prev, types: updated }));
+        showNotification("✅ Ligne supprimée avec succès", "success");
+      } catch (error) {
+        showNotification("❌ Erreur lors de la suppression", "error");
+      }
+    }
+    closeDeleteModal();
+  };
+
+  // ============================================================
+  // GESTION DES DÉTAILS
+  // ============================================================
   const addDetail = (typeId) => {
     const updated = rcarData.types.map(t => {
       if (t.id === typeId) {
@@ -179,53 +272,59 @@ const GestionRCAR = () => {
       return t;
     });
     setRcarData(prev => ({ ...prev, types: updated }));
+    showNotification("➕ Nouvelle ligne ajoutée", "success");
   };
 
-  const handleDeleteType = async (typeId) => {
-    if (String(typeId).startsWith('new-')) {
-      setRcarData(prev => ({ ...prev, types: prev.types.filter(t => t.id !== typeId) }));
-      showNotification("🗑️ Type supprimé", "success");
-      return;
-    }
+  const handleToggleFavorite = async (typeId, currentStatus) => {
+    const updated = rcarData.types.map(t => 
+      t.id === typeId ? { ...t, isFavorite: !currentStatus } : t
+    );
+    setRcarData({ ...rcarData, types: updated });
 
-    if (window.confirm("Voulez-vous supprimer cet organisme et toutes ses lignes ?")) {
-      try {
-        await api.delete(`/api/rcar/type/${typeId}`);
-        setRcarData(prev => ({ ...prev, types: prev.types.filter(t => t.id !== typeId) }));
-        showNotification("✅ Organisme supprimé", "success");
-      } catch (error) {
-        showNotification("❌ Erreur lors de la suppression", "error");
+    try {
+      if (!String(typeId).startsWith('new-')) {
+        await api.patch(`/api/rcar/type/${typeId}/toggle-favorite`, {
+          is_favorite: !currentStatus
+        });
+        showNotification(`⭐ ${!currentStatus ? 'Favori ajouté' : 'Favori retiré'}`, "success");
       }
+    } catch (error) {
+      console.error("Erreur favorite:", error);
+      fetchConfig(selectedYear);
+      showNotification("❌ Erreur", "error");
     }
   };
 
-  const handleDeleteDetail = async (typeId, detailId) => {
-    if (String(detailId).startsWith('det-')) {
-      const updated = rcarData.types.map(t => 
-        t.id === typeId ? { ...t, details: t.details.filter(d => d.id !== detailId) } : t
-      );
-      setRcarData(prev => ({ ...prev, types: updated }));
-      return;
-    }
-
-    if (window.confirm("Supprimer cette ligne ?")) {
-      try {
-        await api.delete(`/api/rcar/detail/${detailId}`);
-        const updated = rcarData.types.map(t => 
-          t.id === typeId ? { ...t, details: t.details.filter(d => d.id !== detailId) } : t
-        );
-        setRcarData(prev => ({ ...prev, types: updated }));
-        showNotification("✅ Ligne supprimée", "success");
-      } catch (error) {
-        showNotification("❌ Erreur lors de la suppression", "error");
-      }
-    }
+  const handleToggleView = (typeId) => {
+    const updated = rcarData.types.map(t => 
+      t.id === typeId ? { ...t, isVisible: !t.isVisible } : t
+    );
+    setRcarData({ ...rcarData, types: updated });
   };
 
+  // ============================================================
+  // SAUVEGARDE
+  // ============================================================
   const handleSave = async () => {
     if (!rcarData.salary_year_id) {
       showNotification("❌ Erreur: Aucun ID d'année trouvé", "error");
       return;
+    }
+
+    // Validation des données avant envoi
+    for (const type of rcarData.types) {
+      for (const detail of type.details) {
+        const taux = parseFloat(detail.percentage);
+        if (taux < 0 || taux > 100) {
+          showNotification(`⚠️ Le taux "${detail.name || 'sans nom'}" doit être entre 0 et 100%`, "warning");
+          return;
+        }
+        const plafond = parseFloat(detail.plafond);
+        if (plafond < 0) {
+          showNotification(`⚠️ Le plafond "${detail.name || 'sans nom'}" ne peut pas être négatif`, "warning");
+          return;
+        }
+      }
     }
 
     setLoading(true);
@@ -252,6 +351,9 @@ const GestionRCAR = () => {
     }
   };
 
+  // ============================================================
+  // EXPORT PDF
+  // ============================================================
   const exportToPDF = () => {
     const doc = new jsPDF();
     
@@ -302,8 +404,11 @@ const GestionRCAR = () => {
     window.history.back();
   };
 
+  // ============================================================
+  // RENDU PRINCIPAL
+  // ============================================================
   return (
-    <div className={`min-h-screen transition-colors duration-300 p-3 ${bgClass}`}>
+    <div className={`min-h-screen transition-colors duration-300  ${bgClass}`}>
       <div className="max-w-7xl mx-auto">
         
         {/* HEADER avec bouton retour */}
@@ -369,7 +474,7 @@ const GestionRCAR = () => {
           </div>
         </div>
 
-        {/* DATA AREA - TABLEAU CORRIGÉ */}
+        {/* DATA AREA */}
         <div className="space-y-6 min-h-[300px]">
           {rcarData.types.length === 0 && !fetching ? (
             <div className={`${cardClass} rounded-2xl border-2 border-dashed ${borderClass} p-12 flex flex-col items-center justify-center text-center`}>
@@ -411,7 +516,10 @@ const GestionRCAR = () => {
                       >
                         <Eye size={16} />
                       </button>
-                      <button onClick={() => handleDeleteType(type.id)} className="text-white/50 hover:text-rose-400 transition-colors cursor-pointer">
+                      <button 
+                        onClick={() => openDeleteTypeModal(type.id, type.label)} 
+                        className="text-white/50 hover:text-rose-400 transition-colors cursor-pointer"
+                      >
                         <Trash2 size={16}/>
                       </button>
                     </div>
@@ -454,14 +562,19 @@ const GestionRCAR = () => {
                             <td className="py-2 px-3">
                               <input 
                                 type="number"
+                                min="0"
                                 placeholder="0"
                                 className={`w-full rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${inputClass}`}
                                 value={det.plafond}
                                 onChange={(e) => {
+                                  let validatedValue = validatePlafond(e.target.value);
                                   const updated = rcarData.types.map(t => t.id === type.id ? {
-                                    ...t, details: t.details.map(d => d.id === det.id ? {...d, plafond: e.target.value} : d)
+                                    ...t, details: t.details.map(d => d.id === det.id ? {...d, plafond: validatedValue} : d)
                                   } : t);
                                   setRcarData({...rcarData, types: updated});
+                                  if (parseFloat(e.target.value) < 0) {
+                                    showNotification("⚠️ Le plafond ne peut pas être négatif", "warning");
+                                  }
                                 }}
                               />
                             </td>
@@ -470,14 +583,24 @@ const GestionRCAR = () => {
                                 <input 
                                   type="number"
                                   step="0.1"
+                                  min="0"
+                                  max="100"
                                   placeholder="0"
                                   className={`w-full rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${inputClass}`}
                                   value={det.percentage}
                                   onChange={(e) => {
+                                    let rawValue = e.target.value;
+                                    let validatedValue = validateTaux(rawValue);
                                     const updated = rcarData.types.map(t => t.id === type.id ? {
-                                      ...t, details: t.details.map(d => d.id === det.id ? {...d, percentage: e.target.value} : d)
+                                      ...t, details: t.details.map(d => d.id === det.id ? {...d, percentage: validatedValue} : d)
                                     } : t);
                                     setRcarData({...rcarData, types: updated});
+                                    if (parseFloat(rawValue) > 100) {
+                                      showNotification("⚠️ Le taux ne peut pas dépasser 100%", "warning");
+                                    }
+                                    if (parseFloat(rawValue) < 0) {
+                                      showNotification("⚠️ Le taux ne peut pas être négatif", "warning");
+                                    }
                                   }}
                                 />
                                 <span className={`text-xs font-bold ${textMutedClass}`}>%</span>
@@ -485,7 +608,7 @@ const GestionRCAR = () => {
                             </td>
                             <td className="py-2 text-center">
                               <button 
-                                onClick={() => handleDeleteDetail(type.id, det.id)} 
+                                onClick={() => openDeleteDetailModal(type.id, det.id, det.name || 'cette ligne')} 
                                 className={`p-2 ${textMutedClass} hover:text-rose-500 transition-colors cursor-pointer`}
                                 title="Supprimer"
                               >
@@ -530,6 +653,16 @@ const GestionRCAR = () => {
           </div>
         )}
       </div>
+
+      {/* MODAL DE CONFIRMATION SUPPRESSION */}
+      <DeleteConfirmModal
+        isOpen={deleteModal.isOpen}
+        onClose={closeDeleteModal}
+        onConfirm={confirmDelete}
+        title="Confirmation de suppression"
+        message={`Êtes-vous sûr de vouloir supprimer "${deleteModal.name}" ? Cette action est irréversible.`}
+        darkMode={darkMode}
+      />
     </div>
   );
 };

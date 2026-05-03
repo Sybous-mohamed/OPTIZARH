@@ -92,7 +92,7 @@ const GestionIndemnitee = () => {
                 localStorage.setItem('indemnite_selected_year', lastYear.year);
             }
         } catch (err) {
-            showNotification("❌ Erreur chargement des années", "error");
+            showNotification(" Erreur chargement des années", "error");
             setYears([]);
         } finally {
             setLoading(false);
@@ -105,7 +105,7 @@ const GestionIndemnitee = () => {
             const res = await api.get(`/api/gestionEtat/get-by-year/${selectedYear}`);
             setConfigData(res.data);
         } catch (err) { 
-            showNotification("❌ Erreur chargement configuration", "error");
+            showNotification(" Erreur chargement configuration", "error");
         } finally {
             setLoading(false);
         }
@@ -115,7 +115,7 @@ const GestionIndemnitee = () => {
         setSelectedYear(yearValue);
         setSelectedYearId(yearId);
         localStorage.setItem('indemnite_selected_year', yearValue);
-        showNotification(`📅 Année ${yearValue} sélectionnée`, "success");
+        showNotification(` Année ${yearValue} sélectionnée`, "success");
     };
 
     const handleRoleChange = (roleId) => {
@@ -222,7 +222,7 @@ const GestionIndemnitee = () => {
             
         } catch (err) { 
             console.error(err);
-            showNotification("❌ Erreur lors de l'enregistrement", "error");
+            showNotification(" Erreur lors de l'enregistrement", "error");
         } finally {
             setLoading(false);
         }
@@ -268,7 +268,7 @@ const GestionIndemnitee = () => {
             <div className="container p-4 ">
                 
                 {/* Header */}
-                <div className={`${cardClass} rounded-2xl shadow-xl border ${borderClass} p-4 mb-6 sticky top-0 z-30 backdrop-blur-xl bg-opacity-80 dark:bg-opacity-80`}>
+                <div className={`${cardClass} rounded-2xl shadow-xl border ${borderClass} p-4 mb-6  top-0 z-30 backdrop-blur-xl bg-opacity-80 dark:bg-opacity-80`}>
                     <div className="flex flex-wrap items-center justify-between gap-4">
                         <div className="flex items-center gap-4">
                             <button 

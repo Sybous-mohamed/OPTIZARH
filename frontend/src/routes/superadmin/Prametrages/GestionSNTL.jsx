@@ -24,6 +24,25 @@ const GestionSNTL = () => {
   const [sntlData, setSntlData] = useState([]);
   const [roles, setRoles] = useState([]);
 
+  // ============================================================
+  // FONCTION DE VALIDATION SELON LE TYPE DE MONTANT
+  // ============================================================
+  const validateValeur = (value, typeMontant, label = '') => {
+    let numValue = parseFloat(value);
+    if (isNaN(numValue)) return 0;
+    if (numValue < 0) return 0;
+    
+    // Si c'est un pourcentage, limiter à 100
+    if (typeMontant === 'pourcentage') {
+      if (numValue > 100) {
+        showNotification(`⚠️ Le pourcentage "${label || 'cette ligne'}" ne peut pas dépasser 100%`, "warning");
+        return 100;
+      }
+    }
+    
+    return numValue;
+  };
+
   // Dark mode classes complètes
   const bgClass = darkMode ? 'bg-[#0D0D0D]' : 'bg-[#f1f5f9]';
   const cardClass = darkMode ? 'bg-[#1A1A1A] border-[#2A2A2A]' : 'bg-white border-gray-200';
@@ -88,7 +107,7 @@ const GestionSNTL = () => {
     setIsYearOpen(false);
     localStorage.setItem('sntl_selected_year', yearValue);
     localStorage.setItem('sntl_selected_year_id', yearId);
-    showNotification(`📅 Année ${yearValue} sélectionnée`, "success");
+    showNotification(` Année ${yearValue} sélectionnée`, "success");
   };
 
   // 2. Charger les rôles quand l'année change
@@ -258,6 +277,18 @@ const GestionSNTL = () => {
       return;
     }
 
+    // Validation des valeurs avant sauvegarde
+    for (const config of sntlData) {
+      if (config.valeur < 0) {
+        showNotification(`⚠️ La valeur "${config.label}" ne peut pas être négative`, "warning");
+        return;
+      }
+      if (config.type_montant === 'pourcentage' && config.valeur > 100) {
+        showNotification(`⚠️ Le pourcentage "${config.label}" ne peut pas dépasser 100%`, "warning");
+        return;
+      }
+    }
+
     if (!selectedYearId) {
       showNotification("Année non valide", "error");
       return;
@@ -341,7 +372,7 @@ const GestionSNTL = () => {
   };
 
   return (
-    <div className={`min-h-screen transition-colors duration-300 p-6 ${bgClass}`}>
+    <div className={`min-h-screen transition-colors duration-300 p-3 ${bgClass}`}>
       <div className="max-w-7xl mx-auto">
         
         {/* Header avec bouton retour */}
@@ -484,14 +515,22 @@ const GestionSNTL = () => {
                         <input 
                           disabled={config.isLocked}
                           type="number"
+                          min="0"
                           className={`w-full ${inputBgClass} border rounded-lg p-3 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500 ${config.isLocked ? 'cursor-not-allowed opacity-70' : ''}`}
                           value={config.valeur}
-                          onChange={(e) => setSntlData(sntlData.map(c => c.id === config.id ? {...c, valeur: e.target.value} : c))}
+                          onChange={(e) => {
+                            let rawValue = e.target.value;
+                            let validatedValue = validateValeur(rawValue, config.type_montant, config.label);
+                            setSntlData(sntlData.map(c => c.id === config.id ? {...c, valeur: validatedValue} : c));
+                          }}
                         />
                         <span className={`absolute right-3 top-3 font-bold text-xs uppercase ${textMutedClass}`}>
                           {config.type_montant === 'fixe' ? 'DH' : '%'}
                         </span>
                       </div>
+                      {config.type_montant === 'pourcentage' && (
+                        <p className={`text-[9px] ${textMutedClass} mt-1`}>⚠️ Maximum: 100%</p>
+                      )}
                     </div>
 
                     <div className="space-y-2">
@@ -500,7 +539,16 @@ const GestionSNTL = () => {
                         disabled={config.isLocked}
                         className={`w-full ${inputBgClass} border rounded-lg p-3 text-sm font-semibold outline-none cursor-pointer ${config.isLocked ? 'cursor-not-allowed opacity-70' : ''}`}
                         value={config.type_montant}
-                        onChange={(e) => setSntlData(sntlData.map(c => c.id === config.id ? {...c, type_montant: e.target.value} : c))}
+                        onChange={(e) => {
+                          const newType = e.target.value;
+                          let nouvelleValeur = config.valeur;
+                          // Si on change de fixe vers pourcentage, vérifier la limite
+                          if (newType === 'pourcentage' && config.valeur > 100) {
+                            nouvelleValeur = 100;
+                            showNotification("⚠️ Le pourcentage a été limité à 100%", "warning");
+                          }
+                          setSntlData(sntlData.map(c => c.id === config.id ? {...c, type_montant: newType, valeur: nouvelleValeur} : c));
+                        }}
                       >
                         <option value="fixe">Montant Fixe (DH)</option>
                         <option value="pourcentage">Pourcentage (%)</option>

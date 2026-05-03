@@ -74,7 +74,7 @@ const AffichageIndemnitee = () => {
                 localStorage.setItem('affichage_indemnite_year', lastYear.year);
             }
         } catch (err) {
-            showNotification("❌ Erreur chargement des années", "error");
+            showNotification(" Erreur chargement des années", "error");
             setYears([]);
         } finally {
             setLoading(false);
@@ -97,7 +97,7 @@ const AffichageIndemnitee = () => {
         setSelectedYear(yearValue);
         setSelectedYearId(yearId);
         localStorage.setItem('affichage_indemnite_year', yearValue);
-        showNotification(`📅 Année ${yearValue} sélectionnée`, "success");
+        showNotification(` Année ${yearValue} sélectionnée`, "success");
     };
 
     // ============ FONCTION DE SUPPRESSION AVEC MODAL ============
@@ -114,11 +114,11 @@ const AffichageIndemnitee = () => {
         setDeletingId(id);
         try {
             await api.delete(`/api/gestionEtat/gestionindemnites/${id}`);
-            showNotification(`✅ Indemnité "${libelle}" supprimée avec succès`, "success");
+            showNotification(`Indemnité "${libelle}" supprimée avec succès`, "success");
             fetchIndemnites();
         } catch (err) {
             console.error(err);
-            showNotification("❌ Erreur lors de la suppression", "error");
+            showNotification(" Erreur lors de la suppression", "error");
         } finally {
             setDeletingId(null);
             closeDeleteModal();
@@ -168,12 +168,6 @@ const AffichageIndemnitee = () => {
                 <div className={`${cardClass} rounded-2xl shadow-xl border ${borderClass} p-4 mb-6`}>
                     <div className="flex flex-wrap items-center justify-between gap-4">
                         <div className="flex items-center gap-4">
-                            <button 
-                                onClick={() => navigate(-1)}
-                                className={`p-2 rounded-xl transition-all cursor-pointer ${darkMode ? 'bg-[#252525] hover:bg-[#333] border border-[#333]' : 'bg-gray-100 hover:bg-gray-200 border border-gray-200'} hover:scale-105`}
-                            >
-                                <ArrowLeft size={20} className={textClass} />
-                            </button>
                             <div>
                                 <h2 className={`font-bold text-xl md:text-2xl tracking-tight flex items-center gap-2 ${textClass}`}>
                                     <Eye size={24} className="text-indigo-500" />
@@ -199,15 +193,7 @@ const AffichageIndemnitee = () => {
                                 
                                 {isYearOpen && years.length > 0 && (
                                     <div className={`absolute top-full left-0 right-0 mt-2 rounded-xl border ${borderClass} ${cardClass} z-50 max-h-60 overflow-y-auto shadow-xl animate-fadeIn`}>
-                                        <div 
-                                            onClick={() => {
-                                                handleYearChange('');
-                                                setIsYearOpen(false);
-                                            }}
-                                            className={`px-4 py-2.5 cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-sm transition-colors ${!selectedYear ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 font-medium' : ''}`}
-                                        >
-                                            -- Année --
-                                        </div>
+
                                         {years.map(y => (
                                             <div 
                                                 key={y.id}
@@ -215,7 +201,7 @@ const AffichageIndemnitee = () => {
                                                     handleYearChange(y.year, y.id);
                                                     setIsYearOpen(false);
                                                 }}
-                                                className={`px-4 py-2.5 cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-sm transition-colors ${selectedYear == y.year ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 font-medium' : ''}`}
+                                                className={`px-4 py-2.5 cursor-pointer dark:text-white hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-sm transition-colors ${selectedYear == y.year ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 font-medium' : ''}`}
                                             >
                                                 {y.year}
                                             </div>

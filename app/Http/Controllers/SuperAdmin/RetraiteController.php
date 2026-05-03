@@ -6,12 +6,18 @@ use App\Models\SuperAdmin\RetraiteSetting;
 use Illuminate\Http\Request;
 
 class RetraiteController extends Controller{
+    
     public function getSettings($year)
     {
         $settings = RetraiteSetting::where('year', $year)->first();
         
+        $this->logActivity(
+            'Consultation Retraite',
+            'READ',
+            "Récupération des paramètres retraite pour l'année {$year}"
+        );
+        
         if (!$settings) {
-            // Ila mal9ach l-3am, n-rej3o default values
             return response()->json([
                 'year' => $year,
                 'age_legal' => 60,
@@ -34,8 +40,14 @@ class RetraiteController extends Controller{
         ]);
 
         $settings = RetraiteSetting::updateOrCreate(
-            ['year' => $validated['year']], // Condition
-            $validated                      // Data to update/create
+            ['year' => $validated['year']],
+            $validated
+        );
+
+        $this->logActivity(
+            'Configuration Retraite',
+            'UPDATE',
+            "Mise à jour des paramètres retraite pour l'année {$validated['year']} (âge: {$validated['age_legal']})"
         );
 
         return response()->json([

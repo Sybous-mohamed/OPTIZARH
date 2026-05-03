@@ -7,10 +7,23 @@ use App\Models\SuperAdmin\SalaryYear;
 use App\Http\Controllers\Controller;
 use Barryvdh\DomPDF\Facade\Pdf;
 
-class EmployeeController extends Controller{
-    public function getAnnees(){
-        $annees = SalaryYear::orderBy('year', 'desc')->get();
-        return response()->json($annees);
+class EmployeeController extends Controller
+{
+    public function getAnnees()
+    {
+        try {
+            $annees = SalaryYear::orderBy('year', 'desc')->get();
+            
+            $this->logActivity(
+                'Consultation années',
+                'READ',
+                'Récupération de la liste des années'
+            );
+            
+            return response()->json($annees);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
     }
 
     public function getClassification(Request $request)
@@ -28,6 +41,12 @@ class EmployeeController extends Controller{
             } else {
                 return response()->json(['error' => 'annee_id or year required'], 400);
             }
+            
+            $this->logActivity(
+                'Consultation classification',
+                'READ',
+                'Récupération de la classification pour ' . ($year ?? $anneeId)
+            );
             
             return response()->json($data ?? ['roles' => []]);
         } catch (\Exception $e) {
@@ -58,6 +77,13 @@ class EmployeeController extends Controller{
             }
 
             $employees = $query->orderBy('created_at', 'desc')->paginate(10);
+            
+            $this->logActivity(
+                'Consultation employés',
+                'READ',
+                'Affichage de la liste des employés (Page ' . ($request->page ?? 1) . ')'
+            );
+            
             return response()->json($employees);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
@@ -106,11 +132,23 @@ class EmployeeController extends Controller{
             }
 
             $employee = Employee::create($validated);
+            
+            $this->logActivity(
+                'Ajout employé',
+                'CREATE',
+                "Ajout de l'employé : {$employee->prenom} {$employee->nom} (Email: {$employee->email})"
+            );
+            
             return response()->json($employee, 201);
             
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json(['errors' => $e->errors()], 422);
         } catch (\Exception $e) {
+            $this->logActivity(
+                'Ajout employé',
+                'ERROR',
+                "Erreur lors de l'ajout: " . $e->getMessage()
+            );
             return response()->json(['message' => $e->getMessage()], 500);
         }
     }
@@ -122,6 +160,13 @@ class EmployeeController extends Controller{
             if (!$employee) {
                 return response()->json(['message' => 'Employé non trouvé'], 404);
             }
+            
+            $this->logActivity(
+                'Consultation employé',
+                'READ',
+                "Consultation de l'employé : {$employee->prenom} {$employee->nom}"
+            );
+            
             return response()->json($employee);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
@@ -135,6 +180,8 @@ class EmployeeController extends Controller{
             if (!$employee) {
                 return response()->json(['message' => 'Employé non trouvé'], 404);
             }
+
+            $oldData = "{$employee->prenom} {$employee->nom}";
 
             $rules = [
                 'prenom' => 'sometimes|string|max:255',
@@ -176,10 +223,22 @@ class EmployeeController extends Controller{
             $request->validate($rules);
             
             $employee->update($request->all());
+            
+            $this->logActivity(
+                'Modification employé',
+                'UPDATE',
+                "Modification de l'employé : {$oldData} → {$employee->prenom} {$employee->nom}"
+            );
+            
             return response()->json($employee);
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json(['errors' => $e->errors()], 422);
         } catch (\Exception $e) {
+            $this->logActivity(
+                'Modification employé',
+                'ERROR',
+                "Erreur lors de la modification: " . $e->getMessage()
+            );
             return response()->json(['message' => 'Erreur lors de la modification: ' . $e->getMessage()], 500);
         }
     }
@@ -192,9 +251,22 @@ class EmployeeController extends Controller{
                 return response()->json(['message' => 'Employé non trouvé'], 404);
             }
 
+            $employeeName = "{$employee->prenom} {$employee->nom}";
             $employee->delete();
+            
+            $this->logActivity(
+                'Suppression employé',
+                'DELETE',
+                "Suppression de l'employé : {$employeeName}"
+            );
+            
             return response()->json(['message' => 'Employé supprimé avec succès']);
         } catch (\Exception $e) {
+            $this->logActivity(
+                'Suppression employé',
+                'ERROR',
+                "Erreur lors de la suppression: " . $e->getMessage()
+            );
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
@@ -212,6 +284,12 @@ class EmployeeController extends Controller{
             $actifs = $query->clone()->where('statut', 'ACTIF')->count();
             $conge = $query->clone()->where('statut', 'CONGÉ')->count();
             $departs = $query->clone()->where('statut', 'DÉPART')->count();
+            
+            $this->logActivity(
+                'Statistiques employés',
+                'READ',
+                'Consultation des statistiques employés'
+            );
             
             return response()->json([
                 'total' => $total,
@@ -249,7 +327,6 @@ class EmployeeController extends Controller{
             $employees = $query->orderBy('nom', 'asc')->get();
             $anneeName = $request->annee_id ? SalaryYear::find($request->annee_id)?->year : 'Toutes';
             
-            // Statistiques supplémentaires
             $actifs = $employees->where('statut', 'ACTIF')->count();
             $conges = $employees->where('statut', 'CONGÉ')->count();
             $departs = $employees->where('statut', 'DÉPART')->count();
@@ -273,14 +350,25 @@ class EmployeeController extends Controller{
                 'departs' => $departs,
                 'totalSalaires' => $totalSalaires,
                 'gradesSummary' => $gradesSummary,
-                'gradesCount' => $gradesSummary->count()
+                'gradesCount' => count($gradesSummary)
             ]);
             
             $pdf->setPaper('a4', 'landscape');
             
+            $this->logActivity(
+                'Export PDF employés',
+                'EXPORT',
+                "Export PDF de la liste des employés - " . ($anneeName !== 'Toutes' ? "Année {$anneeName}" : "Toutes années")
+            );
+            
             return $pdf->download('employes_' . now()->format('Ymd_His') . '.pdf');
             
         } catch (\Exception $e) {
+            $this->logActivity(
+                'Export PDF employés',
+                'ERROR',
+                "Erreur lors de l'export PDF: " . $e->getMessage()
+            );
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
@@ -302,5 +390,5 @@ class EmployeeController extends Controller{
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
-    
 }
+

@@ -102,7 +102,6 @@ const GestionIR = () => {
     // ============================================================
     const isDataEmpty = () => {
         if (!rows.length) return true;
-        // Vérifier si toutes les valeurs sont 0
         return rows.every(row => 
             (row.min === 0 || row.min === '' || row.min === null) &&
             (row.max === 0 || row.max === '' || row.max === null) &&
@@ -130,7 +129,7 @@ const GestionIR = () => {
         setLoading(true);
         try {
             await api.delete(`/api/ir/settings/${yearToDelete}`);
-            showNotification(`✅ Configuration IR de l'année ${yearToDelete} supprimée`, "success");
+            showNotification(`Configuration IR de l'année ${yearToDelete} supprimée`, "success");
             setRows([{ id: Date.now(), min: 0, max: 0, taux: 0, marie: 0, enfant1: 0, enfant2: 0 }]);
             const res = await api.get('/api/ir/annees-for-settings');
             setAnneesList(res.data || []);
@@ -143,7 +142,7 @@ const GestionIR = () => {
     };
 
     // ============================================================
-    //                        SAVE DATA
+    //                        SAVE DATA (CORRIGÉ)
     // ============================================================
     const handleSave = async () => {
         if (!annee) return;
@@ -162,7 +161,8 @@ const GestionIR = () => {
                 showNotification(`❌ Erreur tranche ${i + 1}: Le maximum ne peut pas être négatif`, "error");
                 return;
             }
-            if (max !== 0 && max <= min) {
+            // Pour toutes les tranches sauf la dernière, max doit être > min
+            if (i < rows.length - 1 && max <= min) {
                 showNotification(`❌ Erreur tranche ${i + 1}: Le maximum (${max}) doit être supérieur au minimum (${min})`, "error");
                 return;
             }
@@ -172,7 +172,7 @@ const GestionIR = () => {
         for (let i = 0; i < rows.length - 1; i++) {
             const currentMax = parseFloat(rows[i].max || 0);
             const nextMin = parseFloat(rows[i + 1].min || 0);
-            if (currentMax !== 0 && currentMax !== nextMin) {
+            if (currentMax !== nextMin) {
                 showNotification(`❌ Erreur: La tranche ${i + 1} max (${currentMax}) doit être égale à la tranche ${i + 2} min (${nextMin})`, "error");
                 return;
             }
@@ -180,7 +180,12 @@ const GestionIR = () => {
 
         setLoading(true);
         try {
-            const cleanedRows = rows.map(row => ({
+            // ✅ CRUCIAL: Transformer la dernière tranche en illimitée (max = 0)
+            const rowsToSave = [...rows];
+            const lastIndex = rowsToSave.length - 1;
+            rowsToSave[lastIndex].max = 0;
+            
+            const cleanedRows = rowsToSave.map(row => ({
                 min: row.min === "" || row.min === null ? 0 : parseFloat(row.min),
                 max: row.max === "" || row.max === null ? 0 : parseFloat(row.max),
                 taux: row.taux === "" || row.taux === null ? 0 : parseFloat(row.taux),
@@ -190,6 +195,12 @@ const GestionIR = () => {
             }));
 
             await api.post(`/api/ir/settings/${annee}`, { data_rows: cleanedRows });
+            
+            // ✅ Mettre à jour l'affichage local
+            const updatedRows = [...rows];
+            updatedRows[updatedRows.length - 1].max = 0;
+            setRows(updatedRows);
+            
             showNotification(`✅ Configuration ${annee} enregistrée avec succès`, "success");
         } catch (e) { 
             const msg = e.response?.data?.message || "Erreur lors de l'enregistrement";
@@ -208,7 +219,6 @@ const GestionIR = () => {
             return;
         }
         
-        // Vérifier si les données sont vides
         if (isDataEmpty()) {
             showNotification("⚠️ Aucune donnée à exporter pour l'année " + annee + ". Veuillez d'abord configurer le barème IR.", "warning");
             return;
@@ -236,27 +246,41 @@ const GestionIR = () => {
     };
 
     // ============================================================
-    //                    ROWS MANAGEMENT
+    //                    ROWS MANAGEMENT (CORRIGÉ)
     // ============================================================
     const updateRow = (index, field, value) => {
         const newRows = [...rows];
         let numValue = value === '' ? 0 : parseFloat(value);
         if (isNaN(numValue)) numValue = 0;
         if (numValue < 0) {
-            showNotification("⚠️ Les valeurs négatives ne sont pas autorisées", "warning");
+            showNotification(" Les valeurs négatives ne sont pas autorisées", "error");
             return;
         }
         if (field === 'taux' && numValue > 100) {
-            showNotification("⚠️ Le taux ne peut pas dépasser 100%", "warning");
+            showNotification(" Le taux ne peut pas dépasser 100%", "error");
             numValue = 100;
         }
+        
         newRows[index][field] = numValue;
+    
+        if (field === 'max' && index < newRows.length - 1) {
+            if (newRows[index + 1]) {
+                newRows[index + 1].min = numValue + 1;
+            }
+        }
+
+        if (field === 'min' && index > 0) {
+            if (newRows[index - 1]) {
+                newRows[index - 1].max = numValue - 1; 
+            }
+        }
+        
         setRows(newRows);
     };
 
     const addRow = () => {
         const lastRow = rows[rows.length - 1];
-        const newMin = lastRow.max === 0 ? (lastRow.min + 1) : lastRow.max;
+        const newMin = lastRow.max === 0 ? (lastRow.min + 10000) : lastRow.max;
         setRows([...rows, { 
             id: Date.now(), 
             min: newMin, 
@@ -275,13 +299,30 @@ const GestionIR = () => {
             return;
         }
         
+        // Si on supprime la dernière tranche
+        if (index === rows.length - 1) {
+            const newRows = rows.filter((_, i) => i !== index);
+            // Mettre max = 0 sur la nouvelle dernière tranche
+            newRows[newRows.length - 1].max = 0;
+            setRows(newRows);
+            showNotification("🗑️ Tranche supprimée avec succès", "success");
+            return;
+        }
+        
         const rowToDelete = rows[index];
         const rowId = rowToDelete.id;
+        const isRealId = rowId && typeof rowId === 'number' && !rowId.toString().startsWith('temp_');
         
-        if (rowId && typeof rowId === 'number') {
+        if (isRealId) {
             setLoading(true);
             try {
-                const newRows = rows.filter((_, i) => i !== index);
+                let newRows = rows.filter((_, i) => i !== index);
+                
+                // Ajuster les min/max après suppression
+                if (index > 0 && index < newRows.length) {
+                    newRows[index].min = newRows[index - 1].max;
+                }
+                
                 const cleanedRows = newRows.map(row => ({
                     min: row.min === "" || row.min === null ? 0 : parseFloat(row.min),
                     max: row.max === "" || row.max === null ? 0 : parseFloat(row.max),
@@ -300,7 +341,13 @@ const GestionIR = () => {
                 setLoading(false);
             }
         } else {
-            const newRows = rows.filter((_, i) => i !== index);
+            let newRows = rows.filter((_, i) => i !== index);
+            if (index > 0 && index < newRows.length) {
+                newRows[index].min = newRows[index - 1].max;
+            }
+            if (newRows[newRows.length - 1].max !== 0) {
+                newRows[newRows.length - 1].max = 0;
+            }
             setRows(newRows);
             showNotification("🗑️ Tranche supprimée localement", "success");
         }
@@ -312,13 +359,17 @@ const GestionIR = () => {
         }
         return value;
     };
+    
+    const isLastTrancheUnlimited = (index) => {
+        return index === rows.length - 1 && rows[index]?.max === 0;
+    };
 
     // ============================================================
     //                          RENDER
     // ============================================================
     return (
         <div className={`min-h-screen transition-colors duration-300 ${bgClass}`}>
-            <div className="p-4 max-w-7xl mx-auto">
+            <div className=" max-w-7xl mx-auto">
                 
                 {/* Header */}
                 <div className="mb-6">
@@ -343,7 +394,7 @@ const GestionIR = () => {
                             <div className="relative" ref={yearRef}>
                                 <button 
                                     onClick={() => setIsYearOpen(!isYearOpen)}
-                                    className={` cursor-pointer h-9 px-4 rounded-lg font-medium outline-none cursor-pointer min-w-[120px] transition-all ${selectClass} border ${borderClass} ${textClass} text-sm flex items-center justify-between gap-2 hover:border-indigo-400`}
+                                    className={`cursor-pointer h-9 px-4 rounded-lg font-medium outline-none min-w-[120px] transition-all ${selectClass} border ${borderClass} ${textClass} text-sm flex items-center justify-between gap-2 hover:border-indigo-400`}
                                 >
                                     <span className="truncate">{annee || 'Sélectionner année'}</span>
                                     <ChevronDown size={14} className={`text-indigo-500 transition-transform duration-200 ${isYearOpen ? 'rotate-180' : ''}`} />
@@ -372,7 +423,7 @@ const GestionIR = () => {
                             <button 
                                 onClick={openDeleteModal}
                                 disabled={!annee}
-                                className={` cursor-pointer flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${!annee ? 'bg-gray-300 cursor-not-allowed text-gray-500' : 'bg-red-500 hover:bg-red-600 text-white'}`}
+                                className={`cursor-pointer flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${!annee ? 'bg-gray-300 cursor-not-allowed text-gray-500' : 'bg-red-500 hover:bg-red-600 text-white'}`}
                             >
                                 <Trash2 size={14} /> Supprimer config
                             </button>
@@ -401,14 +452,14 @@ const GestionIR = () => {
                                 <h3 className={`font-bold ${textClass}`}>Barème IR - {annee}</h3>
                                 <button 
                                     onClick={addRow}
-                                    className="cursor-pointer  flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-all"
+                                    className="cursor-pointer flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-all"
                                 >
                                     <PlusCircle size={14} /> Ajouter tranche
                                 </button>
                             </div>
                             
                             <div className="overflow-x-auto">
-                                <table className="w-full">
+                                <table className="w-full min-w-[700px]">
                                     <thead className={`${darkMode ? 'bg-[#252525]' : 'bg-gray-50'}`}>
                                         <tr className={`text-xs font-bold uppercase tracking-wider ${textMutedClass}`}>
                                             <th className="p-3 text-left">Min (MAD)</th>
@@ -447,9 +498,13 @@ const GestionIR = () => {
                                                             min="0"
                                                             value={formatDisplayValue(row.max)}
                                                             onChange={(e) => updateRow(i, 'max', e.target.value)}
-                                                            className={`w-full p-2 rounded-lg outline-none focus:ring-1 focus:ring-indigo-500 ${inputClass} border ${borderClass}`}
-                                                            placeholder="0"
+                                                            disabled={isLastTrancheUnlimited(i)}
+                                                            className={`w-full p-2 rounded-lg outline-none focus:ring-1 focus:ring-indigo-500 ${inputClass} border ${borderClass} ${isLastTrancheUnlimited(i) ? 'opacity-60 cursor-not-allowed bg-gray-100 dark:bg-gray-800' : ''}`}
+                                                            placeholder={isLastTrancheUnlimited(i) ? "Illimité" : "0"}
                                                         />
+                                                        {isLastTrancheUnlimited(i) && (
+                                                            <span className="text-xs text-emerald-500 mt-1 block">Illimité</span>
+                                                        )}
                                                     </td>
                                                     <td className="p-3">
                                                         <input 

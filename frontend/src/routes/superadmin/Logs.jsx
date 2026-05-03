@@ -94,7 +94,7 @@ export default function Logs() {
     };
 
     return (
-        <div className={`min-h-screen transition-colors duration-300 p-6 ${bgClass}`}>
+        <div className={`min-h-screen transition-colors duration-300 ${bgClass}`}>
             <div className="max-w-7xl mx-auto">
                 
                 {/* Header avec bouton retour */}
