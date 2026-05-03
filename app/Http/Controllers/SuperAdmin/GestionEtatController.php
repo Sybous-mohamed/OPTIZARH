@@ -11,7 +11,7 @@ use App\Models\SuperAdmin\Role;
 use App\Models\SuperAdmin\Grade;
 use App\Models\SuperAdmin\Echelle;
 use App\Models\SuperAdmin\Echelon;
-use Barryvdh\DomPDF\Facade\Pdf; 
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class GestionEtatController extends Controller
 {
@@ -28,7 +28,7 @@ class GestionEtatController extends Controller
                 ->first();
 
             if (!$data) {
-                return response()->json(['year' => (int)$year, 'roles' => []]);
+                return response()->json(['year' => (int) $year, 'roles' => []]);
             }
 
             return response()->json($data);
@@ -59,9 +59,9 @@ class GestionEtatController extends Controller
                     ['year' => $request->year],
                     ['is_active' => true]
                 );
-                
+
                 $salaryYear->roles()->delete();
-                
+
                 foreach ($request->roles as $rData) {
                     $role = $salaryYear->roles()->create([
                         'name' => $rData['name']
@@ -87,16 +87,16 @@ class GestionEtatController extends Controller
                         }
                     }
                 }
-                
+
                 Cache::forget('salary_years');
                 Cache::forget('starred_roles');
-                
+
                 $this->logActivity(
                     'Configuration des salaires',
                     'CREATE',
                     "Configuration de l'année {$request->year} enregistrée avec " . count($request->roles) . " poste(s)"
                 );
-                
+
                 return response()->json(['message' => 'Configuration enregistrée avec succès'], 201);
             });
         } catch (\Exception $e) {
@@ -125,17 +125,17 @@ class GestionEtatController extends Controller
                 'year' => $year,
                 'date' => now()->format('d/m/Y')
             ]);
-            
+
             $pdf->setPaper('a4', 'landscape');
-            
+
             $this->logActivity(
                 'Export PDF',
                 'EXPORT',
                 "Export PDF de la grille salariale pour l'année {$year}"
             );
-            
+
             return $pdf->download("grille_salariale_{$year}.pdf");
-            
+
         } catch (\Exception $e) {
             $this->logActivity(
                 'Export PDF',
@@ -181,17 +181,17 @@ class GestionEtatController extends Controller
                                 'name' => $role->name,
                                 'is_starred' => $role->is_starred
                             ]);
-                            
+
                             foreach ($role->grades as $grade) {
                                 $newGrade = $newRole->grades()->create([
                                     'name' => $grade->name
                                 ]);
-                                
+
                                 foreach ($grade->echelles as $echelle) {
                                     $newEchelle = $newGrade->echelles()->create([
                                         'level' => $echelle->level
                                     ]);
-                                    
+
                                     foreach ($echelle->echelons as $echelon) {
                                         $newEchelle->echelons()->create([
                                             'order' => $echelon->order,
@@ -211,13 +211,13 @@ class GestionEtatController extends Controller
                 }
 
                 Cache::forget('salary_years');
-                
+
                 $this->logActivity(
                     'Gestion des années',
                     'CREATE',
                     "Ajout de l'année {$year}" . ($copyFromYear ? " (copiée depuis {$copyFromYear})" : "")
                 );
-                
+
                 return response()->json([
                     'message' => $message,
                     'year' => $salaryYear
@@ -264,32 +264,32 @@ class GestionEtatController extends Controller
                 $sourceYear = SalaryYear::where('year', $fromYear)
                     ->with(['roles.grades.echelles.echelons'])
                     ->first();
-                
+
                 if (!$sourceYear) {
                     return response()->json(['error' => 'Année source non trouvée'], 404);
                 }
-                
+
                 $targetYear = SalaryYear::create([
                     'year' => $toYear,
                     'is_active' => true
                 ]);
-                
+
                 foreach ($sourceYear->roles as $role) {
                     $newRole = $targetYear->roles()->create([
                         'name' => $role->name,
                         'is_starred' => $role->is_starred
                     ]);
-                    
+
                     foreach ($role->grades as $grade) {
                         $newGrade = $newRole->grades()->create([
                             'name' => $grade->name
                         ]);
-                        
+
                         foreach ($grade->echelles as $echelle) {
                             $newEchelle = $newGrade->echelles()->create([
                                 'level' => $echelle->level
                             ]);
-                            
+
                             foreach ($echelle->echelons as $echelon) {
                                 $newEchelle->echelons()->create([
                                     'order' => $echelon->order,
@@ -300,15 +300,15 @@ class GestionEtatController extends Controller
                         }
                     }
                 }
-                
+
                 Cache::forget('salary_years');
-                
+
                 $this->logActivity(
                     'Copie configuration',
                     'CREATE',
                     "Copie de la configuration de {$fromYear} vers {$toYear}"
                 );
-                
+
                 return response()->json(['message' => "Configuration copiée de {$fromYear} vers {$toYear}"]);
             });
         } catch (\Exception $e) {
@@ -326,7 +326,7 @@ class GestionEtatController extends Controller
     {
         try {
             $salaryYear = SalaryYear::where('year', $year)->first();
-            
+
             if (!$salaryYear) {
                 return response()->json([
                     'total_roles' => 0,
@@ -336,17 +336,17 @@ class GestionEtatController extends Controller
                     'total_salary_mass' => 0
                 ]);
             }
-            
+
             $roleIds = $salaryYear->roles()->pluck('id');
             $gradeIds = Grade::whereIn('role_id', $roleIds)->pluck('id');
             $echelleIds = Echelle::whereIn('grade_id', $gradeIds)->pluck('id');
-            
+
             $totalRoles = $roleIds->count();
             $totalGrades = $gradeIds->count();
             $totalEchelles = $echelleIds->count();
             $totalEchelons = Echelon::whereIn('echelle_id', $echelleIds)->count();
             $totalSalaryMass = Echelon::whereIn('echelle_id', $echelleIds)->sum('salary');
-            
+
             return response()->json([
                 'total_roles' => $totalRoles,
                 'total_grades' => $totalGrades,
@@ -363,13 +363,14 @@ class GestionEtatController extends Controller
     //          FONCTIONS DE SUPPRESSION
     // ==========================================================
 
-    public function destroyRole($id) {
+    public function destroyRole($id)
+    {
         try {
             $item = Role::findOrFail($id);
             $roleName = $item->name;
             $year = $item->salaryYear->year ?? 'N/A';
-            foreach($item->grades as $grade) {
-                foreach($grade->echelles as $echelle) {
+            foreach ($item->grades as $grade) {
+                foreach ($grade->echelles as $echelle) {
                     $echelle->echelons()->delete();
                 }
                 $grade->echelles()->delete();
@@ -377,13 +378,13 @@ class GestionEtatController extends Controller
             $item->grades()->delete();
             $item->delete();
             Cache::forget('starred_roles');
-            
+
             $this->logActivity(
                 'Suppression poste',
                 'DELETE',
                 "Suppression du poste '{$roleName}' pour l'année {$year}"
             );
-            
+
             return response()->json(['message' => 'Poste et toutes ses données supprimés avec succès']);
         } catch (\Exception $e) {
             $this->logActivity(
@@ -394,69 +395,72 @@ class GestionEtatController extends Controller
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
-    
-    public function destroyGrade($id) {
+
+    public function destroyGrade($id)
+    {
         try {
             $item = Grade::findOrFail($id);
-            
+
             if ($item->echelles()->count() > 0) {
                 return response()->json([
                     'error' => 'Ce grade contient des échelles. Supprimez-les d\'abord.'
                 ], 422);
             }
-            
+
             $gradeName = $item->name;
             $item->delete();
-            
+
             $this->logActivity(
                 'Suppression grade',
                 'DELETE',
                 "Suppression du grade '{$gradeName}'"
             );
-            
+
             return response()->json(['message' => 'Grade supprimé avec succès']);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
 
-    public function destroyEchelle($id) {
+    public function destroyEchelle($id)
+    {
         try {
             $item = Echelle::findOrFail($id);
-            
+
             if ($item->echelons()->count() > 0) {
                 return response()->json([
                     'error' => 'Cette échelle contient des échelons. Supprimez-les d\'abord.'
                 ], 422);
             }
-            
+
             $echelleLevel = $item->level;
             $item->delete();
-            
+
             $this->logActivity(
                 'Suppression échelle',
                 'DELETE',
                 "Suppression de l'échelle '{$echelleLevel}'"
             );
-            
+
             return response()->json(['message' => 'Échelle supprimée avec succès']);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
 
-    public function destroyEchelon($id) {
+    public function destroyEchelon($id)
+    {
         try {
             $item = Echelon::findOrFail($id);
             $echelonOrder = $item->order;
             $item->delete();
-            
+
             $this->logActivity(
                 'Suppression échelon',
                 'DELETE',
                 "Suppression de l'échelon {$echelonOrder}"
             );
-            
+
             return response()->json(['message' => 'Échelon supprimé avec succès']);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
@@ -475,7 +479,7 @@ class GestionEtatController extends Controller
                     ->with(['grades.echelles.echelons'])
                     ->get();
             });
-            
+
             return response()->json($starredRoles);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
@@ -489,7 +493,7 @@ class GestionEtatController extends Controller
             $oldStatus = $role->is_starred;
             $role->is_starred = !$oldStatus;
             $role->save();
-            
+
             if (!$oldStatus && $role->is_starred) {
                 $this->copyRoleToAllYears($role);
                 $message = "⭐ Poste '{$role->name}' étoilé et copié vers toutes les années";
@@ -499,14 +503,14 @@ class GestionEtatController extends Controller
             } else {
                 $message = $role->is_starred ? "⭐ Poste '{$role->name}' étoilé" : "⭐ Poste '{$role->name}' désétoilé";
             }
-            
+
             Cache::forget('starred_roles');
             $this->logActivity(
                 'Poste étoilé',
                 'UPDATE',
                 $message
             );
-            
+
             return response()->json([
                 'message' => $message,
                 'is_starred' => $role->is_starred
@@ -525,28 +529,28 @@ class GestionEtatController extends Controller
     {
         $allYears = SalaryYear::where('id', '!=', $role->salary_year_id)->get();
         $copiedCount = 0;
-        
+
         foreach ($allYears as $year) {
             $existingRole = Role::where('salary_year_id', $year->id)
                 ->where('name', $role->name)
                 ->first();
-            
+
             if (!$existingRole) {
                 $newRole = $year->roles()->create([
                     'name' => $role->name,
                     'is_starred' => true
                 ]);
-                
+
                 foreach ($role->grades as $grade) {
                     $newGrade = $newRole->grades()->create([
                         'name' => $grade->name
                     ]);
-                    
+
                     foreach ($grade->echelles as $echelle) {
                         $newEchelle = $newGrade->echelles()->create([
                             'level' => $echelle->level
                         ]);
-                        
+
                         foreach ($echelle->echelons as $echelon) {
                             $newEchelle->echelons()->create([
                                 'order' => $echelon->order,
@@ -559,7 +563,7 @@ class GestionEtatController extends Controller
                 $copiedCount++;
             }
         }
-        
+
         $this->logActivity(
             'Copie poste étoilé',
             'CREATE',
@@ -571,18 +575,18 @@ class GestionEtatController extends Controller
     {
         $allYears = SalaryYear::where('id', '!=', $role->salary_year_id)->get();
         $removedCount = 0;
-        
+
         foreach ($allYears as $year) {
             $existingRole = Role::where('salary_year_id', $year->id)
                 ->where('name', $role->name)
                 ->first();
-            
+
             if ($existingRole) {
                 $existingRole->delete();
                 $removedCount++;
             }
         }
-        
+
         $this->logActivity(
             'Suppression poste désétoilé',
             'DELETE',
@@ -600,7 +604,7 @@ class GestionEtatController extends Controller
             $years = Cache::remember('salary_years', 3600, function () {
                 return SalaryYear::orderBy('year', 'desc')->get();
             });
-            
+
             return response()->json($years);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
@@ -653,7 +657,7 @@ class GestionEtatController extends Controller
     {
         try {
             $role = Role::with(['grades.echelles.echelons'])->find($roleId);
-            
+
             if (!$role) {
                 return response()->json(['message' => 'Rôle non trouvé'], 404);
             }
@@ -663,12 +667,12 @@ class GestionEtatController extends Controller
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
-    
+
     public function getGradeDetails($gradeId)
     {
         try {
             $grade = Grade::with(['echelles.echelons'])->find($gradeId);
-            
+
             if (!$grade) {
                 return response()->json(['message' => 'Grade non trouvé'], 404);
             }
@@ -700,11 +704,11 @@ class GestionEtatController extends Controller
                 ->distinct()
                 ->pluck('salary_year_id')
                 ->toArray();
-            
+
             $years = SalaryYear::whereIn('id', $yearsWithIndemnites)
                 ->orderBy('year', 'desc')
                 ->get();
-            
+
             return response()->json($years);
         } catch (\Exception $e) {
             \Log::error('Erreur getYearsWithIndemnites: ' . $e->getMessage());
@@ -724,38 +728,38 @@ class GestionEtatController extends Controller
                 $sourceYear = SalaryYear::where('year', $request->from_year)
                     ->with(['roles.grades.echelles.echelons'])
                     ->first();
-                
+
                 if (!$sourceYear) {
                     return response()->json(['error' => 'Année source non trouvée'], 404);
                 }
-                
+
                 $targetYear = SalaryYear::firstOrCreate(
                     ['year' => $request->to_year],
                     ['is_active' => true]
                 );
-            
+
                 if ($targetYear->wasRecentlyCreated === false) {
                     $targetYear->roles()->delete();
                 }
-                
+
                 $rolesCount = 0;
-                
+
                 foreach ($sourceYear->roles as $role) {
                     $newRole = $targetYear->roles()->create([
                         'name' => $role->name,
                         'is_starred' => $role->is_starred
                     ]);
-                    
+
                     foreach ($role->grades as $grade) {
                         $newGrade = $newRole->grades()->create([
                             'name' => $grade->name
                         ]);
-                        
+
                         foreach ($grade->echelles as $echelle) {
                             $newEchelle = $newGrade->echelles()->create([
                                 'level' => $echelle->level
                             ]);
-                            
+
                             foreach ($echelle->echelons as $echelon) {
                                 $newEchelle->echelons()->create([
                                     'order' => $echelon->order,
@@ -767,7 +771,7 @@ class GestionEtatController extends Controller
                     }
                     $rolesCount++;
                 }
-                
+
                 Cache::forget('salary_years');
 
                 $this->logActivity(
@@ -775,7 +779,7 @@ class GestionEtatController extends Controller
                     'CREATE',
                     "Copie de la configuration de {$request->from_year} vers {$request->to_year} ({$rolesCount} poste(s))"
                 );
-                
+
                 return response()->json([
                     'message' => 'Configuration copiée de ' . $request->from_year . ' vers ' . $request->to_year
                 ]);

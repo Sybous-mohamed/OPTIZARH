@@ -6,3 +6,24 @@ input::-webkit-inner-spin-button {
   -webkit-appearance: none;
   margin: 0;
 }
+/* Animation pour les erreurs */
+@keyframes shakeError {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+
+input.error, select.error, textarea.error {
+    border-color: #ef4444 !important;
+    animation: shakeError 0.3s ease-in-out;
+}
+
+/* Style pour le message d'erreur sous le champ */
+.error-message {
+    color: #ef4444;
+    font-size: 0.7rem;
+    margin-top: 0.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}

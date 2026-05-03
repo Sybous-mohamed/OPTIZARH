@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Controllers\SuperAdmin;
 
 use Illuminate\Http\Request;
@@ -8,11 +7,8 @@ use App\Models\SuperAdmin\SalaryYear;
 use App\Http\Controllers\Controller;
 use Barryvdh\DomPDF\Facade\Pdf;
 
-class EmployeeController extends Controller
-{
-
-    public function getAnnees()
-    {
+class EmployeeController extends Controller{
+    public function getAnnees(){
         $annees = SalaryYear::orderBy('year', 'desc')->get();
         return response()->json($annees);
     }
@@ -241,8 +237,8 @@ class EmployeeController extends Controller
                 $search = $request->search;
                 $query->where(function($q) use ($search) {
                     $q->where('prenom', 'like', "%$search%")
-                      ->orWhere('nom', 'like', "%$search%")
-                      ->orWhere('email', 'like', "%$search%");
+                    ->orWhere('nom', 'like', "%$search%")
+                    ->orWhere('email', 'like', "%$search%");
                 });
             }
             
@@ -253,15 +249,37 @@ class EmployeeController extends Controller
             $employees = $query->orderBy('nom', 'asc')->get();
             $anneeName = $request->annee_id ? SalaryYear::find($request->annee_id)?->year : 'Toutes';
             
+            // Statistiques supplémentaires
+            $actifs = $employees->where('statut', 'ACTIF')->count();
+            $conges = $employees->where('statut', 'CONGÉ')->count();
+            $departs = $employees->where('statut', 'DÉPART')->count();
+            $totalSalaires = $employees->sum('salaire');
+            
+            $gradesSummary = $employees->groupBy('grade')->map(function($group, $grade) {
+                return [
+                    'name' => $grade ?: 'Non spécifié',
+                    'count' => $group->count(),
+                    'total' => $group->sum('salaire')
+                ];
+            })->values()->toArray();
+            
             $pdf = Pdf::loadView('pdf.employees', [
                 'employees' => $employees,
                 'date' => now()->format('d/m/Y H:i'),
                 'annee' => $anneeName,
-                'total' => $employees->count()
+                'total' => $employees->count(),
+                'actifs' => $actifs,
+                'conges' => $conges,
+                'departs' => $departs,
+                'totalSalaires' => $totalSalaires,
+                'gradesSummary' => $gradesSummary,
+                'gradesCount' => $gradesSummary->count()
             ]);
+            
             $pdf->setPaper('a4', 'landscape');
             
             return $pdf->download('employes_' . now()->format('Ymd_His') . '.pdf');
+            
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }

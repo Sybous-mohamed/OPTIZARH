@@ -1,6 +1,4 @@
 <?php
-// app/Http/Controllers/SuperAdmin/DashboardController.php
-
 namespace App\Http\Controllers\SuperAdmin;
 
 use App\Http\Controllers\Controller;
@@ -11,16 +9,15 @@ use App\Models\SuperAdmin\SalaryYear;
 use App\Models\SuperAdmin\Assurance;
 use App\Models\SuperAdmin\SntlSetting;
 use App\Models\SuperAdmin\RcarType;
+use App\Models\SuperAdmin\RcarDetail;
 use App\Models\SuperAdmin\Organisme;
 use App\Models\SuperAdmin\Cotisation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
-class DashboardController extends Controller
-{
-    public function getStats(Request $request)
-    {
+class DashboardController extends Controller{
+    public function getStats(Request $request){
         try {
             $annee = $request->query('year', date('Y'));
             
@@ -45,6 +42,7 @@ class DashboardController extends Controller
             // Crédits par catégorie
             $creditsByCategory = Credit::select('category_id', DB::raw('count(*) as total'))
                 ->whereNotNull('category_id')
+                ->where('year', $annee)
                 ->groupBy('category_id')
                 ->get()
                 ->map(function($item) {
@@ -55,22 +53,32 @@ class DashboardController extends Controller
                     ];
                 });
             
-            // ==================== COTISATIONS (CORRIGÉ) ====================
+            // Crédits par année
+            $creditsByYear = Credit::select('year', DB::raw('count(*) as total'))
+                ->whereNotNull('year')
+                ->groupBy('year')
+                ->orderBy('year', 'desc')
+                ->get()
+                ->map(function($item) {
+                    return [
+                        'year' => (string)$item->year,
+                        'total' => $item->total
+                    ];
+                });
+            
+            // ==================== COTISATIONS ====================
             $cotisationsDetails = [];
             $totalCotisations = 0;
             
-            // Récupérer les organismes avec leurs cotisations
-            $organismes = Organisme::with('cotisations')
-                ->where('annee', $annee)
-                ->get();
+            $organismes = Organisme::where('annee', $annee)->get();
             
             if ($organismes->isNotEmpty()) {
                 foreach ($organismes as $org) {
+                    $cotisations = Cotisation::where('organisme_id', $org->id)->get();
                     $orgTotal = 0;
                     $orgTaux = 0;
                     
-                    foreach ($org->cotisations as $cot) {
-                        // Calcul du montant pour cette cotisation
+                    foreach ($cotisations as $cot) {
                         $montant = ($totalSalaireBrut * ($cot->taux / 100));
                         $orgTotal += $montant;
                         $orgTaux += $cot->taux;
@@ -90,10 +98,11 @@ class DashboardController extends Controller
             $rcarDetails = [];
             
             if ($yearId) {
-                $rcarTypes = RcarType::where('salary_year_id', $yearId)->with('details')->get();
+                $rcarTypes = RcarType::where('salary_year_id', $yearId)->get();
                 
                 foreach ($rcarTypes as $rcarType) {
-                    foreach ($rcarType->details as $detail) {
+                    $details = RcarDetail::where('rcar_type_id', $rcarType->id)->get();
+                    foreach ($details as $detail) {
                         $montant = ($totalSalaireBrut * ($detail->percentage / 100));
                         if ($detail->type === 'salariale') {
                             $totalRCAR += $montant;
@@ -157,34 +166,59 @@ class DashboardController extends Controller
                 ['name' => 'Départ', 'value' => $departEmployees, 'color' => '#ef4444']
             ];
             
-            // ==================== CRÉDITS PAR ANNÉE ====================
-            $creditsByYear = Credit::select('year', DB::raw('count(*) as total'))
-                ->whereNotNull('year')
-                ->groupBy('year')
-                ->orderBy('year', 'desc')
-                ->get()
-                ->map(function($item) {
-                    return [
-                        'year' => $item->year,
-                        'total' => $item->total
-                    ];
-                });
-            
             // ==================== SALAIRE PAR GRADE ====================
-            $salaryByGrade = Employee::select('grade', DB::raw('SUM(salaire) as total'))
-                ->whereNotNull('grade')
-                ->where('salaire', '>', 0)
-                ->groupBy('grade')
-                ->get()
-                ->map(function($item) {
-                    return [
-                        'name' => $item->grade ?: 'Non spécifié',
-                        'total' => round($item->total, 2)
-                    ];
-                });
+            $salaryByGrade = [];
             
-            // ==================== ANNÉES DISPONIBLES ====================
-            $availableYears = SalaryYear::orderBy('year', 'desc')->pluck('year')->toArray();
+            if ($yearId) {
+                $salaryByGrade = DB::table('employees as e')
+                    ->join('grades as g', 'e.grade_id', '=', 'g.id')
+                    ->select('g.name as name', DB::raw('SUM(e.salaire) as total'))
+                    ->where('e.annee_id', $yearId)
+                    ->where('e.salaire', '>', 0)
+                    ->whereNotNull('e.grade_id')
+                    ->groupBy('g.id', 'g.name')
+                    ->orderBy('total', 'desc')
+                    ->get()
+                    ->map(function($item) {
+                        return [
+                            'name' => $item->name,
+                            'total' => round($item->total, 2)
+                        ];
+                    });
+                
+                if ($salaryByGrade->isEmpty()) {
+                    $salaryByGrade = Employee::select('grade', DB::raw('SUM(salaire) as total'))
+                        ->whereNotNull('grade')
+                        ->where('grade', '!=', '')
+                        ->where('salaire', '>', 0)
+                        ->where('annee_id', $yearId)
+                        ->groupBy('grade')
+                        ->orderBy('total', 'desc')
+                        ->get()
+                        ->map(function($item) {
+                            return [
+                                'name' => $item->grade ?: 'Non spécifié',
+                                'total' => round($item->total, 2)
+                            ];
+                        });
+                }
+            }
+            
+            // ==================== ANNÉES DISPONIBLES (CORRIGÉ) ====================
+            // Afficher uniquement les années qui ont des crédits
+            $availableYears = Credit::select('year')
+                ->whereNotNull('year')
+                ->distinct()
+                ->orderBy('year', 'desc')
+                ->pluck('year')
+                ->toArray();
+            
+            // Si aucune année avec crédits, prendre les années de salary_years
+            if (empty($availableYears)) {
+                $availableYears = SalaryYear::orderBy('year', 'desc')->pluck('year')->toArray();
+            }
+            
+            // Si toujours vide, mettre des valeurs par défaut
             if (empty($availableYears)) {
                 $availableYears = [date('Y'), date('Y')-1, date('Y')-2];
             }
