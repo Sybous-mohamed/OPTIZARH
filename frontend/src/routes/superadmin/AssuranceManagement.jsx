@@ -306,7 +306,7 @@ const handleSave = async () => {
                         </div>
                         <button
                             onClick={addAssurance}
-                            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg shadow-indigo-500/25 text-sm"
+                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg shadow-indigo-500/25 text-sm"
                         >
                             <Plus size={16} /> Nouvelle Assurance
                         </button>
@@ -585,7 +585,7 @@ const handleSave = async () => {
                 {hasUnsavedChanges && (
                     <div className="fixed bottom-6 right-6 z-50">
                         <button onClick={handleSave} disabled={loading}
-                            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-full shadow-xl hover:from-indigo-700 hover:to-purple-700 transition-all disabled:opacity-50">
+                            className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-full shadow-xl hover:from-indigo-700 hover:to-purple-700 transition-all disabled:opacity-50">
                             {loading ? <Loader size={18} className="animate-spin" /> : <Save size={18} />}
                             {loading ? "Enregistrement..." : "Sauvegarder les modifications"}
                         </button>

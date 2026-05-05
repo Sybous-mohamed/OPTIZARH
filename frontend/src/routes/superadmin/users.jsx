@@ -1084,7 +1084,7 @@ export default function EmployeeManagement() {
                             </div>
 
                             <button type="submit" disabled={loading}
-                                className="cursor-pointer w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all font-medium disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/25">
+                                className="cursor-pointer w-full py-3 bg-blue-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all font-medium disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/25">
                                 {loading ? <Loader size={18} className="animate-spin" /> : <Save size={18} />}
                                 {loading ? "Enregistrement..." : isEdit ? "Mettre à jour" : "Enregistrer"}
                             </button>

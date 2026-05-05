@@ -43,7 +43,7 @@ const GestionIndemnitee = () => {
     // Dark mode classes
     const bgClass = darkMode ? 'bg-[#0D0D0D]' : 'bg-gradient-to-br from-gray-50 via-gray-50 to-indigo-50/20';
     const cardClass = darkMode ? 'bg-[#1A1A1A] border-[#2A2A2A]' : 'bg-white border-gray-200';
-    const cardHeaderClass = darkMode ? 'bg-gradient-to-r from-indigo-800 to-purple-800' : 'bg-gradient-to-r from-indigo-600 to-purple-600';
+    const cardHeaderClass = darkMode ? 'bg-gradient-to-r from-indigo-800 to-purple-800' : 'bg-blue-600';
     const textClass = darkMode ? 'text-gray-100' : 'text-gray-800';
     const textMutedClass = darkMode ? 'text-gray-500' : 'text-gray-500';
     const inputClass = darkMode ? 'bg-[#252525] border-[#333] text-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500' : 'bg-gray-50 border-gray-200 text-gray-800 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400';
@@ -492,7 +492,7 @@ const GestionIndemnitee = () => {
                                 <button 
                                     onClick={handleSave}
                                     disabled={loading}
-                                    className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold py-3 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                                    className="flex-1 bg-blue-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold py-3 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                                 >
                                     {loading ? <Loader2 size={18} className="animate-spin"/> : <Plus size={18} />}
                                     {loading ? "Enregistrement..." : "Enregistrer l'indemnité"}

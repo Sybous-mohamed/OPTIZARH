@@ -94,7 +94,7 @@ export default function Header() {
                         {user.image ? (
                             <img src={user.image} alt="Profile" className="w-full h-full object-cover" />
                         ) : (
-                            <div className="w-full h-full bg-gradient-to-r from-indigo-600 to-purple-600 flex items-center justify-center text-white font-bold text-[11px]">
+                            <div className="w-full h-full bg-blue-600 flex items-center justify-center text-white font-bold text-[11px]">
                                 {getInitials(user.name)}
                             </div>
                         )}

@@ -756,7 +756,7 @@ const GestionEtat = () => {
                                 <button onClick={() => changeYear(-1)} className={`p-0.5 hover:text-indigo-500 transition-colors`}><ChevronDown size={10}/></button>
                             </div>
                         </div>
-                        <button onClick={addRole} className="flex items-center cursor-pointer gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-1.5 rounded-xl font-bold hover:from-indigo-700 hover:to-purple-700 transition-all transform hover:scale-105 text-[11px] shadow-lg shadow-indigo-500/25">
+                        <button onClick={addRole} className="flex items-center cursor-pointer gap-2 bg-blue-600 text-white px-4 py-1.5 rounded-xl font-bold hover:from-indigo-700 hover:to-purple-700 transition-all transform hover:scale-105 text-[11px] shadow-lg shadow-indigo-500/25">
                             <Plus size={14} /> NOUVEAU POSTE
                         </button>
 
@@ -766,7 +766,7 @@ const GestionEtat = () => {
                             <FileText size={14} /> EXPORT PDF
                         </button>
                     </div>
-                    <button onClick={handleSave} disabled={loading || !hasUnsavedChanges} className={` cursor-pointer px-5 py-1.5 rounded-xl font-bold shadow-lg flex items-center gap-2 text-[11px] transition-all disabled:opacity-50 ${!hasUnsavedChanges ? 'bg-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700'} text-white`}>
+                    <button onClick={handleSave} disabled={loading || !hasUnsavedChanges} className={` cursor-pointer px-5 py-1.5 rounded-xl font-bold shadow-lg flex items-center gap-2 text-[11px] transition-all disabled:opacity-50 ${!hasUnsavedChanges ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:from-indigo-700 hover:to-purple-700'} text-white`}>
                         {loading ? <Loader size={14} className="animate-spin"/> : hasUnsavedChanges ? <Sparkles size={14}/> : <Save size={14}/>}
                         {!hasUnsavedChanges ? "SAUVEGARDÉ" : `SAUVEGARDER ${config.year}`}
                     </button>
@@ -993,7 +993,7 @@ const GestionEtat = () => {
                                 <Database size={32} className="opacity-50"/>
                             </div>
                             <p className="font-medium mb-2">Aucune configuration pour {config.year}</p>
-                            <button onClick={addRole} className="mt-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-2 rounded-xl font-bold hover:from-indigo-700 hover:to-purple-700 transition-all text-xs shadow-lg">
+                            <button onClick={addRole} className="mt-3 bg-blue-600 text-white px-6 py-2 rounded-xl font-bold hover:from-indigo-700 hover:to-purple-700 transition-all text-xs shadow-lg">
                                 + Créer un poste
                             </button>
                         </div>

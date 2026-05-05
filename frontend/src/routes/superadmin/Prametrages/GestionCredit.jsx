@@ -73,7 +73,7 @@ const GestionCredit = () => {
     : 'bg-gray-50 border-gray-200 text-gray-800';
   
   const buttonClass = "px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 cursor-pointer";
-  const primaryButtonClass = `${buttonClass} bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 shadow-md`;
+  const primaryButtonClass = `${buttonClass} bg-blue-600 text-white hover:from-indigo-700 hover:to-purple-700 shadow-md`;
   const successButtonClass = `${buttonClass} bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-700 hover:to-teal-700 shadow-md`;
   const outlineButtonClass = `${buttonClass} border ${borderClass} ${textClass} hover:bg-gray-100 dark:hover:bg-[#252525]`;
 
