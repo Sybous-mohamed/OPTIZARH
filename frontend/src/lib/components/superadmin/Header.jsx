@@ -2,15 +2,31 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Bell, Moon, Sun, Search, Menu } from 'lucide-react';
 import { useTheme } from '../../../context/ThemeContext';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 
 export default function Header({ sidebarOpen, setSidebarOpen, isMobile }) {
     const { darkMode, updateTheme } = useTheme();
     const { t } = useTranslation(['common']);
+    const navigate = useNavigate(); 
     const [user, setUser] = useState({
         name: "Admin",
         role: "Super Admin",
         image: null
     });
+    const handleProfileClick = () => {
+        const role = localStorage.getItem('role');
+        if (role === 'superadmin') {
+            navigate('/SuperAdmin/Parametres');
+        } 
+        // else if (role === 'admin') {
+        //     navigate('/Admin/Parametres');
+        // } else if (role === 'rh') {
+        //     navigate('/RH/Parametres');
+        // } 
+        // else {
+        //     navigate('/employee/Parametres');
+        // }
+    };
 
     const getInitials = (name) => {
         if (!name || name === "Chargement...") return "AD";
@@ -92,13 +108,17 @@ export default function Header({ sidebarOpen, setSidebarOpen, isMobile }) {
                 <div className="h-8 w-[1px] bg-gray-100 dark:bg-[#2A2A2A] hidden sm:block"></div>
 
                 {/* Profile Section */}
-                <div className="flex items-center gap-3 cursor-pointer group">
+                <div onClick={handleProfileClick} className="flex items-center gap-3 cursor-pointer group">
                     <div className="text-right hidden sm:block">
-                        <p className="text-sm font-bold text-gray-900 dark:text-white leading-none">{user.name}</p>
-                        <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium mt-1 uppercase tracking-tighter">{user.role}</p>
+                        <p className="text-sm font-bold text-gray-900 dark:text-white leading-none group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                            {user.name}
+                        </p>
+                        <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium mt-1 uppercase tracking-tighter">
+                            {user.role}
+                        </p>
                     </div>
                     
-                    <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white dark:border-[#2A2A2A] shadow-sm flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white dark:border-[#2A2A2A] shadow-sm flex items-center justify-center transition-all duration-200 group-hover:scale-105 group-hover:shadow-md">
                         {user.image ? (
                             <img src={user.image} alt="Profile" className="w-full h-full object-cover" />
                         ) : (
