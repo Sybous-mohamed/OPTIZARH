@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
-    Camera, ChevronUp, Save, Globe, 
+    Camera, ChevronUp, Save, 
     Loader2, Eye, EyeOff, User, ShieldCheck, 
     Ban, ArrowLeft, Mail, Moon, Sun, 
-    LogOut, Settings as SettingsIcon, Palette,
     Languages, Lock, Users, Database, CheckCircle,
-    XCircle, AlertCircle, Edit2, Trash2, RefreshCw
+    XCircle, AlertCircle ,Palette
 } from 'lucide-react';
 import md5 from 'crypto-js/md5';
 import api from '../../lib/apis/axiosConfig';
@@ -17,7 +16,7 @@ import { useNavigate } from 'react-router-dom';
 export default function Settings() {
     const { t, i18n } = useTranslation(['superadmin/settings', 'common']);
     const { showNotification } = useNotification();
-    const { darkMode, updateTheme } = useTheme();
+    const { darkMode, updateTheme, theme: currentTheme } = useTheme();
     const navigate = useNavigate();
 
     // --- STATES ---
@@ -29,7 +28,6 @@ export default function Settings() {
         full_name: "",
         email: "",
         profile_image: "",
-        theme: "light",
         language: "fr"
     });
 
@@ -49,49 +47,31 @@ export default function Settings() {
     const [activeUsers, setActiveUsers] = useState([]);
     const [platformLoading, setPlatformLoading] = useState(false);
 
-    // Dark mode classes with better design
+    // Dark mode classes
     const bgClass = darkMode ? 'bg-gradient-to-br from-[#0D0D0D] to-[#1a1a1a]' : 'bg-gradient-to-br from-gray-50 to-gray-100';
     const cardClass = darkMode ? 'bg-[#1A1A1A] border-[#2A2A2A] shadow-xl' : 'bg-white border-gray-200 shadow-lg';
     const textClass = darkMode ? 'text-gray-100' : 'text-gray-800';
     const textMutedClass = darkMode ? 'text-gray-400' : 'text-gray-500';
     const borderClass = darkMode ? 'border-[#2A2A2A]' : 'border-gray-200';
     const inputClass = darkMode ? 'bg-[#252525] border-[#333] text-white focus:ring-2 focus:ring-indigo-500' : 'bg-gray-50 border-gray-200 text-gray-800 focus:ring-2 focus:ring-indigo-500';
-    const buttonPrimaryClass = "bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02]";
     const buttonSecondaryClass = darkMode ? "bg-[#252525] hover:bg-[#333] text-gray-300 border border-[#333] hover:border-indigo-500 transition-all duration-200" : "bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200 hover:border-indigo-400 transition-all duration-200";
 
-    // Save theme to localStorage on change
-    useEffect(() => {
-        if (formData.theme) {
-            localStorage.setItem('theme', formData.theme);
-            updateTheme(formData.theme);
-        }
-    }, [formData.theme, updateTheme]);
-
-        useEffect(() => {
-            const handleThemeChange = (e) => {
-                if (e.detail) {
-                    setFormData(prev => ({ ...prev, theme: e.detail.theme }));
-                }
-            };
-            
-            window.addEventListener('themeChanged', handleThemeChange);
-            
-            return () => {
-                window.removeEventListener('themeChanged', handleThemeChange);
-            };
-        }, []);
+    // Handle theme change
+    const handleThemeChange = (newTheme) => {
+        updateTheme(newTheme);
+    };
 
     // --- FETCH DATA ---
     useEffect(() => {
         const fetchData = async () => {
             try {
                 const res = await api.get('/api/Settings/profile');
-                setFormData(res.data);
-                // Apply theme from server
-                if (res.data.theme) {
-                    updateTheme(res.data.theme);
-                    localStorage.setItem('theme', res.data.theme);
-                }
+                setFormData({
+                    full_name: res.data.full_name || "",
+                    email: res.data.email || "",
+                    profile_image: res.data.profile_image || "",
+                    language: res.data.language || "fr"
+                });
             } catch (err) {
                 console.error("Erreur fetching profile:", err);
             }
@@ -183,14 +163,19 @@ export default function Settings() {
         }
         
         setLoading(true);
+        const submitData = {
+            full_name: formData.full_name,
+            email: formData.email,
+            profile_image: formData.profile_image,
+            language: formData.language
+        };
+        
         try {
-            const res = await api.post('/api/Settings/profile', formData);
+            const res = await api.post('/api/Settings/profile', submitData);
             const userData = res.data.user || res.data;
+            // Keep current theme in user data
+            userData.theme = currentTheme;
             localStorage.setItem('user', JSON.stringify(userData));
-            localStorage.setItem('theme', formData.theme);
-            
-            // IMPORTANT: Update theme in context
-            updateTheme(formData.theme);
             
             window.dispatchEvent(new Event('userUpdated'));
             i18n.changeLanguage(formData.language);
@@ -202,12 +187,6 @@ export default function Settings() {
         } finally { 
             setLoading(false); 
         }
-    };
-
-    // For theme buttons in Settings
-    const handleThemeChange = (newTheme) => {
-        setFormData({...formData, theme: newTheme});
-        updateTheme(newTheme); // Directly update context
     };
 
     const handleUpdatePassword = async () => {
@@ -275,9 +254,9 @@ export default function Settings() {
 
     return (
         <div className={`min-h-screen ${bgClass}`}>
-            <div className="max-w-6xl mx-auto ">
+            <div className="max-w-6xl mx-auto">
                 
-                {/* Header with better design */}
+                {/* Header */}
                 <div className="flex items-center gap-4 mb-3">
                     <button 
                         onClick={() => navigate(-1)}
@@ -295,28 +274,28 @@ export default function Settings() {
                     </div>
                 </div>
 
-                {/* Tabs with better design */}
+                {/* Tabs */}
                 <div className={`flex gap-3 mb-6 p-1.5 rounded-xl ${cardClass} border ${borderClass} w-fit shadow-sm`}>
                     <button 
                         onClick={() => setActiveTab('profile')}
-                        className={` cursor-pointer flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                        className={`cursor-pointer flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
                             activeTab === 'profile' 
                                 ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-md transform scale-105' 
                                 : `${textMutedClass} hover:bg-gray-100 dark:hover:bg-[#252525] hover:scale-105`
                         }`}
                     >
-                        <User size={16} className="transition-transform duration-200" />
+                        <User size={16} />
                         <span>Mon Profil</span>
                     </button>
                     <button 
                         onClick={() => setActiveTab('platform')}
-                        className={` cursor-pointer  flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                        className={`cursor-pointer flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
                             activeTab === 'platform' 
                                 ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-md transform scale-105' 
                                 : `${textMutedClass} hover:bg-gray-100 dark:hover:bg-[#252525] hover:scale-105`
                         }`}
                     >
-                        <ShieldCheck size={16} className="transition-transform duration-200" />
+                        <ShieldCheck size={16} />
                         <span>Plateforme</span>
                     </button>
                 </div>
@@ -325,28 +304,22 @@ export default function Settings() {
                 {activeTab === 'profile' && (
                     <div className={`${cardClass} rounded-2xl border ${borderClass} overflow-hidden shadow-2xl`}>
                         
-                        {/* Avatar Section with better design */}
-                        <div className="p-8 border-b ${borderClass} bg-gradient-to-r from-indigo-50/10 to-transparent dark:from-indigo-900/5">
+                        {/* Avatar Section */}
+                        <div className={`p-8 border-b ${borderClass} bg-gradient-to-r from-indigo-50/10 to-transparent dark:from-indigo-900/5`}>
                             <div className="flex flex-col md:flex-row items-center gap-8">
-                                
                                 <div className="relative group">
                                     <div className={`w-28 h-28 rounded-2xl overflow-hidden border-2 ${borderClass} flex items-center justify-center ${darkMode ? 'bg-gradient-to-br from-[#252525] to-[#1a1a1a]' : 'bg-gradient-to-br from-gray-100 to-gray-200'} shadow-lg transition-all duration-300 group-hover:shadow-xl`}>
                                         {formData.profile_image ? (
                                             <img src={formData.profile_image} alt="Profile" className="w-full h-full object-cover" />
                                         ) : (
-                                            <span className={`text-3xl font-bold bg-gradient-to-r from-indigo-500 to-purple-500 bg-clip-text text-transparent`}>
+                                            <span className="text-3xl font-bold bg-gradient-to-r from-indigo-500 to-purple-500 bg-clip-text text-transparent">
                                                 {getInitials(formData.full_name)}
                                             </span>
                                         )}
                                     </div>
-                                    <label className={`absolute -bottom-2 -right-2 p-2 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 text-white cursor-pointer shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-110`}>
+                                    <label className="absolute -bottom-2 -right-2 p-2 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 text-white cursor-pointer shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-110">
                                         <Camera size={14} />
-                                        <input 
-                                            type="file" 
-                                            className="hidden" 
-                                            accept="image/jpeg,image/png,image/jpg" 
-                                            onChange={handleImageSelect}
-                                        />
+                                        <input type="file" className="hidden" accept="image/jpeg,image/png,image/jpg" onChange={handleImageSelect} />
                                     </label>
                                 </div>
                                 
@@ -355,23 +328,20 @@ export default function Settings() {
                                         {formData.full_name || 'Nom non défini'}
                                         <CheckCircle size={16} className="text-green-500" />
                                     </h2>
-                                    <div className="flex items-center justify-center md:justify-start gap-2 text-sm ${textMutedClass} mt-2">
+                                    <div className="flex items-center justify-center md:justify-start gap-2 text-sm mt-2">
                                         <Mail size={14} className={textMutedClass} />
-                                        <span>{formData.email || 'Email non défini'}</span>
+                                        <span className={textClass}>{formData.email || 'Email non défini'}</span>
                                     </div>
                                     <div className="flex flex-wrap justify-center md:justify-start gap-2 mt-4">
-                                        <button 
-                                            onClick={() => setFormData({...formData, profile_image: `https://ui-avatars.com/api/?name=${encodeURIComponent(formData.full_name || 'User')}&background=6366f1&color=fff&bold=true&length=2&rounded=true`})}
-                                            className={`text-xs px-3 py-1.5 rounded-xl cursor-pointer  ${buttonSecondaryClass}`}
-                                        >
+                                        <button onClick={() => setFormData({...formData, profile_image: `https://ui-avatars.com/api/?name=${encodeURIComponent(formData.full_name || 'User')}&background=6366f1&color=fff&bold=true&length=2&rounded=true`})}
+                                            className={`text-xs px-3 py-1.5 rounded-xl cursor-pointer ${buttonSecondaryClass}`}>
                                             Initiales
                                         </button>
-                                        <button onClick={handleSetGravatar} 
-                                            className={`text-xs px-3 py-1.5 rounded-xl cursor-pointer  ${buttonSecondaryClass}`}>
+                                        <button onClick={handleSetGravatar} className={`text-xs px-3 py-1.5 rounded-xl cursor-pointer ${buttonSecondaryClass}`}>
                                             Gravatar
                                         </button>
                                         <button onClick={() => setFormData({...formData, profile_image: ""})} 
-                                            className={`text-xs px-3 py-1.5 rounded-xl cursor-pointer  ${darkMode ? 'bg-red-900/20 text-red-400 hover:bg-red-900/40 border border-red-800' : 'bg-red-50 text-red-600 hover:bg-red-100 border border-red-200'}`}>
+                                            className={`text-xs px-3 py-1.5 rounded-xl cursor-pointer ${darkMode ? 'bg-red-900/20 text-red-400 hover:bg-red-900/40 border border-red-800' : 'bg-red-50 text-red-600 hover:bg-red-100 border border-red-200'}`}>
                                             Supprimer
                                         </button>
                                     </div>
@@ -381,7 +351,6 @@ export default function Settings() {
 
                         {/* Form Section */}
                         <div className="p-8 space-y-6">
-                            
                             {/* Informations */}
                             <div>
                                 <div className="flex items-center gap-2 mb-4">
@@ -414,40 +383,37 @@ export default function Settings() {
                                             <Palette size={12} />
                                             Thème
                                         </label>
-                                       <div className="flex gap-2">
-                                        <button 
-                                            onClick={() => handleThemeChange('light')}
-                                            className={` cursor-pointer flex items-center gap-2 px-4 py-2 rounded-xl border text-sm transition-all duration-200 hover:scale-105 ${
-                                                formData.theme === 'light' 
-                                                    ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white border-indigo-600 shadow-lg' 
-                                                    : `${buttonSecondaryClass}`
-                                            }`}>
-                                            <Sun size={14} /> Clair
-                                        </button>
-                                        <button 
-                                            onClick={() => handleThemeChange('dark')}
-                                            className={` cursor-pointer  flex items-center gap-2 px-4 py-2 rounded-xl border text-sm transition-all duration-200 hover:scale-105 ${
-                                                formData.theme === 'dark' 
-                                                    ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white border-indigo-600 shadow-lg' 
-                                                    : `${buttonSecondaryClass}`
-                                            }`}>
-                                            <Moon size={14} /> Sombre
-                                        </button>
-                                        <button 
-                                            onClick={() => handleThemeChange('system')}
-                                            className={`cursor-pointer  flex items-center gap-2 px-4 py-2 rounded-xl border text-sm transition-all duration-200 hover:scale-105 ${
-                                                formData.theme === 'system' 
-                                                    ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white border-indigo-600 shadow-lg' 
-                                                    : `${buttonSecondaryClass}`
-                                            }`}>
-                                            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
-                                                <line x1="8" y1="21" x2="16" y2="21"></line>
-                                                <line x1="12" y1="17" x2="12" y2="21"></line>
-                                            </svg>
-                                            Système
-                                        </button>
-                                    </div>
+                                        <div className="flex gap-2">
+                                            <button onClick={() => handleThemeChange('light')}
+                                                className={`cursor-pointer flex items-center gap-2 px-4 py-2 rounded-xl border text-sm transition-all duration-200 hover:scale-105 ${
+                                                    currentTheme === 'light' 
+                                                        ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white border-indigo-600 shadow-lg' 
+                                                        : buttonSecondaryClass
+                                                }`}>
+                                                <Sun size={14} /> Clair
+                                            </button>
+                                            <button onClick={() => handleThemeChange('dark')}
+                                                className={`cursor-pointer flex items-center gap-2 px-4 py-2 rounded-xl border text-sm transition-all duration-200 hover:scale-105 ${
+                                                    currentTheme === 'dark' 
+                                                        ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white border-indigo-600 shadow-lg' 
+                                                        : buttonSecondaryClass
+                                                }`}>
+                                                <Moon size={14} /> Sombre
+                                            </button>
+                                            <button onClick={() => handleThemeChange('system')}
+                                                className={`cursor-pointer flex items-center gap-2 px-4 py-2 rounded-xl border text-sm transition-all duration-200 hover:scale-105 ${
+                                                    currentTheme === 'system' 
+                                                        ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white border-indigo-600 shadow-lg' 
+                                                        : buttonSecondaryClass
+                                                }`}>
+                                                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                                                    <line x1="8" y1="21" x2="16" y2="21"></line>
+                                                    <line x1="12" y1="17" x2="12" y2="21"></line>
+                                                </svg>
+                                                Système
+                                            </button>
+                                        </div>
                                     </div>
                                     <div>
                                         <label className={`text-xs font-medium ${textMutedClass} mb-2 block flex items-center gap-1`}>
@@ -455,7 +421,7 @@ export default function Settings() {
                                             Langue
                                         </label>
                                         <select value={formData.language} onChange={(e) => setFormData({...formData, language: e.target.value})}
-                                            className={`cursor-pointer  w-full px-4 py-2.5 rounded-xl border ${inputClass} ${borderClass} outline-none focus:ring-2 focus:ring-indigo-500 text-sm transition-all duration-200 cursor-pointer`}>
+                                            className={`cursor-pointer w-full px-4 py-2.5 rounded-xl border ${inputClass} ${borderClass} outline-none focus:ring-2 focus:ring-indigo-500 text-sm transition-all duration-200`}>
                                             <option value="fr">Français</option>
                                             <option value="en">English</option>
                                             <option value="ar">العربية</option>
@@ -480,14 +446,14 @@ export default function Settings() {
                                         <ChevronUp size={16} className={`transition-transform duration-200 ${!isPasswordOpen ? 'rotate-180' : ''}`} />
                                     </button>
                                     {isPasswordOpen && (
-                                        <div className="p-5 border-t ${borderClass} space-y-3 bg-opacity-50">
+                                        <div className={`p-5 border-t ${borderClass} space-y-3 bg-opacity-50`}>
                                             <div className="relative">
                                                 <input type={showPasswords.current ? "text" : "password"} 
                                                     placeholder="Mot de passe actuel"
                                                     value={passwordData.current_password}
                                                     onChange={(e) => setPasswordData({...passwordData, current_password: e.target.value})}
                                                     className={`w-full px-4 py-2.5 pr-10 rounded-xl border ${inputClass} ${borderClass} outline-none focus:ring-2 focus:ring-indigo-500 text-sm`} />
-                                                <button onClick={() => toggleVisibility('current')} className=" cursor-pointer absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-indigo-500 transition-colors">
+                                                <button onClick={() => toggleVisibility('current')} className="cursor-pointer absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-indigo-500 transition-colors">
                                                     {showPasswords.current ? <EyeOff size={14} /> : <Eye size={14} />}
                                                 </button>
                                             </div>
@@ -524,9 +490,9 @@ export default function Settings() {
                             </div>
 
                             {/* Save Button */}
-                            <div className="flex justify-end pt-4 border-t ${borderClass}">
+                            <div className={`flex justify-end pt-4 border-t ${borderClass}`}>
                                 <button onClick={handleUpdateProfile} disabled={loading}
-                                    className=" cursor-pointer px-8 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white rounded-xl text-sm font-medium flex items-center gap-2 disabled:opacity-50 transition-all duration-200 hover:scale-105 shadow-lg hover:shadow-xl">
+                                    className="cursor-pointer px-8 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white rounded-xl text-sm font-medium flex items-center gap-2 disabled:opacity-50 transition-all duration-200 hover:scale-105 shadow-lg hover:shadow-xl">
                                     {loading ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
                                     Enregistrer les modifications
                                 </button>
@@ -535,11 +501,10 @@ export default function Settings() {
                     </div>
                 )}
 
-                {/* Platform Tab */}
+                {/* Platform Tab - same as before */}
                 {activeTab === 'platform' && (
                     <div className="space-y-6">
-                        
-                        {/* Registration Control with better design */}
+                        {/* Registration Control */}
                         <div className={`${cardClass} rounded-2xl border ${borderClass} p-6 shadow-lg hover:shadow-xl transition-all duration-200`}>
                             <div className="flex flex-wrap justify-between items-center gap-4">
                                 <div className="flex items-start gap-3">
@@ -571,9 +536,9 @@ export default function Settings() {
                             </div>
                         </div>
 
-                        {/* Users List with better design */}
+                        {/* Users List */}
                         <div className={`${cardClass} rounded-2xl border ${borderClass} overflow-hidden shadow-lg`}>
-                            <div className="p-6 border-b ${borderClass} bg-gradient-to-r from-indigo-50/5 to-transparent dark:from-indigo-900/5">
+                            <div className={`p-6 border-b ${borderClass} bg-gradient-to-r from-indigo-50/5 to-transparent dark:from-indigo-900/5`}>
                                 <div className="flex items-center gap-2">
                                     <Database size={18} className="text-indigo-500" />
                                     <h3 className={`text-base font-semibold ${textClass}`}>Comptes actifs</h3>
@@ -598,8 +563,7 @@ export default function Settings() {
                                             <div key={user.id} 
                                                 className={`flex flex-wrap items-center justify-between gap-3 p-4 rounded-xl border ${borderClass} 
                                                             ${darkMode ? 'bg-[#252525] hover:bg-[#2a2a2a]' : 'bg-gray-50 hover:bg-gray-100'} 
-                                                            transition-all duration-200 hover:shadow-md animate-fadeIn`}
-                                                style={{ animationDelay: `${index * 50}ms` }}>
+                                                            transition-all duration-200 hover:shadow-md`}>
                                                 <div className="flex items-center gap-4">
                                                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-sm 
                                                                     transition-all duration-200 ${user.is_blocked ? 'bg-gradient-to-br from-gray-500 to-gray-700' : 'bg-gradient-to-br from-indigo-500 to-purple-600'}`}>
@@ -618,7 +582,7 @@ export default function Settings() {
                                                     </div>
                                                 </div>
                                                 <button onClick={() => handleToggleBlock(user.id)}
-                                                    className={`cursor-pointer  flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium transition-all duration-200 hover:scale-105 
+                                                    className={`cursor-pointer flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium transition-all duration-200 hover:scale-105 
                                                                 ${user.is_blocked 
                                                                     ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 hover:bg-green-200 border border-green-200' 
                                                                     : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 hover:bg-red-200 border border-red-200'}`}>
@@ -634,7 +598,6 @@ export default function Settings() {
                     </div>
                 )}
             </div>
-
         </div>
     );
 }

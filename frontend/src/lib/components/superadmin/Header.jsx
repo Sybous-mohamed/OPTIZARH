@@ -3,29 +3,41 @@ import { Bell, Moon, Sun, Search, Menu } from 'lucide-react';
 import { useTheme } from '../../../context/ThemeContext';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
+import { useNotification } from '../../../context/NotificationContext';
 
 export default function Header({ sidebarOpen, setSidebarOpen, isMobile }) {
     const { darkMode, updateTheme } = useTheme();
     const { t } = useTranslation(['common']);
-    const navigate = useNavigate(); 
+    const navigate = useNavigate();
+    const { showNotification } = useNotification();
     const [user, setUser] = useState({
         name: "Admin",
         role: "Super Admin",
         image: null
     });
+
+    // ⭐ Redirection selon le rôle
     const handleProfileClick = () => {
         const role = localStorage.getItem('role');
-        if (role === 'superadmin') {
-            navigate('/SuperAdmin/Parametres');
-        } 
-        // else if (role === 'admin') {
-        //     navigate('/Admin/Parametres');
-        // } else if (role === 'rh') {
-        //     navigate('/RH/Parametres');
-        // } 
-        // else {
-        //     navigate('/employee/Parametres');
-        // }
+        const routes = {
+            superadmin: '/SuperAdmin/Parametres',
+            admin: '/Admin/Parametres',
+            rh: '/RH/Parametres',
+            employee: '/Employee/Parametres'
+        };
+        navigate(routes[role] || '/');
+    };
+
+    // ⭐ Rôle title pour l'affichage
+    const getRoleTitle = () => {
+        const role = localStorage.getItem('role');
+        const titles = {
+            superadmin: 'Super Admin',
+            admin: 'Administrateur',
+            rh: 'Ressources Humaines',
+            employee: 'Employé'
+        };
+        return titles[role] || 'Utilisateur';
     };
 
     const getInitials = (name) => {
@@ -44,7 +56,7 @@ export default function Header({ sidebarOpen, setSidebarOpen, isMobile }) {
                 const parsedUser = JSON.parse(savedUser);
                 setUser({
                     name: parsedUser.full_name || "Admin",
-                    role: parsedUser.role || "Super Admin",
+                    role: getRoleTitle(),
                     image: parsedUser.profile_image || null
                 });
             } catch (e) {
@@ -64,10 +76,11 @@ export default function Header({ sidebarOpen, setSidebarOpen, isMobile }) {
     const handleThemeToggle = useCallback(() => {
         const newTheme = darkMode ? 'light' : 'dark';
         updateTheme(newTheme);
-    }, [darkMode, updateTheme]);
+    }, [darkMode, updateTheme, showNotification]);
 
     return (
         <header className={`h-16 bg-white/80 dark:bg-[#1A1A1A]/80 backdrop-blur-md border-b border-gray-100 dark:border-[#2A2A2A] flex items-center justify-between px-4 md:px-6 fixed top-0 right-0 z-30 transition-all duration-300 ${isMobile ? 'left-0' : 'left-[280px]'}`}>
+            {/* Left section */}
             <div className="flex items-center gap-3 flex-1">
                 {isMobile && (
                     <button onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -75,7 +88,6 @@ export default function Header({ sidebarOpen, setSidebarOpen, isMobile }) {
                         <Menu size={20} />
                     </button>
                 )}
-
                 <div className="hidden sm:block flex-1 max-w-sm relative group">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 group-focus-within:text-indigo-500 transition-colors">
                         <Search size={18} />
@@ -85,8 +97,8 @@ export default function Header({ sidebarOpen, setSidebarOpen, isMobile }) {
                 </div>
             </div>
 
+            {/* Right section */}
             <div className="flex items-center gap-2 md:gap-4">
-                {/* Dark Mode Toggle */}
                 <button 
                     onClick={handleThemeToggle}
                     className="p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#2A2A2A] rounded-full transition-all cursor-pointer group"
@@ -99,7 +111,6 @@ export default function Header({ sidebarOpen, setSidebarOpen, isMobile }) {
                     )}
                 </button>
 
-                {/* Notifications */}
                 <button className="p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#2A2A2A] rounded-full transition-colors relative">
                     <Bell size={20} />
                     <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-[#1A1A1A]"></span>

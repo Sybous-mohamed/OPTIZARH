@@ -3,7 +3,6 @@ import React, { createContext, useContext, useEffect, useState, useMemo, useCall
 const ThemeContext = createContext();
 
 export const ThemeProvider = ({ children }) => {
-    // Initialize theme from localStorage once
     const [theme, setTheme] = useState(() => {
         const savedTheme = localStorage.getItem('theme');
         if (savedTheme && ['light', 'dark', 'system'].includes(savedTheme)) {
@@ -16,102 +15,75 @@ export const ThemeProvider = ({ children }) => {
         window.matchMedia('(prefers-color-scheme: dark)').matches
     );
 
-    // Listen to system theme changes
-    useEffect(() => {
-        const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-        const handleChange = (e) => {
-            setSystemIsDark(e.matches);
-            // If theme is 'system', update automatically
-            if (theme === 'system') {
-                const root = document.documentElement;
-                if (e.matches) {
-                    root.classList.add('dark');
-                    root.classList.remove('light');
-                } else {
-                    root.classList.add('light');
-                    root.classList.remove('dark');
-                }
-            }
-        };
-        mediaQuery.addEventListener('change', handleChange);
-        return () => mediaQuery.removeEventListener('change', handleChange);
-    }, [theme]);
-
-    // Calculate darkMode boolean
     const darkMode = useMemo(() => {
         if (theme === 'dark') return true;
         if (theme === 'light') return false;
         return systemIsDark;
     }, [theme, systemIsDark]);
 
-    // Apply theme to DOM
+    useEffect(() => {
+        const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+        const handleChange = (e) => {
+            setSystemIsDark(e.matches);
+            if (theme === 'system') {
+                const root = document.documentElement;
+                root.classList.remove('light', 'dark');
+                root.classList.add(e.matches ? 'dark' : 'light');
+            }
+        };
+        mediaQuery.addEventListener('change', handleChange);
+        return () => mediaQuery.removeEventListener('change', handleChange);
+    }, [theme]);
+
     useEffect(() => {
         const root = document.documentElement;
+        root.classList.remove('light', 'dark');
+        
         if (darkMode) {
             root.classList.add('dark');
-            root.classList.remove('light');
         } else {
             root.classList.add('light');
-            root.classList.remove('dark');
         }
-    }, [darkMode]);
+        
+        localStorage.setItem('theme', theme);
+    }, [darkMode, theme]);
 
-    // Update theme function - broadcasts to all components
     const updateTheme = useCallback((newTheme) => {
         if (!newTheme || !['light', 'dark', 'system'].includes(newTheme)) return;
         
-        // Save to localStorage
-        localStorage.setItem('theme', newTheme);
+        if (newTheme === theme) return;
         
-        // Update state
         setTheme(newTheme);
         
-        // Force immediate DOM update
         const root = document.documentElement;
-        let isDark = false;
+        root.classList.remove('light', 'dark');
         
         if (newTheme === 'dark') {
-            isDark = true;
-        } else if (newTheme === 'light') {
-            isDark = false;
-        } else { // system
-            isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        }
-        
-        if (isDark) {
             root.classList.add('dark');
-            root.classList.remove('light');
-        } else {
+        } else if (newTheme === 'light') {
             root.classList.add('light');
-            root.classList.remove('dark');
+        } else {
+            const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            root.classList.add(isDark ? 'dark' : 'light');
         }
         
-        // Dispatch custom event to notify all components
-        window.dispatchEvent(new CustomEvent('themeChanged', { detail: { theme: newTheme, darkMode: isDark } }));
-    }, []);
+        localStorage.setItem('theme', newTheme);
+        
+        window.dispatchEvent(new CustomEvent('themeChanged', { 
+            detail: { theme: newTheme, darkMode: newTheme === 'dark' || (newTheme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches) } 
+        }));
+    }, [theme]);
 
-    // Sync across tabs and components
     useEffect(() => {
         const handleStorageChange = (e) => {
-            if (e.key === 'theme' && e.newValue) {
+            if (e.key === 'theme' && e.newValue && e.newValue !== theme) {
                 setTheme(e.newValue);
             }
         };
         
-        const handleThemeChanged = (e) => {
-            if (e.detail) {
-                setTheme(e.detail.theme);
-            }
-        };
-        
         window.addEventListener('storage', handleStorageChange);
-        window.addEventListener('themeChanged', handleThemeChanged);
-        
-        return () => {
-            window.removeEventListener('storage', handleStorageChange);
-            window.removeEventListener('themeChanged', handleThemeChanged);
-        };
-    }, []);
+        return () => window.removeEventListener('storage', handleStorageChange);
+    }, [theme]);
 
     return (
         <ThemeContext.Provider value={{ theme, darkMode, updateTheme }}>

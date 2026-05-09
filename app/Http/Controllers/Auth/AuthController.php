@@ -17,6 +17,7 @@ class AuthController extends Controller{
             'role'           => 'required',
             'company_name'   => 'required|string',
             'sector'         => 'required|string',
+            'must_change_password' => false,
         ], [
             'email.unique' => 'Cet email est déjà utilisé .',
             'password.confirmed' => 'La confirmation du mot de passe ne correspond pas.',
@@ -34,6 +35,7 @@ class AuthController extends Controller{
             'company_name'   => $request->company_name,
             'sector'         => $request->sector,
             'employee_count' => $request->employee_count,
+            'must_change_password' => false,
         ]);
 
         event(new Registered($user));
@@ -81,21 +83,40 @@ class AuthController extends Controller{
         $request->user()->sendEmailVerificationNotification();
         return response()->json(['status' => 'verification-link-sent']);
     }
-public function userStatus(Request $request)
-{
-    // fresh() darouri bach i-jib l-état jdid mn database machi mn session
-    $user = $request->user();
+    public function userStatus(Request $request)
+    {
+        $user = $request->user();
 
-    if (!$user) {
-        return response()->json(['message' => 'Unauthenticated'], 401);
+        if (!$user) {
+            return response()->json(['message' => 'Unauthenticated'], 401);
+        }
+
+        return response()->json([
+            'email_verified_at' => $user->fresh()->email_verified_at,
+            'user' => $user->fresh(),
+            'role' => $user->role
+        ]);
+    }
+    public function updatePasswordFirst(Request $request) {
+        $request->validate([
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+
+        $user = $request->user();
+        $user->password = Hash::make($request->password);
+        $user->must_change_password = false;
+        $user->save();
+
+        return response()->json(['message' => 'Password updated successfully']);
     }
 
-    return response()->json([
-        'email_verified_at' => $user->fresh()->email_verified_at,
-        'user' => $user->fresh(),
-        'role' => $user->role
-    ]);
-}
+    public function skipPasswordChange(Request $request) {
+        $user = $request->user();
+        $user->must_change_password = false;
+        $user->save();
+
+        return response()->json(['message' => 'Skipped successfully']);
+    }
 
     public function logout(Request $request){
         $request->user()->currentAccessToken()->delete();

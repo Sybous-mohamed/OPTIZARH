@@ -79,7 +79,7 @@ export default function EmployeeManagement() {
     });
 
     const [formData, setFormData] = useState({
-        prenom: "", nom: "", email: "", telephone: "",
+        prenom: "", nom: "", email: "", telephone: "",role:"",password:"",
         date_naissance: "", situation_familiale: "", nombre_enfants: "",
         date_embauche: "",
         type_contrat: "", annee_id: "", Post_id: "", grade_id: "", echelle_id: "", echelon_id: "",
@@ -112,21 +112,29 @@ export default function EmployeeManagement() {
     // FONCTIONS API
     // ============================================================
     const fetchRetraiteSettings = async () => {
-    if (!selectedAnnee) return;
-        try {
-            const res = await axiosClient.get(`/api/retraite/settings/${selectedAnnee}`);
-            setRetraiteSettings(res.data);
-        } catch (err) {
-            console.error("Erreur chargement retraite settings:", err);
-            setRetraiteSettings(null);
-        }
-    };
+        if (!selectedAnnee) return;
+            try {
+                const res = await axiosClient.get(`/api/retraite/settings/${selectedAnnee}`);
+                setRetraiteSettings(res.data);
+            } catch (err) {
+                console.error("Erreur chargement retraite settings:", err);
+                setRetraiteSettings(null);
+            }
+        };
 
-    useEffect(() => {
-    if (selectedAnnee) {
-        fetchRetraiteSettings();
-    }
-}, [selectedAnnee]);
+        useEffect(() => {
+        if (selectedAnnee) {
+            fetchRetraiteSettings();
+        }
+    }, [selectedAnnee]);
+    const generatePassword = () => {
+        const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
+        let retVal = "";
+        for (let i = 0; i < 12; ++i) {
+            retVal += charset.charAt(Math.floor(Math.random() * charset.length));
+        }
+        setFormData({ ...formData, password: retVal });
+    };
 
 const verifierAgeRetraite = (dateNaissance) => {
     if (!dateNaissance || !retraiteSettings) {
@@ -1299,8 +1307,9 @@ const verifierAgeRetraite = (dateNaissance) => {
                 salaire: formData.salaire ? parseFloat(formData.salaire) : null,
                 indice: formData.indice ? parseFloat(formData.indice) : null,
                 statut: formData.statut,
-                cotisation_id: formData.cotisation_id ? parseInt(formData.cotisation_id) : null
-                // ✅ Supprimé: adresse, departement, type_contrat, role_id
+                cotisation_id: formData.cotisation_id ? parseInt(formData.cotisation_id) : null,
+                password: formData.password,
+                role: formData.role,
             };
             
             let employeeId;
@@ -2192,6 +2201,68 @@ const verifierAgeRetraite = (dateNaissance) => {
                                         </div>
                                     )}
                                 </div>
+                                 {/* ===== SECTION SÉCURITÉ & ACCÈS (AJOUTÉE) ===== */}
+    <div className="mt-6">
+        <div className="mb-3">
+            <h3 className={`text-sm font-semibold flex items-center gap-2 ${textClass}`}>
+                <div className="w-1 h-5 bg-blue-500 rounded-full"></div>
+                <Lock size={16} className="text-blue-500" /> Sécurité & Accès
+            </h3>
+            <div className="h-px bg-gradient-to-r from-blue-500 to-transparent mt-2"></div>
+        </div>
+        <div className={`p-5 rounded-xl ${cardClass} border ${borderClass} space-y-4`}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center border-b pb-4 border-gray-200 dark:border-gray-700">
+                <label className={`text-sm font-medium ${textClass}`}>Rôle Système</label>
+                <select
+                    name="role"
+                    value={formData.role || ""}
+                    onChange={handleChange}
+                    className={`w-full p-2 rounded-lg border bg-transparent ${borderClass} ${textClass} focus:ring-2 focus:ring-blue-500/20`}
+                >
+                    <option value="">Sélectionner un rôle</option>
+                    <option value="employee">Employé</option>
+                    <option value="rh">RH</option>
+                    <option value="admin">Admin</option>
+                </select>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label className={`block text-xs mb-1 ${textMutedClass}`}>Adresse Email Professionnelle</label>
+                    <input 
+                        type="email" 
+                        name="email"
+                        value={formData.email}
+                        onChange={handleChange}
+                        placeholder="ex: a.alami@company.com"
+                        className={`w-full p-2.5 rounded-lg border bg-transparent ${borderClass} ${textClass}`}
+                        required
+                    />
+                </div>
+
+                <div>
+                    <label className={`block text-xs mb-1 ${textMutedClass}`}>Mot de passe</label>
+                    <div className="relative">
+                        <input 
+                            type="text"
+                            name="password"
+                            value={formData.password || ""}
+                            onChange={handleChange}
+                            className={`w-full p-2.5 pr-24 rounded-lg border bg-transparent ${borderClass} ${textClass} font-mono text-sm`}
+                            placeholder="Générer un mot de passe"
+                        />
+                        <button 
+                            type="button"
+                            onClick={generatePassword}
+                            className="absolute right-1 top-1 bottom-1 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-[10px] font-bold uppercase tracking-wider transition-colors flex items-center gap-1"
+                        >
+                            Générer
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
                             </div>
 
                             <button type="submit" disabled={loading} className="cursor-pointer w-full py-3 bg-blue-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all font-medium disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/25">

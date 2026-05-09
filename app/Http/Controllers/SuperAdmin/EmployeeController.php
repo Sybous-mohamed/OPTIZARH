@@ -7,6 +7,9 @@ use App\Models\SuperAdmin\SalaryYear;
 use App\Models\SuperAdmin\EmployeeCredit;
 use App\Http\Controllers\Controller;
 use Barryvdh\DomPDF\Facade\Pdf;
+use App\Models\Auth\User;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 
 class EmployeeController extends Controller
 {
@@ -95,10 +98,13 @@ class EmployeeController extends Controller
     public function store(Request $request)
     {
         try {
+            // 1. Validation (Zdna email unique f table users w l-champs jdad)
             $validated = $request->validate([
                 'prenom' => 'required|string|max:255',
                 'nom' => 'required|string|max:255',
-                'email' => 'required|email|unique:employees,email',
+                'email' => 'required|email|unique:users,email', // Check f table users hsen
+                'password' => 'required|min:6', // Password darouri
+                'role' => 'required|string|in:employee,rh,admin',    // RH wala EMPLOYE
                 'telephone' => 'nullable|string|max:20',
                 'date_naissance' => 'nullable|date',
                 'adresse' => 'nullable|string',
@@ -117,7 +123,7 @@ class EmployeeController extends Controller
                 'echelon' => 'nullable|string',  
                 'salaire' => 'nullable|numeric|min:0',
                 'indice' => 'nullable|numeric|min:0',
-                'statut' => 'nullable|string|in:ACTIF,CONGE,DEPART',
+                'statut' => 'nullable|string|in:ACTIF,CONGÉ,DÉPART',
                 'cotisation_type' => 'nullable|string',
                 'cotisation_id' => 'required|integer', 
                 'cotisation_rubrique_id' => 'nullable|integer',
@@ -137,48 +143,55 @@ class EmployeeController extends Controller
                 'credit_reste_a_payer' => 'nullable|numeric|min:0'
             ]);
 
-            if (isset($validated['echelon']) && $validated['echelon'] !== null) {
-                $validated['echelon'] = (string) $validated['echelon'];
-            }
-            if (isset($validated['montant_credit']) && isset($validated['taux_credit']) && isset($validated['credit_duree'])) {
-                if (!isset($validated['credit_mensualite']) || $validated['credit_mensualite'] == 0) {
-                    $validated['credit_mensualite'] = $this->calculerMensualiteCredit(
-                        $validated['montant_credit'],
-                        $validated['taux_credit'],
-                        $validated['credit_duree']
-                    );
-                }
+            // Asta3mel DB::transaction bach ila whlat chi haja, may-creeyach user bla employé
+            $employee = DB::transaction(function () use ($validated, $request) {
                 
-                if (!isset($validated['credit_reste_a_payer'])) {
-                    $validated['credit_reste_a_payer'] = $validated['montant_credit'];
+                // 2. Création de l'utilisateur (Le compte login)
+                $user = User::create([
+                    'full_name' => $validated['prenom'] . ' ' . $validated['nom'],
+                    'email' => $validated['email'],
+                    'password' => Hash::make($request->password),
+                    'role' => $request->role,
+                    'company_name' => null,
+                    'sector' => null,
+                    'must_change_password' => true
+                ]);
+
+                // 3. Traitement des calculs (Kima derti)
+                if (isset($validated['echelon'])) {
+                    $validated['echelon'] = (string) $validated['echelon'];
                 }
-            }
 
-            if (isset($validated['credit_date_debut']) && isset($validated['credit_duree']) && !isset($validated['credit_date_fin'])) {
-                $dateDebut = new \DateTime($validated['credit_date_debut']);
-                $dateFin = clone $dateDebut;
-                $dateFin->modify('+' . $validated['credit_duree'] . ' months');
-                $validated['credit_date_fin'] = $dateFin->format('Y-m-d');
-            }
+                if (isset($validated['montant_credit'], $validated['taux_credit'], $validated['credit_duree'])) {
+                    if (!isset($validated['credit_mensualite']) || $validated['credit_mensualite'] == 0) {
+                        $validated['credit_mensualite'] = $this->calculerMensualiteCredit(
+                            $validated['montant_credit'], $validated['taux_credit'], $validated['credit_duree']
+                        );
+                    }
+                    if (!isset($validated['credit_reste_a_payer'])) {
+                        $validated['credit_reste_a_payer'] = $validated['montant_credit'];
+                    }
+                }
 
-            $employee = Employee::create($validated);
-            
-            $this->logActivity(
-                'Ajout employé',
-                'CREATE',
-                "Ajout de l'employé : {$employee->prenom} {$employee->nom} (Email: {$employee->email})"
-            );
-            
+                if (isset($validated['credit_date_debut'], $validated['credit_duree']) && !isset($validated['credit_date_fin'])) {
+                    $dateFin = (new \DateTime($validated['credit_date_debut']))->modify('+' . $validated['credit_duree'] . ' months');
+                    $validated['credit_date_fin'] = $dateFin->format('Y-m-d');
+                }
+
+                // 4. Création de l'employé lié au User ID
+                $validated['user_id'] = $user->id; // Hna katrebet-hom
+                return Employee::create($validated);
+            });
+
+            // 5. Logging
+            $this->logActivity('Ajout employé', 'CREATE', "Ajout de l'employé : {$employee->prenom} {$employee->nom}");
+
             return response()->json($employee, 201);
-            
+
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json(['errors' => $e->errors()], 422);
         } catch (\Exception $e) {
-            $this->logActivity(
-                'Ajout employé',
-                'ERROR',
-                "Erreur lors de l'ajout: " . $e->getMessage()
-            );
+            $this->logActivity('Ajout employé', 'ERROR', "Erreur: " . $e->getMessage());
             return response()->json(['message' => $e->getMessage()], 500);
         }
     }
@@ -304,34 +317,37 @@ class EmployeeController extends Controller
         }
     }
 
-    public function destroy($id)
-    {
-        try {
-            $employee = Employee::find($id);
-            if (!$employee) {
-                return response()->json(['message' => 'Employé non trouvé'], 404);
-            }
+   public function destroy($id)
+{
+    try {
+        $employee = Employee::find($id);
 
-            $employeeName = "{$employee->prenom} {$employee->nom}";
-            $employee->delete();
-            
-            $this->logActivity(
-                'Suppression employé',
-                'DELETE',
-                "Suppression de l'employé : {$employeeName}"
-            );
-            
-            return response()->json(['message' => 'Employé supprimé avec succès']);
-        } catch (\Exception $e) {
-            $this->logActivity(
-                'Suppression employé',
-                'ERROR',
-                "Erreur lors de la suppression: " . $e->getMessage()
-            );
-            return response()->json(['error' => $e->getMessage()], 500);
+        if (!$employee) {
+            return response()->json(['message' => 'Employé non trouvé'], 404);
         }
-    }
 
+        $employeeName = "{$employee->prenom} {$employee->nom}";
+        $userId = $employee->user_id; // N-khbiw l-ID dyal user qbel mad-delete employee
+
+        DB::transaction(function () use ($employee, $userId) {
+            // 1. N-ms-hou l-employé (hadi lowla)
+            $employee->delete();
+
+            // 2. N-ms-hou l-user dyalou (ila kan m-lié)
+            if ($userId) {
+                User::where('id', $userId)->delete();
+            }
+        });
+
+        $this->logActivity('Suppression employé', 'DELETE', "Suppression de: {$employeeName}");
+
+        return response()->json(['message' => 'Supprimé avec succès']);
+
+    } catch (\Exception $e) {
+        // Had l-ligne ghadi t-goul lik f-logs chno wqe3 b-debt
+        return response()->json(['error' => $e->getMessage()], 500);
+    }
+}
     public function stats(Request $request)
     {
         try {

@@ -165,11 +165,11 @@ const Login = () => {
                         </button>
                     </form>
 
-                    {isRegistrationEnabled && (
+                    {/* {isRegistrationEnabled && (
                         <p className="mt-8 text-center text-[13px] text-gray-500 font-medium">
                             Nouvelle entreprise ? <Link to="/auth/register" className="text-[#4F46E5] font-black hover:underline">Créer un compte</Link>
                         </p>
-                    )}
+                    )} */}
                 </div>
             </div>
         </div>

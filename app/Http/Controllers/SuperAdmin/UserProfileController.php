@@ -11,17 +11,12 @@ use App\Models\Auth\User;
 
 class UserProfileController extends Controller
 {
-    /**
-     * Jib data dyal l-user melli kat-lancer l-page Settings
-     */
+
     public function show(Request $request)
     {
         return response()->json($request->user());
     }
 
-    /**
-     * Update Profile (General Settings)
-     */
     public function updateProfile(Request $request)
     {
         $user = $request->user();
@@ -37,7 +32,6 @@ class UserProfileController extends Controller
             'language' => ['required', Rule::in(['en', 'fr', 'ar'])],
         ]);
 
-        // 2. Update f l-Base de données
         $user->update($validated);
 
         return response()->json([
@@ -54,7 +48,7 @@ class UserProfileController extends Controller
     {
         $user = $request->user();
 
-        // 1. Validation d l-passwords
+ 
         $request->validate([
             'current_password' => 'required|string',
             'new_password'     => ['required', 'confirmed', Password::defaults()],
@@ -68,7 +62,7 @@ class UserProfileController extends Controller
             ], 422);
         }
 
-        // 3. Hash w Save l-password jdida
+
         $user->update([
             'password' => Hash::make($request->new_password)
         ]);

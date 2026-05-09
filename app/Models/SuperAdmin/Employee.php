@@ -9,7 +9,7 @@ class Employee extends Model
     protected $table = 'employees';
     
     protected $fillable = [
-        'prenom', 'nom', 'email', 'telephone', 'date_naissance',
+        'prenom', 'nom', 'email', 'telephone', 'date_naissance','user_id',
         'situation_familiale', 'nombre_enfants', 'date_embauche',
         'annee_id', 'Post_id', 'grade_id', 'echelle_id', 'echelon_id',
         'grade', 'echelle', 'echelon', 'salaire', 'indice', 'statut',

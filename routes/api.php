@@ -66,6 +66,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', function (Request $request) {
         return $request->user();
     });
+    Route::post('/user/update-password-first', [AuthController::class, 'updatePasswordFirst']);
+    Route::post('/user/skip-password-change', [AuthController::class, 'skipPasswordChange']);
     Route::get('/auth/user-status', [AuthController::class, 'userStatus']);
 
     // Verification Notification

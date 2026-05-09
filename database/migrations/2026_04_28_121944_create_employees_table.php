@@ -18,6 +18,8 @@ return new class extends Migration {
             $table->integer('nombre_enfants')->default(0);
             $table->date('date_embauche')->nullable();
 
+            $table->unsignedBigInteger('user_id')->nullable()->after('id');
+            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
 
             // IDs pour la classification
             $table->unsignedBigInteger('annee_id')->nullable();
