@@ -137,7 +137,7 @@ public function userStatus(Request $request)
 
         return response()->json(['message' => 'Skipped successfully']);
     }
-
+// LOgout
     public function logout(Request $request){
         $request->user()->currentAccessToken()->delete();
         return response()->json(['message' => 'Déconnecté']);
