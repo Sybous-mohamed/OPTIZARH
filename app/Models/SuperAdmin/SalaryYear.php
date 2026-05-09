@@ -6,24 +6,26 @@ use Illuminate\Support\Facades\Cache;
 
 class SalaryYear extends Model
 {
-    
+    protected $table = 'salary_years';
     protected $fillable = ['year', 'is_active'];
 
-    public function roles() {
-        return $this->hasMany(Role::class, 'salary_year_id');
+    public function Post() {
+        return $this->hasMany(Post::class, 'salary_year_id');
     }
 
-    public function starredRoles() {
-        return $this->hasMany(Role::class, 'salary_year_id')->where('is_starred', true);
+    public function starredPost() {
+        return $this->hasMany(Post::class, 'salary_year_id')->where('is_starred', true);
     }
     
-    public function getRolesOrderedAttribute() {
-        return $this->roles()->orderBy('name')->get();
+    public function getPostOrderedAttribute() {
+        return $this->Post()->orderBy('name')->get();
     }
+    
     public function indemnites() {
         return $this->hasMany(GestionIndemnite::class, 'salary_year_id');
     }
-     public function rcarTypes() {
+    
+    public function rcarTypes() {
         return $this->hasMany(RcarType::class, 'salary_year_id');
     }
 

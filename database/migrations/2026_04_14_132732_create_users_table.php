@@ -17,10 +17,13 @@ public function up(): void
         $table->string('sector')->nullable();
         $table->integer('employee_count')->nullable();
         $table->string('role')->default('admin');
-        $table->string('profile_image')->nullable(); // Ghadi t-stori fih l-path
-        $table->string('theme')->default('light');    // default light kima f l-image
+        $table->timestamp('email_verified_at')->nullable();
+        $table->text('profile_image')->nullable();
+        $table->string('theme')->default('light');   
         $table->string('language')->default('en');
         $table->boolean('is_blocked')->default(false);
+        $table->boolean('must_change_password')->default(false);
+        $table->rememberToken(); 
         $table->timestamps();
     });
 }

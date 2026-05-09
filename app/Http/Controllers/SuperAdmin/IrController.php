@@ -7,6 +7,7 @@ use App\Models\SuperAdmin\SalaryYear;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\Cache;
 
 class IrController extends Controller
 {
@@ -14,7 +15,7 @@ class IrController extends Controller
     //                 FONCTIONS POUR L'AFFICHAGE
     // ==========================================================
 
-    // Récupérer toutes les années depuis la table gestion_ir
+    // Récupérer les années qui ont des configurations IR
     public function getAnnees()
     {
         try {
@@ -76,7 +77,7 @@ class IrController extends Controller
                 "Génération PDF de la configuration IR pour l'année " . $annee
             );
             
-            return $pdf->download("barème_IR_{$annee}.pdf");
+            return $pdf->download("bareme_IR_{$annee}.pdf");
         } catch (\Exception $e) {
             $this->logActivity(
                 'Export IR',
@@ -154,12 +155,6 @@ class IrController extends Controller
         for ($i = 0; $i < count($dataRows) - 1; $i++) {
             $currentMax = $dataRows[$i]['max'];
             $nextMin = $dataRows[$i + 1]['min'];
-            
-            if ($currentMax != 0 && $currentMax != $nextMin) {
-                return response()->json([
-                    'message' => "Erreur: La tranche " . ($i + 1) . " max ($currentMax) doit être égale à la tranche " . ($i + 2) . " min ($nextMin)"
-                ], 422);
-            }
         }
 
         try {
@@ -167,6 +162,9 @@ class IrController extends Controller
                 ['annee' => $annee],
                 ['data_rows' => $request->data_rows]
             );
+            
+            // Clear cache
+            Cache::forget('ir_settings_' . $annee);
             
             $this->logActivity(
                 'Paramétrage IR',
@@ -201,6 +199,9 @@ class IrController extends Controller
             
             $setting->delete();
             
+            // Clear cache
+            Cache::forget('ir_settings_' . $annee);
+            
             $this->logActivity(
                 'Paramétrage IR',
                 'DELETE',
@@ -217,4 +218,80 @@ class IrController extends Controller
             return response()->json(['message' => 'Erreur lors de la suppression'], 500);
         }
     }
+
+    // ==========================================================
+    //                 FONCTIONS SUPPLEMENTAIRES
+    // ==========================================================
+
+    // Vérifier si une année a une configuration
+    public function checkYear($annee)
+    {
+        try {
+            $exists = GestionIR::where('annee', $annee)->exists();
+            return response()->json(['exists' => $exists]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    // Copier la configuration d'une année vers une autre
+    public function copyYear(Request $request)
+    {
+        $request->validate([
+            'from_year' => 'required|integer',
+            'to_year' => 'required|integer|different:from_year'
+        ]);
+
+        try {
+            $source = GestionIR::where('annee', $request->from_year)->first();
+            
+            if (!$source) {
+                return response()->json(['message' => 'Année source non trouvée'], 404);
+            }
+            
+            $target = GestionIR::updateOrCreate(
+                ['annee' => $request->to_year],
+                ['data_rows' => $source->data_rows]
+            );
+            
+            $this->logActivity(
+                'Paramétrage IR',
+                'COPY',
+                "Copie de la configuration IR de {$request->from_year} vers {$request->to_year}"
+            );
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Configuration copiée avec succès',
+                'data' => $target
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 500);
+        }
+    }
+
+    // Récupérer la configuration avec cache
+    public function getCachedSettings($annee)
+    {
+        try {
+            $settings = Cache::remember('ir_settings_' . $annee, 3600, function () use ($annee) {
+                return GestionIR::where('annee', $annee)->first();
+            });
+            
+            if (!$settings) {
+                return response()->json([
+                    'data_rows' => [
+                        ['min' => 0, 'max' => 0, 'taux' => 0, 'marie' => 0, 'enfant1' => 0, 'enfant2' => 0]
+                    ]
+                ]);
+            }
+            
+            return response()->json([
+                'data_rows' => $settings->data_rows
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
 }

@@ -13,7 +13,7 @@ class GestionIndemnite extends Model
         'type', 
         'valeur', 
         'salary_year_id', 
-        'role_id', 
+        'Post_id', 
         'grade_id', 
         'echelle_id', 
         'echelon_id',
@@ -24,8 +24,8 @@ class GestionIndemnite extends Model
         return $this->belongsTo(SalaryYear::class, 'salary_year_id');
     }
 
-    public function role() {
-        return $this->belongsTo(Role::class);
+    public function post() {
+        return $this->belongsTo(Post::class, 'Post_id');
     }
 
     public function grade() {

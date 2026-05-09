@@ -21,7 +21,7 @@ return new class extends Migration
             $table->foreignId('salary_year_id')->constrained('salary_years')->onDelete('cascade');
             
             // Nullable hit t9der tkon categorie "tous"
-            $table->foreignId('role_id')->nullable()->constrained('roles')->onDelete('set null');
+            $table->foreignId('Post_id')->nullable()->constrained('Post')->onDelete('set null');
             $table->foreignId('grade_id')->nullable()->constrained('grades')->onDelete('set null');
             $table->foreignId('echelle_id')->nullable()->constrained('echelles')->onDelete('set null');
             $table->foreignId('echelon_id')->nullable()->constrained('echelons')->onDelete('set null');

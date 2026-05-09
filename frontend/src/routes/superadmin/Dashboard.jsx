@@ -1,214 +1,463 @@
-// import React, { useState, useEffect } from 'react';
-// import api from '../../lib/apis/axiosConfig';
-// import { 
-//     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell
-// } from 'recharts';
-// import { 
-//     Users, UserCheck, Wallet, Layout, Settings, TrendingUp, Bell, ShieldCheck, Banknote, 
-//     ArrowUpRight, Activity, Zap
-// } from 'lucide-react';
+// resources/js/routes/superadmin/Dashboard.jsx
 
-// const Dashboard = () => {
-//     const [data, setData] = useState({
-//         cards: [],
-//         cotisationStats: [], 
-//         modules: [], 
-//         charges: { ir: 0, rcar: 0 }
-//     });
-//     const [loading, setLoading] = useState(true);
+import React, { useState, useEffect } from 'react';
+import {
+    Users, Calendar, TrendingUp, TrendingDown,
+    DollarSign, CreditCard, Shield, Building2,
+    Activity, RefreshCw, ChevronDown, Briefcase,
+    Percent, Truck, Wallet
+} from 'lucide-react';
+import axiosClient from "../../lib/apis/axiosConfig";
+import { useTheme } from '../../context/ThemeContext';
+import { useNotification } from '../../context/NotificationContext';
+import {
+    AreaChart, Area, BarChart, Bar, PieChart as RePieChart,
+    Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
+} from 'recharts';
 
-//     useEffect(() => {
-//         const fetchStats = async () => {
-//             try {
-//                 const res = await api.get('/api/superadmin/dashboard-stats');
-//                 if (res.data) setData(res.data);
-//             } catch (err) {
-//                 console.error("Erreur Backend:", err.message);
-//             } finally {
-//                 setLoading(false);
-//             }
-//         };
-//         fetchStats();
-//     }, []);
-
-//     const icons = [
-//         <Users className="w-5 h-5" />,      
-//         <UserCheck className="w-5 h-5" />,  
-//         <Banknote className="w-5 h-5" />,   
-//         <Wallet className="w-5 h-5" />      
-//     ];
-
-//     // if (loading) return (
-//     //     <div className="h-screen flex items-center justify-center bg-[#fdfdff] dark:bg-[#080808]">
-//     //         <div className="flex flex-col items-center gap-4">
-//     //             <div className="w-12 h-12 border-4 border-indigo-600/20 border-t-indigo-600 rounded-full animate-spin"></div>
-//     //             <div className="text-indigo-600 font-black tracking-widest text-sm uppercase animate-pulse">OptizaRH System</div>
-//     //         </div>
-//     //     </div>
-//     // );
-
-//     return (
-//         <div className=" bg-[#fdfdff] dark:bg-[#080808] min-h-screen transition-colors duration-500">
+export default function Dashboard() {
+    const { darkMode } = useTheme();
+    const { showNotification } = useNotification();
+    
+    const [loading, setLoading] = useState(true);
+    const [data, setData] = useState(null);
+    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+    const [availableYears, setAvailableYears] = useState([]);
+    const [isYearOpen, setIsYearOpen] = useState(false);
+    const yearRef = React.useRef(null);
+    
+    const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'];
+    
+    const darkClasses = darkMode ? {
+        bg: 'bg-[#0D0D0D]',
+        card: 'bg-[#1A1A1A] border-[#2A2A2A]',
+        text: 'text-gray-100',
+        textMuted: 'text-gray-500',
+        border: 'border-[#2A2A2A]',
+        hover: 'hover:bg-[#252525]'
+    } : {
+        bg: 'bg-gray-50',
+        card: 'bg-white border-gray-200',
+        text: 'text-gray-800',
+        textMuted: 'text-gray-500',
+        border: 'border-gray-200',
+        hover: 'hover:bg-gray-50'
+    };
+    
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (yearRef.current && !yearRef.current.contains(event.target)) {
+                setIsYearOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+    
+    useEffect(() => {
+        fetchDashboardData();
+    }, [selectedYear]);
+    
+    const fetchDashboardData = async () => {
+        setLoading(true);
+        try {
+            const res = await axiosClient.get('/api/superadmin/dashboard-stats', {
+                params: { year: selectedYear }
+            });
+            setData(res.data);
             
-//             {/* Top Navigation / Header */}
-//             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-10">
-//                 <div>
-//                     <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter">
-//                         Dashboard <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-violet-500">Overview</span>
-//                     </h2>
-//                     <p className="text-slate-500 dark:text-slate-400 text-xs font-semibold uppercase tracking-widest mt-1 opacity-70">
-//                         Bienvenue sur votre centre de pilotage
-//                     </p>
-//                 </div>
-//             </div>
-
-//             {/* Stats Bento Grid */}
-//             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 transition-colors duration-500">
-//                 {data.cards.map((item, idx) => (
-//                     <div 
-//                         key={idx} 
-//                         className="bg-white dark:bg-[#0f0f0f] p-5 rounded-[2rem] border border-slate-100 dark:border-[#1a1a1a] flex flex-col justify-between group hover:border-indigo-500 transition-all duration-300 shadow-sm">
-//                         {/* Icon Container */}
-//                         <div className="w-10 h-10 rounded-xl bg-slate-50 dark:bg-[#1a1a1a] flex items-center justify-center text-indigo-500 mb-4 group-hover:bg-indigo-600 group-hover:text-white transition-all">
-//                             {icons[idx]}
-//                         </div>
-
-//                         {/* Content Area */}
-//                         <div>
-//                             <h4 className="text-slate-400 dark:text-gray-500 text-[10px] font-black uppercase tracking-[0.15em] mb-2">
-//                                 {item.label}
-//                             </h4>
-//                             <div className="flex items-baseline gap-2">
-//                                 <span className="text-2xl font-black text-slate-900 dark:text-white tracking-tight leading-none">
-//                                     {item.value}
-//                                 </span>
-//                                 <span className="text-[10px] font-bold text-emerald-500 flex items-center gap-0.5">
-//                                     <TrendingUp size={10} /> 12%
-//                                 </span>
-//                             </div>
-//                             {/* Currency tag with adaptive color */}
-//                             {item.label.includes('MASSE') && (
-//                                 <span className="text-sm font-black text-slate-900 dark:text-white mt-1 block">DH</span>
-//                             )}
-//                         </div>
-//                     </div>
-//                 ))}
-//             </div>
-
-//             {/* Middle Section: Chart + Financials */}
-//             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-10">
+            const years = res.data.available_years || [];
+            setAvailableYears(years);
+            
+            if (years.length > 0 && !years.includes(selectedYear)) {
+                setSelectedYear(years[0]);
+            }
+        } catch (err) {
+            console.error("Erreur API:", err);
+            showNotification("Erreur chargement dashboard", "error");
+            setAvailableYears([new Date().getFullYear()]);
+        } finally {
+            setLoading(false);
+        }
+    };
+    
+    const handleYearChange = (year) => {
+        setSelectedYear(year);
+        setIsYearOpen(false);
+    };
+    
+    const formatMoney = (num) => {
+        if (!num || num === 0) return '0 DH';
+        if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M DH';
+        if (num >= 1000) return (num / 1000).toFixed(1) + 'k DH';
+        return num.toLocaleString('fr-FR') + ' DH';
+    };
+    
+    const formatNumber = (num) => {
+        if (!num) return '0';
+        if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+        if (num >= 1000) return (num / 1000).toFixed(1) + 'k';
+        return num.toLocaleString('fr-FR');
+    };
+    
+    const stats = data?.stats || {};
+    const charts = data?.charts || {};
+    
+    const monthlyData = charts.monthly_evolution || [];
+    const cotisationsData = charts.cotisations_details || [];
+    const statusData = charts.employee_status || [];
+    const salaryByGrade = charts.salary_by_grade || [];
+    const creditsByYear = charts.credits_by_year || [];
+    
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center min-h-[60vh]">
+                <div className="flex flex-col items-center gap-3">
+                    <div className="animate-spin rounded-full h-10 w-10 border-3 border-blue-500 border-t-transparent"></div>
+                    <p className={`text-sm ${darkClasses.textMuted}`}>Chargement...</p>
+                </div>
+            </div>
+        );
+    }
+    
+    return (
+        <div className="space-y-5 pb-8">
+            
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-900/20">
+                        <Activity size={20} className="text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <div>
+                        <h1 className={`text-xl font-semibold ${darkClasses.text}`}>Tableau de bord</h1>
+                        <p className={`text-xs ${darkClasses.textMuted} mt-0.5`}>
+                            Vue d'ensemble - Année {selectedYear}
+                        </p>
+                    </div>
+                </div>
                 
-//                 {/* Visualisation Card */}
-//                 <div className="lg:col-span-8 bg-white dark:bg-[#121212] p-8 rounded-[2.5rem] border border-slate-100 dark:border-[#1c1c1c] shadow-sm">
-//                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-10 gap-4">
-//                         <div>
-//                             <h3 className="text-xl font-black text-slate-900 dark:text-white">Répartition des Cotisations</h3>
-//                             <p className="text-xs text-slate-400 font-medium italic mt-1">Comparaison des taux par organisme</p>
-//                         </div>
-//                         {/* <div className="flex bg-slate-50 dark:bg-[#1c1c1c] p-1 rounded-xl">
-//                             <button className="px-4 py-1.5 bg-white dark:bg-[#262626] text-indigo-600 dark:text-white text-[10px] font-bold rounded-lg shadow-sm">Mensuel</button>
-//                             <button className="px-4 py-1.5 text-slate-400 text-[10px] font-bold">Annuel</button>
-//                         </div> */}
-//                     </div>
+                <div className="flex items-center gap-2">
+                    <div className="relative" ref={yearRef}>
+                        <button
+                            onClick={() => setIsYearOpen(!isYearOpen)}
+                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border ${darkClasses.card} ${darkClasses.text} cursor-pointer text-sm`}
+                        >
+                            <Calendar size={14} className="text-blue-500" />
+                            <span>{selectedYear}</span>
+                            <ChevronDown size={12} className={`transition-transform ${isYearOpen ? 'rotate-180' : ''}`} />
+                        </button>
+                        {isYearOpen && availableYears.length > 0 && (
+                            <div className={`absolute top-full right-0 mt-1 rounded-lg border ${darkClasses.border} ${darkClasses.card} z-50 min-w-[120px] shadow-md max-h-48 overflow-y-auto`}>
+                                {availableYears.map(year => (
+                                    <div
+                                        key={year}
+                                        onClick={() => handleYearChange(year)}
+                                        className={`px-3 py-2 cursor-pointer text-sm transition-colors ${selectedYear === year ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : darkClasses.textMuted} ${darkClasses.hover}`}
+                                    >
+                                        {year}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                    <button
+                        onClick={fetchDashboardData}
+                        className={`p-1.5 rounded-lg border ${darkClasses.card} ${darkClasses.hover} transition-all cursor-pointer`}
+                        title="Rafraîchir"
+                    >
+                        <RefreshCw size={14} className={darkClasses.textMuted} />
+                    </button>
+                </div>
+            </div>
+            
+            {/* Cartes principales */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <div className={`${darkClasses.card} rounded-lg p-3 border ${darkClasses.border}`}>
+                    <div className="flex items-center justify-between">
+                        <span className={`text-xs font-medium ${darkClasses.textMuted}`}>Employés</span>
+                        <Users size={16} className="text-blue-500" />
+                    </div>
+                    <p className={`text-xl font-semibold ${darkClasses.text} mt-1`}>{stats.total_employees || 0}</p>
+                    <div className="flex gap-3 mt-2 text-xs">
+                        <span className={darkClasses.textMuted}>Actifs: {stats.active_employees || 0}</span>
+                        <span className={darkClasses.textMuted}>Congé: {stats.conge_employees || 0}</span>
+                    </div>
+                </div>
+                
+                <div className={`${darkClasses.card} rounded-lg p-3 border ${darkClasses.border}`}>
+                    <div className="flex items-center justify-between">
+                        <span className={`text-xs font-medium ${darkClasses.textMuted}`}>Masse salariale</span>
+                        <DollarSign size={16} className="text-emerald-500" />
+                    </div>
+                    <p className={`text-xl font-semibold ${darkClasses.text} mt-1`}>
+                        {formatMoney(stats.total_salary)}
+                    </p>
+                    <div className="mt-2 text-xs">
+                        <span className={darkClasses.textMuted}>
+                            Salaire brut total: {formatMoney(stats.total_salary)}
+                        </span>
+                    </div>
+                </div>
+                
+                <div className={`${darkClasses.card} rounded-lg p-3 border ${darkClasses.border}`}>
+                    <div className="flex items-center justify-between">
+                        <span className={`text-xs font-medium ${darkClasses.textMuted}`}>Crédits actifs</span>
+                        <CreditCard size={16} className="text-purple-500" />
+                    </div>
+                    <p className={`text-xl font-semibold ${darkClasses.text} mt-1`}>{stats.active_credits || 0}</p>
+                    <div className="mt-2 text-xs">
+                        <span className={darkClasses.textMuted}>Montant: {formatMoney(stats.total_credit_amount)}</span>
+                    </div>
+                </div>
+                
+                <div className={`${darkClasses.card} rounded-lg p-3 border ${darkClasses.border}`}>
+                    <div className="flex items-center justify-between">
+                        <span className={`text-xs font-medium ${darkClasses.textMuted}`}>Total déductions</span>
+                        <TrendingDown size={16} className="text-rose-500" />
+                    </div>
+                    <p className={`text-xl font-semibold ${darkClasses.text} mt-1`}>
+                        {formatMoney(stats.total_deductions_salarie)}
+                    </p>
+                    <div className="mt-2 text-xs">
+                        <div className="flex justify-between">
+                            <span className={darkClasses.textMuted}>IR: {formatMoney(stats.total_ir)}</span>
+                            <span className={darkClasses.textMuted}>Crédits: {formatMoney(stats.total_credits_mensualites)}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            {/* Détails charges - 4 petites cartes */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className={`${darkClasses.card} rounded-lg p-2 border ${darkClasses.border} text-center`}>
+                    <Shield size={14} className="text-blue-500 mx-auto mb-1" />
+                    <p className={`text-xs font-medium ${darkClasses.text}`}>RCAR</p>
+                    <p className={`text-sm font-semibold ${darkClasses.text}`}>{formatMoney(stats.total_rcar)}</p>
+                </div>
+                <div className={`${darkClasses.card} rounded-lg p-2 border ${darkClasses.border} text-center`}>
+                    <Building2 size={14} className="text-emerald-500 mx-auto mb-1" />
+                    <p className={`text-xs font-medium ${darkClasses.text}`}>Assurances</p>
+                    <p className={`text-sm font-semibold ${darkClasses.text}`}>{formatMoney(stats.total_assurances)}</p>
+                </div>
+                <div className={`${darkClasses.card} rounded-lg p-2 border ${darkClasses.border} text-center`}>
+                    <Truck size={14} className="text-orange-500 mx-auto mb-1" />
+                    <p className={`text-xs font-medium ${darkClasses.text}`}>SNTL</p>
+                    <p className={`text-sm font-semibold ${darkClasses.text}`}>{formatMoney(stats.total_sntl)}</p>
+                </div>
+                <div className={`${darkClasses.card} rounded-lg p-2 border ${darkClasses.border} text-center`}>
+                    <Percent size={14} className="text-purple-500 mx-auto mb-1" />
+                    <p className={`text-xs font-medium ${darkClasses.text}`}>Taux charge</p>
+                    <p className={`text-sm font-semibold ${darkClasses.text}`}>
+                        {stats.total_salary > 0 ? Math.round((stats.total_charges_patronales / stats.total_salary) * 100) : 0}%
+                    </p>
+                </div>
+            </div>
+            
+            {/* Graphiques Ligne 1 */}
+{/* Graphiques Ligne 1 */}
+<div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    
+    {/* Répartition des déductions (Pie Chart) */}
+    <div className={`${darkClasses.card} rounded-lg border ${darkClasses.border} p-3`}>
+        <div className="flex items-center gap-2 mb-3">
+            <Percent size={14} className="text-purple-500" />
+            <h3 className={`text-sm font-medium ${darkClasses.text}`}>Répartition des déductions</h3>
+        </div>
+        {(
+            (stats.total_cotisations > 0 || stats.total_rcar > 0 || stats.total_credits_mensualites > 0 || stats.total_ir > 0)
+        ) ? (
+            <div className="h-[240px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                    <RePieChart>
+                        <Pie
+                            data={[
+                                { name: 'Cotisations', value: stats.total_cotisations, color: '#f59e0b' },
+                                { name: 'RCAR', value: stats.total_rcar, color: '#ef4444' },
+                                { name: 'Crédits', value: stats.total_credits_mensualites, color: '#8b5cf6' },
+                                { name: 'IR', value: stats.total_ir, color: '#10b981' }
+                            ].filter(item => item.value > 0)}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={45}
+                            outerRadius={75}
+                            dataKey="value"
+                            label={({ percent }) => percent > 0.05 ? `${(percent * 100).toFixed(0)}%` : ''}
+                            labelLine={{ stroke: darkMode ? '#444' : '#ccc', strokeWidth: 0.5 }}
+                        >
+                            {[
+                                { name: 'Cotisations', value: stats.total_cotisations, color: '#f59e0b' },
+                                { name: 'RCAR', value: stats.total_rcar, color: '#ef4444' },
+                                { name: 'Crédits', value: stats.total_credits_mensualites, color: '#8b5cf6' },
+                                { name: 'IR', value: stats.total_ir, color: '#10b981' }
+                            ].filter(item => item.value > 0).map((entry, idx) => (
+                                <Cell key={entry.name} fill={entry.color} />
+                            ))}
+                        </Pie>
+                        <Tooltip formatter={(v) => [formatMoney(v), '']} contentStyle={{ fontSize: '11px', borderRadius: '8px' }} />
+                        <Legend wrapperStyle={{ fontSize: '10px' }} />
+                    </RePieChart>
+                </ResponsiveContainer>
+            </div>
+        ) : (
+            <div className="h-[240px] flex items-center justify-center">
+                <p className={`text-sm ${darkClasses.textMuted}`}>Aucune donnée</p>
+            </div>
+        )}
+    </div>
+    
+    {/* Cotisations par organisme */}
+    <div className={`${darkClasses.card} rounded-lg border ${darkClasses.border} p-3`}>
+        <div className="flex items-center gap-2 mb-3">
+            <Wallet size={14} className="text-emerald-500" />
+            <h3 className={`text-sm font-medium ${darkClasses.text}`}>Cotisations par organisme</h3>
+        </div>
+        {cotisationsData.length > 0 ? (
+            <div className="h-[240px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={cotisationsData} layout="vertical" margin={{ left: 50 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? '#333' : '#e5e7eb'} />
+                        <XAxis type="number" tickFormatter={(v) => formatNumber(v)} fontSize={10} stroke={darkMode ? '#6b7280' : '#9ca3af'} />
+                        <YAxis type="category" dataKey="name" width={50} fontSize={10} stroke={darkMode ? '#6b7280' : '#9ca3af'} />
+                        <Tooltip formatter={(v) => [formatMoney(v), '']} contentStyle={{ fontSize: '11px' }} />
+                        <Bar dataKey="total" fill="#10b981" radius={[0, 4, 4, 0]} />
+                    </BarChart>
+                </ResponsiveContainer>
+            </div>
+        ) : (
+            <div className="h-[240px] flex items-center justify-center">
+                <p className={`text-sm ${darkClasses.textMuted}`}>Aucune donnée</p>
+            </div>
+        )}
+    </div>
+</div>
+            
+            {/* Graphiques Ligne 2 */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                
+                {/* Statut employés */}
+                <div className={`${darkClasses.card} rounded-lg border ${darkClasses.border} p-3`}>
+                    <div className="flex items-center gap-2 mb-3">
+                        <Users size={14} className="text-blue-500" />
+                        <h3 className={`text-sm font-medium ${darkClasses.text}`}>Statut des employés</h3>
+                    </div>
+                    {statusData.length > 0 && statusData.some(s => s.value > 0) ? (
+                        <div className="h-[240px] w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <RePieChart>
+                                    <Pie
+                                        data={statusData.filter(s => s.value > 0)}
+                                        cx="50%"
+                                        cy="50%"
+                                        innerRadius={45}
+                                        outerRadius={75}
+                                        dataKey="value"
+                                        label={({ percent }) => percent > 0.05 ? `${(percent * 100).toFixed(0)}%` : ''}
+                                        labelLine={{ stroke: darkMode ? '#444' : '#ccc', strokeWidth: 0.5 }}
+                                    >
+                                        {statusData.filter(s => s.value > 0).map((entry, idx) => (
+                                            <Cell key={entry.name} fill={entry.color || COLORS[idx % COLORS.length]} />
+                                        ))}
+                                    </Pie>
+                                    <Tooltip formatter={(v) => [`${v} employés`, '']} />
+                                    <Legend wrapperStyle={{ fontSize: '10px' }} />
+                                </RePieChart>
+                            </ResponsiveContainer>
+                        </div>
+                    ) : (
+                        <div className="h-[240px] flex items-center justify-center">
+                            <p className={`text-sm ${darkClasses.textMuted}`}>Aucune donnée</p>
+                        </div>
+                    )}
+                </div>
+                
+                {/* Salaire par grade */}
+                <div className={`${darkClasses.card} rounded-lg border ${darkClasses.border} p-3`}>
+                    <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                            <Briefcase size={14} className="text-purple-500" />
+                            <h3 className={`text-sm font-medium ${darkClasses.text}`}>Masse salariale par grade</h3>
+                        </div>
+                        <span className={`text-[10px] ${darkClasses.textMuted}`}>
+                            Total: {formatMoney(salaryByGrade.reduce((sum, g) => sum + (g.total || 0), 0))}
+                        </span>
+                    </div>
                     
-//                     <div className="h-[320px] w-full">
-//                         <ResponsiveContainer width="100%" height="100%">
-//                             <BarChart data={data.cotisationStats} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
-//                                 <defs>
-//                                     <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
-//                                         <stop offset="0%" stopColor="#6366f1" />
-//                                         <stop offset="100%" stopColor="#818cf8" />
-//                                     </linearGradient>
-//                                 </defs>
-//                                 <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#f1f5f9" dark:stroke="#262626" opacity={0.5} />
-//                                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 10, fontWeight: '700'}} dy={15} />
-//                                 <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 10}} />
-//                                 <Tooltip 
-//                                     cursor={{fill: '#f8faff', dark: {fill: '#1c1c1c'}, radius: 15}}
-//                                     content={({ active, payload }) => {
-//                                         if (active && payload && payload.length) return (
-//                                             <div className="bg-white dark:bg-[#1c1c1c] p-4 rounded-2xl shadow-2xl border-none outline-none">
-//                                                 <p className="text-[9px] font-black text-indigo-500 uppercase mb-1">{payload[0].payload.name}</p>
-//                                                 <p className="text-xl font-black dark:text-white">{payload[0].value}%</p>
-//                                             </div>
-//                                         );
-//                                         return null;
-//                                     }}
-//                                 />
-//                                 <Bar dataKey="taux" radius={[10, 10, 10, 10]} barSize={40}>
-//                                     {data.cotisationStats.map((entry, index) => (
-//                                         <Cell key={index} fill={entry.name === 'RCAR' ? 'url(#barGradient)' : '#e2e8f0'} />
-//                                     ))}
-//                                 </Bar>
-//                             </BarChart>
-//                         </ResponsiveContainer>
-//                     </div>
-//                 </div>
-
-//                 {/* Financial Sum-up */}
-//                 <div className="lg:col-span-4 flex flex-col gap-6">
-//                     <div className="flex-1 bg-gradient-to-br from-indigo-600 to-violet-700 p-8 rounded-[2.5rem] shadow-xl shadow-indigo-500/20 text-white relative overflow-hidden group">
-//                         <Zap className="absolute -right-2 -top-2 w-32 h-32 text-white/5 -rotate-12" />
-//                         <div className="relative z-10 flex flex-col h-full justify-between">
-//                             <div>
-//                                 <span className="text-[10px] font-black bg-white/20 px-3 py-1 rounded-full uppercase tracking-widest">Charges RCAR</span>
-//                                 <h2 className="text-4xl font-black mt-4 tracking-tight leading-none">
-//                                     {Number(data.charges.rcar).toLocaleString('fr-FR')} <span className="text-lg font-medium opacity-60">DH</span>
-//                                 </h2>
-//                             </div>
-//                             <div className="mt-8 flex items-center justify-between border-t border-white/10 pt-6">
-//                                 <div className="text-xs font-semibold opacity-80 italic">Prélèvements Employeur</div>
-//                                 <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center"><TrendingUp size={16} /></div>
-//                             </div>
-//                         </div>
-//                     </div>
-
-//                     <div className="flex-1 bg-white dark:bg-[#121212] p-8 rounded-[2.5rem] border border-slate-100 dark:border-[#1c1c1c] shadow-sm">
-//                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Retenue IR Globale</span>
-//                          <h2 className="text-4xl font-black text-slate-900 dark:text-white mt-4 tracking-tight">
-//                             {Number(data.charges.ir).toLocaleString('fr-FR')} <span className="text-lg font-bold text-slate-400">DH</span>
-//                          </h2>
-//                          <div className="mt-6 flex items-center gap-2">
-//                              <div className="flex -space-x-2">
-//                                  {[1,2,3].map(i => <div key={i} className="w-6 h-6 rounded-full border-2 border-white dark:border-[#121212] bg-slate-200 dark:bg-[#262626]"></div>)}
-//                              </div>
-//                              <span className="text-[10px] text-slate-400 font-bold">Basé sur +{data.cards[1]?.value || 0} employés</span>
-//                          </div>
-//                     </div>
-//                 </div>
-//             </div>
-
-//             {/* Modern Modules Grid */}
-//             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-//                 {modules.map((mod, idx) => (
-//                     <div key={idx} className="group bg-white dark:bg-[#121212] p-8 rounded-[2rem] border border-slate-100 dark:border-[#1c1c1c] hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
-//                         <div className="flex justify-between items-center mb-6">
-//                             <div className="p-3 bg-indigo-50 dark:bg-indigo-500/5 text-indigo-600 rounded-2xl transition-transform group-hover:scale-110">
-//                                 <Settings size={22} strokeWidth={2.5} />
-//                             </div>
-//                             <span className={`text-[9px] font-black px-3 py-1.5 rounded-lg tracking-wider ${mod.status === 'ACTIF' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-500'}`}>
-//                                 {mod.status}
-//                             </span>
-//                         </div>
-//                         <h4 className="text-lg font-black text-slate-900 dark:text-white mb-2">{mod.title}</h4>
-//                         <p className="text-xs text-slate-400 font-medium leading-relaxed">{mod.desc}</p>
-//                     </div>
-//                 ))}
-//             </div>
-//         </div>
-//     );
-// };
-
-// const modules = [
-//     { title: 'RCAR', desc: 'Gestion automatisée des cotisations de retraite collective et affiliation des agents.', status: 'ACTIF' },
-//     { title: 'IR Fiscalité', desc: 'Calcul précis de l\'impôt sur le revenu basé sur les derniers barèmes légaux.', status: 'ACTIF' },
-//     { title: 'Indemnités', desc: 'Moteur de calcul des primes, indemnités de fonction et frais de déplacement.', status: 'ACTIF' },
-//     { title: 'SNTL Mission', desc: 'Planification logistique, ordres de mission et gestion des véhicules de service.', status: 'ACTIF' },
-//     { title: 'Retraite', desc: 'Simulations de fin de carrière et accompagnement au départ à la retraite.', status: 'ACTIF' },
-//     { title: 'Crédit Social', desc: 'Traitement des demandes de prêts sociaux et avances sur salaire.', status: 'ACTIF' },
-// ];
-
-// export default Dashboard;
-
-
-export default function Dashboard (){}
+                    {salaryByGrade.length > 0 ? (
+                        <div className="h-[260px] w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart 
+                                    data={salaryByGrade.slice(0, 8)} 
+                                    layout="horizontal" 
+                                    margin={{ top: 10, right: 10, left: 10, bottom: 50 }}
+                                    barSize={40}
+                                >
+                                    <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? '#333' : '#e5e7eb'} vertical={false} />
+                                    <XAxis 
+                                        dataKey="name" 
+                                        fontSize={11} 
+                                        angle={-35} 
+                                        textAnchor="end" 
+                                        height={65} 
+                                        tick={{ fontSize: 10, fill: darkMode ? '#9ca3af' : '#6b7280' }}
+                                        interval={0}
+                                    />
+                                    <YAxis fontSize={11} tickFormatter={(v) => formatNumber(v)} tick={{ fontSize: 10, fill: darkMode ? '#9ca3af' : '#6b7280' }} width={50}/>
+                                    <Tooltip 
+                                        formatter={(value) => [formatMoney(value), 'Masse salariale']}
+                                        contentStyle={{ fontSize: '11px', borderRadius: '8px' }}
+                                    />
+                                    <Bar 
+                                        dataKey="total" 
+                                        name="Masse salariale"
+                                        fill="#8b5cf6" 
+                                        radius={[6, 6, 0, 0]} 
+                                        maxBarSize={50}
+                                        label={{ 
+                                            position: 'top', 
+                                            fontSize: 9,
+                                            formatter: (v) => formatNumber(v),
+                                            fill: darkMode ? '#9ca3af' : '#6b7280'
+                                        }}
+                                    />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                    ) : (
+                        <div className="h-[240px] flex flex-col items-center justify-center gap-2">
+                            <Briefcase size={32} className={darkClasses.textMuted} />
+                            <p className={`text-sm ${darkClasses.textMuted}`}>Aucune donnée disponible</p>
+                        </div>
+                    )}
+                </div>
+            </div>
+            
+            {/* Crédits par année */}
+            {creditsByYear && creditsByYear.length > 0 && (
+                <div className="grid grid-cols-1 gap-4">
+                    <div className={`${darkClasses.card} rounded-lg border ${darkClasses.border} p-3`}>
+                        <div className="flex items-center gap-2 mb-3">
+                            <CreditCard size={14} className="text-purple-500" />
+                            <h3 className={`text-sm font-medium ${darkClasses.text}`}>Crédits par année</h3>
+                        </div>
+                        <div className="h-[260px] w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart 
+                                    data={[...creditsByYear].sort((a, b) => a.year - b.year)} 
+                                    margin={{ top: 10, right: 30, left: 20, bottom: 20 }}
+                                >
+                                    <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? '#333' : '#e5e7eb'} />
+                                    <XAxis dataKey="year" fontSize={12} tick={{ fontSize: 12, fill: darkMode ? '#9ca3af' : '#6b7280' }} />
+                                    <YAxis fontSize={12} tick={{ fontSize: 12, fill: darkMode ? '#9ca3af' : '#6b7280' }} />
+                                    <Tooltip formatter={(value) => [`${value} crédits`, 'Total']} contentStyle={{ fontSize: '12px', borderRadius: '8px' }} />
+                                    <Legend wrapperStyle={{ fontSize: '11px' }} />
+                                    <Bar dataKey="total" name="Nombre de crédits" fill="#8b5cf6" radius={[6, 6, 0, 0]} label={{ position: 'top', fontSize: 11, fill: darkMode ? '#a78bfa' : '#6d28d9' }} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}

@@ -117,7 +117,7 @@ const IRAffichage = () => {
 
   return (
     <div className={`min-h-screen transition-colors duration-300 ${bgClass}`}>
-      <div className="p-6 max-w-7xl mx-auto">
+      <div className="p-4 max-w-7xl mx-auto">
         
         {/* Header */}
         <div className="mb-6">
@@ -179,26 +179,6 @@ const IRAffichage = () => {
                   disabled={!irData || irData.length === 0}
                 />
               </div>
-            </div>
-            
-            <div className="flex gap-2">
-              <button 
-                onClick={() => {
-                  if (selectedYear) {
-                    window.open(`/api/ir/export/${selectedYear}`, '_blank');
-                  }
-                }}
-                disabled={!selectedYear}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${!selectedYear ? 'bg-gray-300 cursor-not-allowed text-gray-500' : darkMode ? 'bg-[#252525] hover:bg-[#333]' : 'bg-gray-100 hover:bg-gray-200'}`}
-              >
-                <Download size={14} /> Exporter PDF
-              </button>
-              <button 
-                onClick={() => window.print()}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium ${darkMode ? 'bg-[#252525] hover:bg-[#333]' : 'bg-gray-100 hover:bg-gray-200'} transition-all`}
-              >
-                <Printer size={14} /> Imprimer
-              </button>
             </div>
           </div>
         </div>

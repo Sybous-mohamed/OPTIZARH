@@ -40,32 +40,46 @@ const Login = () => {
         try {
             const response = await api.post('/api/login', credentials);
             const { access_token, user } = response.data;
+            
             localStorage.setItem("token", access_token);
             localStorage.setItem("user_name", user.full_name || user.name || `${user.prenom} ${user.nom}`);
             localStorage.setItem("role", user.role);
             localStorage.setItem("user", JSON.stringify(user));
             localStorage.setItem("user_email", user.email);
             
+            // Apply theme from user data
+            if (user.theme) {
+                localStorage.setItem("theme", user.theme);
+                if (user.theme === 'dark') {
+                    document.documentElement.classList.add('dark');
+                    document.documentElement.classList.remove('light');
+                } else {
+                    document.documentElement.classList.add('light');
+                    document.documentElement.classList.remove('dark');
+                }
+            }
+            
             login(user, access_token); 
             
             showNotification(`Bienvenue, ${user.full_name || 'utilisateur'}`, "success");
+            
             const paths = {
                 superadmin: '/SuperAdmin/Dashboard',
-                admin: '/admin/dashboard',
-                rh: '/rh/dashboard',
-                employee: '/employee/dashboard'
+                admin: '/Admin/Dashboard',
+                rh: '/RH/Dashboard',
+                employee: '/Employee/Dashboard'
             };
             
             navigate(paths[user.role] || '/');
 
         } catch (error) {
+            const status = error.response?.status;
             const errorMsg = error.response?.data?.message || "Erreur de connexion";
             if (status === 403) {
-            showNotification("Accès Refusé : " + errorMsg, "error");
-            setLoading(false);
-            return;
-        }
-            showNotification(errorMsg, "error");
+                showNotification("Accès Refusé : " + errorMsg, "error");
+            } else {
+                showNotification(errorMsg, "error");
+            }
             console.warn("Détails de l'erreur:", errorMsg); 
         } finally {
             setLoading(false);
@@ -151,11 +165,11 @@ const Login = () => {
                         </button>
                     </form>
 
-                    {isRegistrationEnabled && (
+                    {/* {isRegistrationEnabled && (
                         <p className="mt-8 text-center text-[13px] text-gray-500 font-medium">
                             Nouvelle entreprise ? <Link to="/auth/register" className="text-[#4F46E5] font-black hover:underline">Créer un compte</Link>
                         </p>
-                    )}
+                    )} */}
                 </div>
             </div>
         </div>

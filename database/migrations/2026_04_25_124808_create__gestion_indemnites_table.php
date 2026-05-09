@@ -18,9 +18,9 @@ return new class extends Migration
                   ->constrained('salary_years')
                   ->onDelete('cascade');
 
-            $table->foreignId('role_id')
+            $table->foreignId('Post_id')
                   ->nullable() 
-                  ->constrained('roles')
+                  ->constrained('Post')
                   ->onDelete('cascade');
 
             $table->foreignId('grade_id')

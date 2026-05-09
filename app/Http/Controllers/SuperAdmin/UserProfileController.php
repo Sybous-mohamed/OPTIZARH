@@ -32,7 +32,7 @@ class UserProfileController extends Controller
             'company_name'   => 'nullable|string|max:255',
             'sector'         => 'nullable|string|max:255',
             'employee_count' => 'nullable|integer|min:0',
-            'profile_image'  => 'nullable|string', // Path dyal image ula URL (Gravatar/Initials)
+            'profile_image'  => 'nullable|string',
             'theme'    => ['required', Rule::in(['light', 'dark','system'])],
             'language' => ['required', Rule::in(['en', 'fr', 'ar'])],
         ]);

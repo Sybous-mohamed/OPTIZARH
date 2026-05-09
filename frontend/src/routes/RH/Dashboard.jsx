@@ -3,13 +3,11 @@ import React from 'react';
 const ProfilePage = () => {
     // 1. Kan-parse-i l-object 'user' li 3ndek f l-image
     const userData = JSON.parse(localStorage.getItem('user') || '{}');
-    //ffgfgf
     
     // 2. Kan-jbdou l-data l-hqi9iya
     const fullName = userData.full_name || "Utilisateur"; 
     const email = userData.email || "Email non spécifié";
     const role = localStorage.getItem('role') || "Rôle non défini";
-
 
     const handleLogout = () => {
         localStorage.clear();

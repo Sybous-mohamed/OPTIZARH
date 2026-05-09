@@ -1,15 +1,22 @@
 <?php
-
 namespace App\Http\Controllers\SuperAdmin;
 
 use App\Http\Controllers\Controller;
 use App\Models\SuperAdmin\RetraiteSetting;
 use Illuminate\Http\Request;
 
-class RetraiteController extends Controller
-{
-    public function getSettings($year) {
+class RetraiteController extends Controller{
+    
+    public function getSettings($year)
+    {
         $settings = RetraiteSetting::where('year', $year)->first();
+        
+        $this->logActivity(
+            'Consultation Retraite',
+            'READ',
+            "Récupération des paramètres retraite pour l'année {$year}"
+        );
+        
         if (!$settings) {
             return response()->json([
                 'year' => $year,
@@ -18,10 +25,13 @@ class RetraiteController extends Controller
                 'nb_fois' => 0
             ]);
         }
+
         return response()->json($settings);
     }
 
-    public function storeOrUpdate(Request $request) {
+    // Bach t-sauvegarder (dik handleSave dialek)
+    public function storeOrUpdate(Request $request)
+    {
         $validated = $request->validate([
             'year' => 'required|integer',
             'age_legal' => 'required|integer',
@@ -29,19 +39,15 @@ class RetraiteController extends Controller
             'nb_fois' => 'required|integer',
         ]);
 
-        $exists = RetraiteSetting::where('year', $validated['year'])->exists();
-        $actionType = $exists ? 'UPDATE' : 'CREATE';
-        $actionText = $exists ? 'Mise à jour' : 'Configuration';
-
         $settings = RetraiteSetting::updateOrCreate(
-            ['year' => $validated['year']], 
-            $validated                      
+            ['year' => $validated['year']],
+            $validated
         );
 
         $this->logActivity(
-            'Paramètres Retraite',
-            $actionType,
-            "{$actionText} des paramètres de retraite pour l'année {$validated['year']} (Âge: {$validated['age_legal']}, Durée max: {$validated['duree_max']})"
+            'Configuration Retraite',
+            'UPDATE',
+            "Mise à jour des paramètres retraite pour l'année {$validated['year']} (âge: {$validated['age_legal']})"
         );
 
         return response()->json([

@@ -16,7 +16,7 @@ return new class extends Migration
         });
 
         // 2. Roles
-        Schema::create('roles', function (Blueprint $table) {
+        Schema::create('Post', function (Blueprint $table) {
             $table->id();
             $table->foreignId('salary_year_id')->constrained('salary_years')->onDelete('cascade');
             $table->string('name');
@@ -28,7 +28,7 @@ return new class extends Migration
         // 3. Grades
         Schema::create('grades', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('role_id')->constrained('roles')->onDelete('cascade');
+            $table->foreignId('Post_id')->constrained('Post')->onDelete('cascade');
             $table->string('name');
             $table->timestamps();
         });
@@ -57,7 +57,7 @@ return new class extends Migration
         Schema::dropIfExists('echelons');
         Schema::dropIfExists('echelles');
         Schema::dropIfExists('grades');
-        Schema::dropIfExists('roles');
+        Schema::dropIfExists('Post');
         Schema::dropIfExists('salary_years');
     }
 };

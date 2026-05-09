@@ -1,62 +1,117 @@
-import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
+import React, { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react';
 
 const ThemeContext = createContext();
 
 export const ThemeProvider = ({ children }) => {
-    // 1. Initial State mn LocalStorage
+    // Initialize theme from localStorage once
     const [theme, setTheme] = useState(() => {
         const savedTheme = localStorage.getItem('theme');
-        return savedTheme || 'system';
+        if (savedTheme && ['light', 'dark', 'system'].includes(savedTheme)) {
+            return savedTheme;
+        }
+        return 'light';
     });
 
-    // 2. Logic bach n-detectiw wach l-system fih Dark Mode
-    const [systemIsDark, setSystemIsDark] = useState(
+    const [systemIsDark, setSystemIsDark] = useState(() => 
         window.matchMedia('(prefers-color-scheme: dark)').matches
     );
 
+    // Listen to system theme changes
     useEffect(() => {
         const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-        const handleChange = (e) => setSystemIsDark(e.matches);
-
+        const handleChange = (e) => {
+            setSystemIsDark(e.matches);
+            // If theme is 'system', update automatically
+            if (theme === 'system') {
+                const root = document.documentElement;
+                if (e.matches) {
+                    root.classList.add('dark');
+                    root.classList.remove('light');
+                } else {
+                    root.classList.add('light');
+                    root.classList.remove('dark');
+                }
+            }
+        };
         mediaQuery.addEventListener('change', handleChange);
         return () => mediaQuery.removeEventListener('change', handleChange);
-    }, []);
+    }, [theme]);
 
-    // 3. Calcul dial darkMode (Booleen) - Hadchi li kays'hel l-khedma f les composants
+    // Calculate darkMode boolean
     const darkMode = useMemo(() => {
         if (theme === 'dark') return true;
         if (theme === 'light') return false;
-        return systemIsDark; // ila khtarina 'system'
+        return systemIsDark;
     }, [theme, systemIsDark]);
 
-    // 4. Appliquer l-class f l-HTML u hfadh f LocalStorage
+    // Apply theme to DOM
     useEffect(() => {
         const root = document.documentElement;
-        root.classList.remove('light', 'dark');
-        
         if (darkMode) {
             root.classList.add('dark');
+            root.classList.remove('light');
         } else {
             root.classList.add('light');
+            root.classList.remove('dark');
+        }
+    }, [darkMode]);
+
+    // Update theme function - broadcasts to all components
+    const updateTheme = useCallback((newTheme) => {
+        if (!newTheme || !['light', 'dark', 'system'].includes(newTheme)) return;
+        
+        // Save to localStorage
+        localStorage.setItem('theme', newTheme);
+        
+        // Update state
+        setTheme(newTheme);
+        
+        // Force immediate DOM update
+        const root = document.documentElement;
+        let isDark = false;
+        
+        if (newTheme === 'dark') {
+            isDark = true;
+        } else if (newTheme === 'light') {
+            isDark = false;
+        } else { // system
+            isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
         }
         
-        localStorage.setItem('theme', theme);
-    }, [theme, darkMode]);
+        if (isDark) {
+            root.classList.add('dark');
+            root.classList.remove('light');
+        } else {
+            root.classList.add('light');
+            root.classList.remove('dark');
+        }
+        
+        // Dispatch custom event to notify all components
+        window.dispatchEvent(new CustomEvent('themeChanged', { detail: { theme: newTheme, darkMode: isDark } }));
+    }, []);
 
-    // 5. Synchronisation bin les onglets (tabs)
+    // Sync across tabs and components
     useEffect(() => {
         const handleStorageChange = (e) => {
             if (e.key === 'theme' && e.newValue) {
                 setTheme(e.newValue);
             }
         };
+        
+        const handleThemeChanged = (e) => {
+            if (e.detail) {
+                setTheme(e.detail.theme);
+            }
+        };
+        
         window.addEventListener('storage', handleStorageChange);
-        return () => window.removeEventListener('storage', handleStorageChange);
+        window.addEventListener('themeChanged', handleThemeChanged);
+        
+        return () => {
+            window.removeEventListener('storage', handleStorageChange);
+            window.removeEventListener('themeChanged', handleThemeChanged);
+        };
     }, []);
-
-    const updateTheme = (newTheme) => {
-        setTheme(newTheme);
-    };
 
     return (
         <ThemeContext.Provider value={{ theme, darkMode, updateTheme }}>
@@ -68,7 +123,7 @@ export const ThemeProvider = ({ children }) => {
 export const useTheme = () => {
     const context = useContext(ThemeContext);
     if (!context) {
-        throw new Error('useTheme khassha t-khdem wast ThemeProvider');
+        throw new Error('useTheme must be used within ThemeProvider');
     }
     return context;
 };

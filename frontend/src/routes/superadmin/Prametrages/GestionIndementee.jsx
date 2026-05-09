@@ -20,7 +20,7 @@ const GestionIndemnitee = () => {
     const [selectedYearId, setSelectedYearId] = useState(null);
     const [configData, setConfigData] = useState(null);
     const [loading, setLoading] = useState(false);
-    const [selectedRole, setSelectedRole] = useState(null);
+    const [selectedPost, setSelectedPost] = useState(null);
     const [selectedGrade, setSelectedGrade] = useState(null);
     const [selectedEchelle, setSelectedEchelle] = useState(null);
     const [selectedEchelon, setSelectedEchelon] = useState(null);
@@ -33,7 +33,7 @@ const GestionIndemnitee = () => {
         libelle: '',
         type: 'Fixe',
         valeur: '',
-        role_id: '',
+        Post_id: '',
         grade_id: '',
         echelle_id: '',
         echelon_id: '',
@@ -43,7 +43,7 @@ const GestionIndemnitee = () => {
     // Dark mode classes
     const bgClass = darkMode ? 'bg-[#0D0D0D]' : 'bg-gradient-to-br from-gray-50 via-gray-50 to-indigo-50/20';
     const cardClass = darkMode ? 'bg-[#1A1A1A] border-[#2A2A2A]' : 'bg-white border-gray-200';
-    const cardHeaderClass = darkMode ? 'bg-gradient-to-r from-indigo-800 to-purple-800' : 'bg-blue-600';
+    const cardHeaderClass = darkMode ? 'bg-blue-600 to-purple-800' : 'bg-blue-600  to-purple-600';
     const textClass = darkMode ? 'text-gray-100' : 'text-gray-800';
     const textMutedClass = darkMode ? 'text-gray-500' : 'text-gray-500';
     const inputClass = darkMode ? 'bg-[#252525] border-[#333] text-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500' : 'bg-gray-50 border-gray-200 text-gray-800 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400';
@@ -92,7 +92,7 @@ const GestionIndemnitee = () => {
                 localStorage.setItem('indemnite_selected_year', lastYear.year);
             }
         } catch (err) {
-            showNotification("❌ Erreur chargement des années", "error");
+            showNotification(" Erreur chargement des années", "error");
             setYears([]);
         } finally {
             setLoading(false);
@@ -105,7 +105,7 @@ const GestionIndemnitee = () => {
             const res = await api.get(`/api/gestionEtat/get-by-year/${selectedYear}`);
             setConfigData(res.data);
         } catch (err) { 
-            showNotification("❌ Erreur chargement configuration", "error");
+            showNotification(" Erreur chargement configuration", "error");
         } finally {
             setLoading(false);
         }
@@ -115,13 +115,13 @@ const GestionIndemnitee = () => {
         setSelectedYear(yearValue);
         setSelectedYearId(yearId);
         localStorage.setItem('indemnite_selected_year', yearValue);
-        showNotification(`📅 Année ${yearValue} sélectionnée`, "success");
+        showNotification(` Année ${yearValue} sélectionnée`, "success");
     };
 
-    const handleRoleChange = (roleId) => {
-        setForm({ ...form, role_id: roleId, grade_id: '', echelle_id: '', echelon_id: '' });
-        const role = configData?.roles?.find(r => r.id == roleId);
-        setSelectedRole(role);
+    const handlePostChange = (postId) => {
+        setForm({ ...form, Post_id: postId, grade_id: '', echelle_id: '', echelon_id: '' });
+        const post = configData?.Post?.find(p => p.id == postId);
+        setSelectedPost(post);
         setSelectedGrade(null);
         setSelectedEchelle(null);
         setSelectedEchelon(null);
@@ -131,7 +131,7 @@ const GestionIndemnitee = () => {
 
     const handleGradeChange = (gradeId) => {
         setForm({ ...form, grade_id: gradeId, echelle_id: '', echelon_id: '' });
-        const grade = selectedRole?.grades?.find(g => g.id == gradeId);
+        const grade = selectedPost?.grades?.find(g => g.id == gradeId);
         setSelectedGrade(grade);
         setSelectedEchelle(null);
         setSelectedEchelon(null);
@@ -162,23 +162,22 @@ const GestionIndemnitee = () => {
     };
 
     const resetForm = () => {
-        setForm({
+       setForm({
             libelle: '',
             type: 'Fixe',
             valeur: '',
-            role_id: '',
+            Post_id: '',  
             grade_id: '',
             echelle_id: '',
             echelon_id: '',
             is_for_all: false
         });
-        setSelectedRole(null);
+        setSelectedPost(null);
         setSelectedGrade(null);
         setSelectedEchelle(null);
         setSelectedEchelon(null);
         setSalaryValue(0);
         setIndexValue(0);
-        showNotification("Formulaire réinitialisé", "success");
     };
 
     const handleSave = async () => {
@@ -187,8 +186,8 @@ const GestionIndemnitee = () => {
             return;
         }
 
-        if (!form.is_for_all && !form.role_id) {
-            showNotification(" Veuillez sélectionner un rôle ou activer 'Pour tous'", "error");
+        if (!form.is_for_all && !form.Post_id) {
+            showNotification(" Veuillez sélectionner un poste ou activer 'Pour tous'", "error");
             return;
         }
 
@@ -217,12 +216,12 @@ const GestionIndemnitee = () => {
             };
             
             await api.post('/api/gestionEtat/gestionindemnites', payload);
-            showNotification(`✨ Indemnité "${form.libelle}" ajoutée avec succès!`, "success");
+            showNotification(` Indemnité "${form.libelle}" ajoutée avec succès!`, "success");
             resetForm();
             
         } catch (err) { 
             console.error(err);
-            showNotification("❌ Erreur lors de l'enregistrement", "error");
+            showNotification(" Erreur lors de l'enregistrement", "error");
         } finally {
             setLoading(false);
         }
@@ -265,10 +264,10 @@ const GestionIndemnitee = () => {
 
     return (
         <div className={`min-h-screen transition-all duration-300 ${bgClass}`}>
-            <div className="container p-4 ">
+            <div className="container p-2 ">
                 
                 {/* Header */}
-                <div className={`${cardClass} rounded-2xl shadow-xl border ${borderClass} p-4 mb-6 sticky top-0 z-30 backdrop-blur-xl bg-opacity-80 dark:bg-opacity-80`}>
+                <div className={`${cardClass} rounded-2xl shadow-xl border ${borderClass} p-4 mb-4  top-0 z-30 backdrop-blur-xl bg-opacity-80 dark:bg-opacity-80`}>
                     <div className="flex flex-wrap items-center justify-between gap-4">
                         <div className="flex items-center gap-4">
                             <button 
@@ -280,7 +279,6 @@ const GestionIndemnitee = () => {
                             </button>
                             <div>
                                 <h2 className={`font-bold text-xl md:text-2xl tracking-tight flex items-center gap-2 ${textClass}`}>
-                                    <Gift size={24} className="text-indigo-500" />
                                     Paramétrage des Indemnités
                                 </h2>
                                 <p className={`text-sm ${textMutedClass} mt-1`}>Configuration des primes et indemnités par hiérarchie</p>
@@ -305,7 +303,6 @@ const GestionIndemnitee = () => {
                                         }}
                                         className={`px-4 py-2.5 cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-sm transition-colors ${!selectedYear ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 font-medium' : ''}`}
                                     >
-                                        -- Année --
                                     </div>
                                     {years.map(y => (
                                         <div 
@@ -314,8 +311,7 @@ const GestionIndemnitee = () => {
                                                 handleYearChange(y.year, y.id);
                                                 setIsYearOpen(false);
                                             }}
-                                            className={`px-4 py-2.5 cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-sm transition-colors ${selectedYear == y.year ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 font-medium' : ''}`}
-                                        >
+                                            className={`px-4 py-2.5 cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/30  dark:text-white text-sm transition-colors ${selectedYear == y.year ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 font-medium' : ''}`}>
                                             {y.year}
                                         </div>
                                     ))}
@@ -329,14 +325,13 @@ const GestionIndemnitee = () => {
                     <div className={`${cardClass} rounded-2xl shadow-xl border ${borderClass} overflow-hidden`}>
                         <div className={`${cardHeaderClass} px-6 py-4`}>
                             <h3 className="flex items-center gap-2 font-bold text-white text-sm uppercase tracking-wider">
-                                <Sparkles size={16} />
                                 Nouvelle Indemnité - {selectedYear}
                             </h3>
                         </div>
                         
                         <div className="p-6 space-y-5">
                             <div>
-                                <label className={`text-xs font-bold ${textMutedClass} mb-1.5 block uppercase tracking-wider`}>Libellé *</label>
+                                <label className={`text-xs font-bold ${textMutedClass} mb-1.5 block uppercase tracking-wider`}>Libellé </label>
                                 <input 
                                     placeholder="ex: Prime de transport, Indemnité de logement..."
                                     className={`w-full p-3 rounded-xl outline-none transition-all ${inputClass} border ${borderClass}`}
@@ -353,8 +348,8 @@ const GestionIndemnitee = () => {
                                         value={form.type}
                                         onChange={e => setForm({...form, type: e.target.value, valeur: ''})}
                                     >
-                                        <option value="Fixe">💰 Fixe (MAD)</option>
-                                        <option value="Pourcentage">📈 Pourcentage (%)</option>
+                                        <option value="Fixe">Fixe (MAD)</option>
+                                        <option value="Pourcentage">Pourcentage (%)</option>
                                     </select>
                                 </div>
                                 <div>
@@ -377,8 +372,8 @@ const GestionIndemnitee = () => {
                             <div 
                                 className={`relative p-4 rounded-xl border-2 transition-all cursor-pointer ${form.is_for_all ? 'border-indigo-500 bg-indigo-500/10' : borderClass} ${hoverClass}`}
                                 onClick={() => {
-                                    setForm({...form, is_for_all: !form.is_for_all, role_id: '', grade_id: '', echelle_id: '', echelon_id: ''});
-                                    setSelectedRole(null);
+                                    setForm({...form, is_for_all: !form.is_for_all, Post_id: '', grade_id: '', echelle_id: '', echelon_id: ''});
+                                    setSelectedPost(null);
                                     setSelectedGrade(null);
                                     setSelectedEchelle(null);
                                     setSelectedEchelon(null);
@@ -400,22 +395,22 @@ const GestionIndemnitee = () => {
                                 <div className="space-y-4 animate-fadeIn">
                                     <div>
                                         <label className={`text-xs font-bold ${textMutedClass} mb-1.5 block flex items-center gap-1 uppercase tracking-wider`}>
-                                            <Users size={12}/> Rôle *
+                                            <Users size={12}/> Post 
                                         </label>
                                         <select 
                                             className={`w-full p-3 rounded-xl outline-none transition-all ${selectClass} border ${borderClass} ${textClass}`}
-                                            value={form.role_id}
-                                            onChange={(e) => handleRoleChange(e.target.value)}
+                                            value={form.Post_id}
+                                            onChange={(e) => handlePostChange(e.target.value)}
                                         >
                                             <option value="">-- Choisir un rôle --</option>
-                                            {configData?.roles?.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                                            {configData?.Post?.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                                         </select>
                                     </div>
 
-                                    {selectedRole && selectedRole.grades?.length > 0 && (
+                                    {selectedPost && selectedPost.grades?.length > 0 && (
                                         <div className="animate-fadeIn">
                                             <label className={`text-xs font-bold ${textMutedClass} mb-1.5 block flex items-center gap-1 uppercase tracking-wider`}>
-                                                <Award size={12}/> Grade (Optionnel)
+                                                <Award size={12}/> Grade 
                                             </label>
                                             <select 
                                                 className={`w-full p-3 rounded-xl outline-none transition-all ${selectClass} border ${borderClass} ${textClass}`}
@@ -423,7 +418,7 @@ const GestionIndemnitee = () => {
                                                 onChange={(e) => handleGradeChange(e.target.value)}
                                             >
                                                 <option value="">-- Tous les grades --</option>
-                                                {selectedRole.grades.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                                                {selectedPost.grades.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
                                             </select>
                                         </div>
                                     )}
@@ -431,7 +426,7 @@ const GestionIndemnitee = () => {
                                     {selectedGrade && selectedGrade.echelles?.length > 0 && (
                                         <div className="animate-fadeIn">
                                             <label className={`text-xs font-bold ${textMutedClass} mb-1.5 block flex items-center gap-1 uppercase tracking-wider`}>
-                                                <Grid3x3 size={12}/> Échelle (Optionnel)
+                                                <Grid3x3 size={12}/> Échelle 
                                             </label>
                                             <select 
                                                 className={`w-full p-3 rounded-xl outline-none transition-all ${selectClass} border ${borderClass} ${textClass}`}
@@ -447,7 +442,7 @@ const GestionIndemnitee = () => {
                                     {selectedEchelle && selectedEchelle.echelons?.length > 0 && (
                                         <div className="animate-fadeIn">
                                             <label className={`text-xs font-bold ${textMutedClass} mb-1.5 block flex items-center gap-1 uppercase tracking-wider`}>
-                                                <Hash size={12}/> Échelon (Optionnel)
+                                                <Hash size={12}/> Échelon 
                                             </label>
                                             <select 
                                                 className={`w-full p-3 rounded-xl outline-none transition-all ${selectClass} border ${borderClass} ${textClass}`}
@@ -477,7 +472,7 @@ const GestionIndemnitee = () => {
                                         </div>
                                     )}
 
-                                    {selectedRole && selectedRole.grades?.length === 0 && (
+                                    {selectedPost && selectedPost.grades?.length === 0 && (
                                         <div className={`p-3 rounded-xl border ${darkMode ? 'bg-amber-900/20 border-amber-800' : 'bg-amber-50 border-amber-200'}`}>
                                             <p className={`text-xs flex items-center gap-2 ${darkMode ? 'text-amber-400' : 'text-amber-700'}`}>
                                                 <AlertCircle size={12}/>
@@ -492,14 +487,14 @@ const GestionIndemnitee = () => {
                                 <button 
                                     onClick={handleSave}
                                     disabled={loading}
-                                    className="flex-1 bg-blue-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold py-3 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                                    className=" cursor-pointer flex-1 bg-blue-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold py-3 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                                 >
                                     {loading ? <Loader2 size={18} className="animate-spin"/> : <Plus size={18} />}
                                     {loading ? "Enregistrement..." : "Enregistrer l'indemnité"}
                                 </button>
                                 <button 
                                     onClick={resetForm}
-                                    className="px-6 bg-gray-500 hover:bg-gray-600 text-white font-semibold py-3 rounded-xl transition-all flex items-center justify-center gap-2"
+                                    className=" cursor-pointer px-6 bg-gray-500 hover:bg-gray-600 text-white font-semibold py-3 rounded-xl transition-all flex items-center justify-center gap-2"
                                 >
                                     <X size={18} /> Réinitialiser
                                 </button>
@@ -525,17 +520,6 @@ const GestionIndemnitee = () => {
                     </div>
                 )}
             </div>
-
-            <style jsx>{`
-                @keyframes fadeIn {
-                    from { opacity: 0; transform: translateY(-8px); }
-                    to { opacity: 1; transform: translateY(0); }
-                }
-                .animate-fadeIn { animation: fadeIn 0.2s ease-out; }
-                .custom-scrollbar::-webkit-scrollbar { width: 5px; }
-                .custom-scrollbar::-webkit-scrollbar-track { background: ${darkMode ? '#2A2A2A' : '#E5E7EB'}; border-radius: 10px; }
-                .custom-scrollbar::-webkit-scrollbar-thumb { background: linear-gradient(135deg, #6366f1, #a855f7); border-radius: 10px; }
-            `}</style>
         </div>
     );
 };

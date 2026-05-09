@@ -17,6 +17,7 @@ class AuthController extends Controller{
             'role'           => 'required',
             'company_name'   => 'required|string',
             'sector'         => 'required|string',
+            'must_change_password' => false,
         ], [
             'email.unique' => 'Cet email est déjà utilisé .',
             'password.confirmed' => 'La confirmation du mot de passe ne correspond pas.',
@@ -34,6 +35,7 @@ class AuthController extends Controller{
             'company_name'   => $request->company_name,
             'sector'         => $request->sector,
             'employee_count' => $request->employee_count,
+            'must_change_password' => false,
         ]);
 
         event(new Registered($user));
@@ -63,7 +65,7 @@ class AuthController extends Controller{
         if ($user->is_blocked) {
             return response()->json([
                 'message' => 'Votre compte est suspendu. Veuillez contacter l\'administrateur.'
-            ], 403); // 403 Forbidden
+            ], 403); 
         }
         $token = $user->createToken('auth_token')->plainTextToken;
 
@@ -96,6 +98,28 @@ public function userStatus(Request $request)
         'role' => $user->role
     ]);
 }
+// F-west AuthController.php
+
+    public function updatePasswordFirst(Request $request) {
+        $request->validate([
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+
+        $user = $request->user();
+        $user->password = Hash::make($request->password);
+        $user->must_change_password = false;
+        $user->save();
+
+        return response()->json(['message' => 'Password updated successfully']);
+    }
+
+    public function skipPasswordChange(Request $request) {
+        $user = $request->user();
+        $user->must_change_password = false;
+        $user->save();
+
+        return response()->json(['message' => 'Skipped successfully']);
+    }
 
     public function logout(Request $request){
         $request->user()->currentAccessToken()->delete();
