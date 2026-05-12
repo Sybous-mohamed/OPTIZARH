@@ -411,7 +411,11 @@ const GestionCotisation = () => {
                                 <input 
                                   className={`w-full p-2 rounded-lg outline-none focus:ring-1 focus:ring-indigo-500 transition-all ${inputClass} border ${borderClass} text-sm`}
                                   value={rub.label}
+<<<<<<< HEAD
+                                  placeholder="ex: RC, AMO, CNSS..."
+=======
                                   placeholder="ex:CNOPS ,..."
+>>>>>>> bouray/main
                                   onChange={(e) => updateRubrique(org.id, rub.id, 'label', e.target.value)}
                                 />
                               </td>

@@ -22,6 +22,10 @@ return new class extends Migration {
             $table->string('role')->nullable()->after('user_id');
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
 
+<<<<<<< HEAD
+
+=======
+>>>>>>> bouray/main
             // IDs pour la classification
             $table->unsignedBigInteger('annee_id')->nullable();
             $table->unsignedBigInteger('Post_id')->nullable();

@@ -2,12 +2,20 @@
 
 namespace App\Http\Controllers\SuperAdmin;
 
+<<<<<<< HEAD
+
+=======
+>>>>>>> bouray/main
 use App\Models\SuperAdmin\CreditType;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 
 class CreditController extends Controller
 {
+<<<<<<< HEAD
+    // ==================== CREDIT TYPES ====================
+=======
+>>>>>>> bouray/main
     public function getTypes()
     {
         $types = CreditType::orderBy('sort_order')->get();

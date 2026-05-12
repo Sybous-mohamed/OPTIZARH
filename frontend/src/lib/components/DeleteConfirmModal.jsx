@@ -22,7 +22,11 @@ const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, title, message, darkMo
             <div className={`relative ${modalBgClass} rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6 animate-fadeIn border ${darkMode ? 'border-[#2A2A2A]' : 'border-gray-100'}`}>
                 <button 
                     onClick={onClose} 
+<<<<<<< HEAD
+                    className={`absolute top-4 right-4 ${closeButtonClass} transition-colors p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-[#252525]`}
+=======
                     className={` cursor-pointer absolute top-4 right-4 ${closeButtonClass} transition-colors p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-[#252525]`}
+>>>>>>> bouray/main
                 >
                     <X size={20}/>
                 </button>
@@ -39,7 +43,11 @@ const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, title, message, darkMo
                 <div className="flex gap-3 justify-end">
                     <button 
                         onClick={onClose} 
+<<<<<<< HEAD
+                        className={`px-5 py-2.5 rounded-xl font-medium text-sm transition-all ${cancelButtonClass}`}
+=======
                         className={` cursor-pointer px-5 py-2.5 rounded-xl font-medium text-sm transition-all ${cancelButtonClass}`}
+>>>>>>> bouray/main
                     >
                         Annuler
                     </button>
@@ -48,7 +56,11 @@ const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, title, message, darkMo
                             onConfirm(); 
                             onClose(); 
                         }} 
+<<<<<<< HEAD
+                        className="px-5 py-2.5 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-xl font-medium text-sm hover:from-red-700 hover:to-red-800 transition-all shadow-md"
+=======
                         className=" cursor-pointer px-5 py-2.5 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-xl font-medium text-sm hover:from-red-700 hover:to-red-800 transition-all shadow-md"
+>>>>>>> bouray/main
                     >
                         Supprimer
                     </button>
