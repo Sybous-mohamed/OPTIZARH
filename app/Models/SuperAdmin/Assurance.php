@@ -3,9 +3,11 @@
 namespace App\Models\SuperAdmin;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\RecalculatesSalaries; 
 
 class Assurance extends Model
 {
+    use RecalculatesSalaries;
     protected $fillable = [
         'annee_id', 'name', 'code', 'is_active',
         'taux_salarie', 'taux_employeur', 'plafond_mensuel'

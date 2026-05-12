@@ -125,7 +125,7 @@ const PublicRoute = ({ children, isFirstRun }) => {
             superadmin: "/SuperAdmin/Dashboard",
             admin: "/Admin/Dashboard",
             rh: "/RH/Dashboard",
-            employee: "/Employee/Dashboard"
+            employee: "/employee/Dashboard"
         };
         return <Navigate to={paths[role] || "/auth/login"} replace />;
     }

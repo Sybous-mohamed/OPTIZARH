@@ -17,6 +17,7 @@ return new class extends Migration
             $table->integer('annee'); // ex: 2026
             $table->boolean('is_favorite')->default(false);
             $table->timestamps();
+            $table->boolean('is_default')->default(0)->after('is_favorite');
         });
     }
 

@@ -17,8 +17,8 @@ export default function Sidebar({ onLinkClick, isMobile }) {
         superadmin: {
             main: [
                 { label: "Tableau de bord", icon: <LayoutDashboard size={20} />, path: "/SuperAdmin/Dashboard" },
-                { label: "Employés", icon: <Users size={20} />, path: "/SuperAdmin/users" },
                 { label: "Paramétrages", icon: <Settings size={20} />, path: "/SuperAdmin/Parametrages" },
+                { label: "Employés", icon: <Users size={20} />, path: "/SuperAdmin/users" },
                 { label: "Indemnités", icon: <Gift size={20} />, path: "/SuperAdmin/AffichageIndementes" },
                 { label: "Cotisation", icon: <PiggyBank size={20} />, path: "/SuperAdmin/Cotisation" },
                 { label: "RCAR", icon: <ShieldCheck size={20} />, path: "/SuperAdmin/RCAR" },
@@ -47,7 +47,7 @@ export default function Sidebar({ onLinkClick, isMobile }) {
         }
     };
 
-    // ⭐ Récupérer les items selon le rôle
+    //  Récupérer les items selon le rôle
     const getNavItems = () => {
         if (role === 'superadmin') {
             return navigation.superadmin.main;
@@ -70,15 +70,15 @@ export default function Sidebar({ onLinkClick, isMobile }) {
                 ];
             case 'admin':
                 return [
-                    { label: "Paramètres", icon: <Settings size={20} />, path: "/Admin/Parametres" },
+                    // { label: "Paramètres", icon: <Settings size={20} />, path: "/Admin/Parametres" },
                 ];
             case 'rh':
                 return [
-                    { label: "Paramètres", icon: <Settings size={20} />, path: "/RH/Parametres" },
+                    // { label: "Paramètres", icon: <Settings size={20} />, path: "/RH/Parametres" },
                 ];
             case 'employee':
                 return [
-                    { label: "Paramètres", icon: <Settings size={20} />, path: "/Employee/Parametres" },
+                    // { label: "Paramètres", icon: <Settings size={20} />, path: "/Employee/Parametres" },
                 ];
             default:
                 return [];
@@ -98,26 +98,23 @@ export default function Sidebar({ onLinkClick, isMobile }) {
     const navItems = getNavItems();
     const adminItems = getAdminItems();
 
-const handleLogout = async () => {
-    try {
-        await axiosClient.post("/logout");
-    } catch (err) {
-        console.error("Logout error:", err);
-    } finally {
-        // ⭐ Sauvegarder le thème avant de tout effacer
-        const savedTheme = localStorage.getItem('theme');
-        
-        localStorage.clear();
-        
-        // ⭐ Restaurer le thème
-        if (savedTheme) {
-            localStorage.setItem('theme', savedTheme);
+    const handleLogout = async () => {
+        try {
+            await axiosClient.post("/logout");
+        } catch (err) {
+            console.error("Logout error:", err);
+        } finally {
+            const savedTheme = localStorage.getItem('theme');
+            
+            localStorage.clear();
+            
+            if (savedTheme) {
+                localStorage.setItem('theme', savedTheme);
+            }
+            
+            window.location.href = "/auth/login";
         }
-        
-        window.location.href = "/auth/login";
-    }
-};
-
+    };
     const handleLinkClick = () => {
         if (onLinkClick) {
             onLinkClick();
@@ -125,10 +122,7 @@ const handleLogout = async () => {
     };
 
     return (
-        <aside className={`
-            w-[280px] bg-white dark:bg-[#1A1A1A] flex flex-col shadow-xl border-r border-gray-100 dark:border-[#2A2A2A]
-            ${isMobile ? 'h-full overflow-y-auto' : 'h-screen overflow-hidden'}
-        `}>
+        <aside className={` w-[280px] bg-white dark:bg-[#1A1A1A] flex flex-col shadow-xl border-r border-gray-100 dark:border-[#2A2A2A] ${isMobile ? 'h-full overflow-y-auto' : 'h-screen overflow-hidden'}`}>
             {/* Logo Section */}
             <div className="flex-shrink-0 p-6 border-b border-gray-100 dark:border-[#2A2A2A]">
                 <div className="flex items-center gap-3">

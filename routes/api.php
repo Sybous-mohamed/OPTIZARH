@@ -26,13 +26,6 @@ use App\Http\Controllers\SuperAdmin\SettingsController;
 
 
 
-
-
-/*
-|--------------------------------------------------------------------------
-| Public Routes (Guest)
-|--------------------------------------------------------------------------
-*/
 Route::get('/check-setup', [SuperAdminController::class, 'checkStatus']);
 Route::post('/setup-superadmin', [SuperAdminController::class, 'setup']);
 Route::post('/login', [AuthController::class, 'login']);
@@ -40,15 +33,11 @@ Route::post('/register', [AuthController::class, 'register']);
 Route::post('/forgot-password', [PasswordResetLinkController::class, 'store'])->name('password.email');
 Route::post('/reset-password', [NewPasswordController::class, 'store'])->name('password.store');
 
+
 Route::get('/verify-email/{id}/{hash}', VerifyEmailController::class)
     ->middleware(['signed', 'throttle:6,1'])
     ->name('verification.verify');
 
-/*
-|--------------------------------------------------------------------------
-| Protected Routes (Auth:Sanctum)
-|--------------------------------------------------------------------------
-*/
 
 Route::get('/Settings/registration-status', function () {
     $setting = \App\Models\SuperAdmin\Setting::where('key', 'registration_enabled')->first();
@@ -59,9 +48,9 @@ Route::get('/Settings/registration-status', function () {
 
 
 Route::middleware('auth:sanctum')->group(function () {
+
     Route::get('/activity-logs', [ActivityLogController::class, 'index']);
     Route::delete('/activity-logs/{id}', [ActivityLogController::class, 'destroy']);
-    // Account & Status
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', function (Request $request) {
         return $request->user();
@@ -75,15 +64,17 @@ Route::middleware('auth:sanctum')->group(function () {
         ->middleware(['throttle:6,1'])
         ->name('verification.send');
 
+    Route::get('/my-salary', [EmployeeController::class, 'mySalary']);
+    Route::get('/employees/{id}/salary-dashboard', [EmployeeController::class, 'salaryDashboard']);
+
     Route::middleware(['verified'])->group(function () {
         Route::middleware('role:superadmin')->group(function () {
 
             Route::get('/salary-years', function () {
                 return \App\Models\SuperAdmin\SalaryYear::orderBy('year', 'asc')->get();
             });
-
             Route::get('/superadmin/dashboard-stats', [DashboardController::class, 'getStats']);
-
+            
             Route::prefix('employees')->group(function () {
                 Route::get('/annees', [EmployeeController::class, 'getAnnees'])->name('employees.annees');
                 Route::get('/stats', [EmployeeController::class, 'stats'])->name('employees.stats');
@@ -95,7 +86,7 @@ Route::middleware('auth:sanctum')->group(function () {
                 Route::get('/{id}', [EmployeeController::class, 'show'])->name('employees.show');
                 Route::put('/{id}', [EmployeeController::class, 'update'])->name('employees.update');
                 Route::delete('/{id}', [EmployeeController::class, 'destroy'])->name('employees.destroy');
-                
+                // Credit 
                 Route::get('/{employeeId}/credits', [EmployeeController::class, 'getCredits']);
                 Route::post('/{employeeId}/credits', [EmployeeController::class, 'addCredit']);
                 Route::put('/credits/{creditId}', [EmployeeController::class, 'updateCredit']);
@@ -144,8 +135,6 @@ Route::middleware('auth:sanctum')->group(function () {
                 Route::get('/years-with-data', [CotisationController::class, 'getYearsWithData']);
             });
 
-
-
             Route::prefix('rcar')->group(function () {
                 Route::get('/years-with-data', [RCARController::class, 'getYearsWithData']);
                 Route::get('/config/{year}', [RCARController::class, 'getConfiguration']);
@@ -178,6 +167,7 @@ Route::middleware('auth:sanctum')->group(function () {
                 Route::post('/settings', [RetraiteController::class, 'storeOrUpdate']);
                 Route::get('/configs', [RetraiteController::class, 'index']);
             });
+
             Route::get('/retraite-settings/{year}', [RetraiteController::class, 'getSettings']);
             Route::post('/retraite-settings', [RetraiteController::class, 'storeOrUpdate']);
 
@@ -188,8 +178,6 @@ Route::middleware('auth:sanctum')->group(function () {
                 Route::put('/{id}', [CreditController::class, 'updateType']);
                 Route::delete('/{id}', [CreditController::class, 'destroyType']);
             });
-
-
 
             Route::prefix('assurances')->group(function () {
                 Route::get('/annees', [AssuranceController::class, 'getAnnees']);
@@ -205,19 +193,30 @@ Route::middleware('auth:sanctum')->group(function () {
                 Route::delete('/configs/{id}', [SntlSettingController::class, 'destroy']);
                 Route::get('/configs/{year}', [SntlSettingController::class, 'getByYear']);
             });
+
             Route::prefix('Settings')->group(function () {
                 Route::get('/profile', [UserProfileController::class, 'show']);
                 Route::post('/profile', [UserProfileController::class, 'updateProfile']);
                 Route::post('/password', [UserProfileController::class, 'updatePassword']);
-                Route::get('/admin/platform-data', [SettingsController::class, 'index']); // Badel hada f React f fetchPlatformData
+                Route::get('/admin/platform-data', [SettingsController::class, 'index']);
                 Route::post('/admin/settings', [SettingsController::class, 'updateRegistration']);
                 Route::patch('/admin/users/{id}/toggle-block', [SettingsController::class, 'toggleBlock']);
             });
 
         });
-        // Role: Admin
-        Route::middleware('role:admin')->group(function () { });
-        // Role: RH
-        Route::middleware('role:rh')->group(function () { });
+
+        
+        Route::middleware('role:employee')->group(function () { 
+        });
+
+        
+        Route::middleware('role:admin')->group(function () { 
+
+        });
+
+        Route::middleware('role:rh')->group(function () {
+
+         });
+
     });
 });

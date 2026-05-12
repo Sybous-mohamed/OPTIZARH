@@ -4,9 +4,11 @@ namespace App\Models\SuperAdmin;
 
 use Illuminate\Database\Eloquent\Model;
 use Carbon\Carbon;
+use App\Traits\RecalculatesSalaries; 
 
 class EmployeeCredit extends Model
 {
+    use RecalculatesSalaries;
     protected $table = 'employee_credits';
     
     protected $fillable = [

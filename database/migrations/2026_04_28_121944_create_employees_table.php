@@ -19,6 +19,7 @@ return new class extends Migration {
             $table->date('date_embauche')->nullable();
 
             $table->unsignedBigInteger('user_id')->nullable()->after('id');
+            $table->string('role')->nullable()->after('user_id');
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
 
             // IDs pour la classification

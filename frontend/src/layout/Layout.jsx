@@ -23,7 +23,6 @@ export default function Layout() {
         return () => window.removeEventListener('resize', checkMobile);
     }, []);
 
-    // ⭐ FORCER LE THÈME À CHAQUE CHANGEMENT DE ROUTE
     useEffect(() => {
         const savedTheme = localStorage.getItem('theme');
         const root = document.documentElement;
@@ -67,7 +66,7 @@ export default function Layout() {
     };
 
     return (
-        <div className={`min-h-screen ${darkMode ? 'dark:bg-[#0D0D0D]' : 'bg-gray-50'}`}>
+        <div className={`min-h-screen ${darkMode ? 'dark:bg-black' : 'bg-gray-50'}`}>
             <div className={`
                 fixed top-0 left-0 h-full z-50
                 transition-transform duration-300 ease-in-out

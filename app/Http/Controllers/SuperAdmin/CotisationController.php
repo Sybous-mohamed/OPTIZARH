@@ -8,9 +8,10 @@ use Illuminate\Http\Request;
 use App\Models\SuperAdmin\SalaryYear;
 use Illuminate\Support\Facades\DB;
 use App\Models\SuperAdmin\Cotisation;
-
+use App\Traits\RecalculatesSalaries;
 class CotisationController extends Controller
 {
+     use RecalculatesSalaries;
     public function index(Request $request)
     {
         try {
@@ -53,71 +54,101 @@ class CotisationController extends Controller
         }
     }
 
-    public function store(Request $request)
+   public function store(Request $request)
     {
         try {
-            \Log::info('Store cotisations request', $request->all());
-            
             $year = $request->input('year');
             $organismes = $request->input('organismes', []);
             
-            if (!$year) {
-                return response()->json(['error' => 'Année requise'], 400);
-            }
-            
             DB::beginTransaction();
             
-            Organisme::where('annee', $year)->delete();
-
-            $orgCount = 0;
-
+            // Récupérer les IDs existants
+            $existingOrgIds = Organisme::where('annee', $year)->pluck('id')->toArray();
+            $newOrgIds = [];
+            
             foreach ($organismes as $orgData) {
-                if (empty($orgData['name'])) {
-                    continue;
-                }
+                if (empty($orgData['name'])) continue;
                 
-                $organisme = Organisme::create([
-                    'nom'   => $orgData['name'],
-                    'is_favorite' => isset($orgData['is_favorite']) ? (bool)$orgData['is_favorite'] : false,
-                    'annee' => $year,
-                ]);
-                $orgCount++;
+                // ⚠️ Important: Chercher par nom ET année
+                $organisme = Organisme::where('nom', $orgData['name'])
+                    ->where('annee', $year)
+                    ->first();
                 
-                $rubriques = isset($orgData['rubriques']) ? $orgData['rubriques'] : [];
-                foreach ($rubriques as $rub) {
-                    $taux = isset($rub['taux']) && $rub['taux'] !== '' ? floatval($rub['taux']) : 0;
-                    $plafond = isset($rub['plafond']) && $rub['plafond'] !== '' ? floatval($rub['plafond']) : null;
-                    $label = isset($rub['label']) ? $rub['label'] : 'Sans Désignation';
-                    
-                    $organisme->cotisations()->create([
-                        'name'    => $label,
-                        'taux'    => $taux,
-                        'plafond' => $plafond,
+                if ($organisme) {
+                    // Mettre à jour existant
+                    $organisme->update([
+                        'is_favorite' => $orgData['is_favorite'] ?? false
+                    ]);
+                } else {
+                    // Créer nouveau
+                    $organisme = Organisme::create([
+                        'nom' => $orgData['name'],
+                        'is_favorite' => $orgData['is_favorite'] ?? false,
+                        'annee' => $year,
                     ]);
                 }
+                
+                $newOrgIds[] = $organisme->id;
+                
+                // Gérer les rubriques
+                $existingCotIds = $organisme->cotisations->pluck('id')->toArray();
+                $newCotIds = [];
+                
+                foreach ($orgData['rubriques'] as $rub) {
+                    // ⚠️ Ignorer les IDs temporaires (timestamp > 1000000)
+                    $cotisation = null;
+                    
+                    if (isset($rub['id']) && $rub['id'] < 1000000) {
+                        // ID réel - mettre à jour existant
+                        $cotisation = Cotisation::where('id', $rub['id'])
+                            ->where('organisme_id', $organisme->id)
+                            ->first();
+                    }
+                    
+                    if ($cotisation) {
+                        $cotisation->update([
+                            'name' => $rub['label'],
+                            'taux' => $rub['taux'],
+                            'plafond' => $rub['plafond']
+                        ]);
+                    } else {
+                        // Créer nouvelle rubrique
+                        $cotisation = $organisme->cotisations()->create([
+                            'name' => $rub['label'],
+                            'taux' => $rub['taux'],
+                            'plafond' => $rub['plafond'],
+                        ]);
+                    }
+                    
+                    if ($cotisation) {
+                        $newCotIds[] = $cotisation->id;
+                    }
+                }
+                
+                // Supprimer les rubriques qui ne sont plus là
+                $toDelete = array_diff($existingCotIds, $newCotIds);
+                if (!empty($toDelete)) {
+                    $organisme->cotisations()->whereIn('id', $toDelete)->delete();
+                }
+            }
+            
+            // Supprimer les organismes qui ne sont plus dans la liste
+            $toDeleteOrgs = array_diff($existingOrgIds, $newOrgIds);
+            if (!empty($toDeleteOrgs)) {
+                Organisme::whereIn('id', $toDeleteOrgs)->delete();
             }
             
             DB::commit();
-
-            $this->logActivity(
-                'Configuration cotisations',
-                'UPDATE',
-                "Mise à jour des cotisations pour l'année {$year} ({$orgCount} organisme(s))"
-            );
             
             return response()->json(['message' => 'Configuration enregistrée avec succès'], 201);
             
         } catch (\Exception $e) {
             DB::rollBack();
-            \Log::error('Store error: ' . $e->getMessage());
-            $this->logActivity(
-                'Configuration cotisations',
-                'ERROR',
-                "Erreur lors de l'enregistrement: " . $e->getMessage()
-            );
+            \Log::error('Store cotisations error: ' . $e->getMessage());
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
+
 
     public function destroyOrganisme($id)
     {

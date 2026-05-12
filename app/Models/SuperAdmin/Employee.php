@@ -38,10 +38,8 @@ class Employee extends Model
         'credit_reste_a_payer' => 'decimal:2',
     ];
 
-    // ⭐ Appended attributes
     protected $appends = ['poste_name', 'grade_name', 'echelle_name', 'echelon_name', 'statut_display', 'full_name'];
 
-    // ⭐ Accessors
     public function getPosteNameAttribute()
     {
         return $this->post ? $this->post->name : null;
@@ -76,7 +74,7 @@ class Employee extends Model
         return $this->prenom . ' ' . $this->nom;
     }
 
-    // ⭐ Relations
+    //  Relations
     public function annee()
     {
         return $this->belongsTo(SalaryYear::class, 'annee_id');
@@ -127,7 +125,7 @@ class Employee extends Model
         return $this->belongsTo(CreditType::class, 'credit_type_id');
     }
 
-    // ⭐ Scopes
+    //  Scopes
     public function scopeActif($query)
     {
         return $query->where('statut', 'ACTIF');
