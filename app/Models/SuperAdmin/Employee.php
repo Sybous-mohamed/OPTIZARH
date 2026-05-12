@@ -18,7 +18,7 @@ class Employee extends Model
         'rcar_type_id', 'rcar_type_label', 'rcar_taux', 
         'credit_type_id', 'montant_credit', 'taux_credit',
         'credit_duree', 'credit_date_debut', 'credit_date_fin', 
-        'credit_mensualite', 'credit_reste_a_payer'
+        'credit_mensualite', 'credit_reste_a_payer','temp_password', 'credentials_sent_at'
     ];
 
     protected $casts = [
@@ -36,6 +36,7 @@ class Employee extends Model
         'credit_date_fin' => 'date',
         'credit_mensualite' => 'decimal:2',
         'credit_reste_a_payer' => 'decimal:2',
+        'credentials_sent_at' => 'datetime'
     ];
 
     protected $appends = ['poste_name', 'grade_name', 'echelle_name', 'echelon_name', 'statut_display', 'full_name'];
@@ -135,4 +136,8 @@ class Employee extends Model
     {
         return $query->where('annee_id', $anneeId);
     }
+    public function user()
+{
+    return $this->belongsTo(\App\Models\Auth\User::class, 'user_id');
+}
 }

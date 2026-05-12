@@ -1,4 +1,5 @@
 <?php
+
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -25,6 +26,8 @@ use App\Http\Controllers\SuperAdmin\ActivityLogController;
 use App\Http\Controllers\SuperAdmin\SettingsController;
 
 
+use App\Http\Controllers\RH\EmployeeController as RHEmployeeController;
+use App\Http\Controllers\RH\salaryController;
 
 Route::get('/check-setup', [SuperAdminController::class, 'checkStatus']);
 Route::post('/setup-superadmin', [SuperAdminController::class, 'setup']);
@@ -64,7 +67,7 @@ Route::middleware('auth:sanctum')->group(function () {
         ->middleware(['throttle:6,1'])
         ->name('verification.send');
 
-    Route::get('/my-salary', [EmployeeController::class, 'mySalary']);
+    
     Route::get('/employees/{id}/salary-dashboard', [EmployeeController::class, 'salaryDashboard']);
 
     Route::middleware(['verified'])->group(function () {
@@ -207,16 +210,34 @@ Route::middleware('auth:sanctum')->group(function () {
 
         
         Route::middleware('role:employee')->group(function () { 
+            Route::get('/my-salary', [EmployeeController::class, 'mySalary']);
         });
 
         
-        Route::middleware('role:admin')->group(function () { 
 
-        });
 
-        Route::middleware('role:rh')->group(function () {
 
-         });
+    Route::middleware('role:rh')->prefix('rh')->group(function () {
+        Route::get('/my-salary', [salaryController::class, 'mySalary']);
+
+        Route::get('/employees/annees', [RHEmployeeController::class, 'getAnnees']);
+        Route::get('/employees', [RHEmployeeController::class, 'index']);
+        Route::post('/employees', [RHEmployeeController::class, 'store']);
+        Route::get('/employees/{id}', [RHEmployeeController::class, 'show']);
+        Route::put('/employees/{id}', [RHEmployeeController::class, 'update']);
+        Route::delete('/employees/{id}', [RHEmployeeController::class, 'destroy']);
+        Route::get('/employees/{id}/salary-dashboard', [RHEmployeeController::class, 'salaryDashboard']);
+        Route::get('/employees/{employeeId}/credits', [RHEmployeeController::class, 'getCredits']);
+        Route::post('/employees/{employeeId}/credits', [RHEmployeeController::class, 'addCredit']);
+        Route::put('/credits/{creditId}', [RHEmployeeController::class, 'updateCredit']);
+        Route::delete('/credits/{creditId}', [RHEmployeeController::class, 'deleteCredit']);
+        Route::get('/employees/export-pdf', [RHEmployeeController::class, 'exportPDF']);
+        Route::get('/gestionEtat/get-by-year/{year}', [RHEmployeeController::class, 'getClassification']);
+        
+        // ✅ HAD L MÉTHODES KAYNIN F RHEmployeeController (delegate l SuperAdmin)
+        Route::get('/cotisations', [RHEmployeeController::class, 'getCotisations']);
+        Route::get('/credit-types', [RHEmployeeController::class, 'getCreditTypes']);
+    });
 
     });
 });

@@ -43,11 +43,12 @@ import AssuranceManagement from './routes/superadmin/AssuranceManagement';
 import Logs from "./routes/superadmin/Logs";
 import Parametres from './routes/superadmin/Parametres';
 
-// Admin Components
-import AdminDashboard from './routes/Admin/Dashboard';
+
 
 // RH Components
 import RHDashboard from './routes/Rh/Dashboard';
+import EmployeesRH from './routes/RH/Employees';
+import RHsalary from './routes/RH/Salary';
 
 // Employee Components
 import EmployeeDashboard from './routes/employee/Dashboard';
@@ -220,17 +221,12 @@ function AppContent() {
                     </Route>
                 </Route>
 
-                {/* Admin Routes */}
-                <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
-                    <Route element={<Layout />}>
-                        <Route path="/Admin/Dashboard" element={<AdminDashboard />} />
-                    </Route>
-                </Route>
-
                 {/* RH Routes */}
                 <Route element={<ProtectedRoute allowedRoles={['rh']} />}>
                     <Route element={<Layout />}>
                         <Route path="/RH/Dashboard" element={<RHDashboard />} />
+                        <Route path="/RH/Employes" element={<EmployeesRH />} />
+                        <Route path="/RH/Salary" element={<RHsalary />} />
                     </Route>
                 </Route>
 

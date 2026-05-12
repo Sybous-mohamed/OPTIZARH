@@ -28,21 +28,18 @@ export default function Sidebar({ onLinkClick, isMobile }) {
                 { label: "SNTL", icon: <Truck size={20} />, path: "/SuperAdmin/SNTL" },
             ]
         },
-        admin: {
-            main: [
-                { label: "Tableau de bord", icon: <LayoutDashboard size={20} />, path: "/Admin/Dashboard" },
-            ]
-        },
         rh: {
             main: [
                 { label: "Tableau de bord", icon: <LayoutDashboard size={20} />, path: "/RH/Dashboard" },
+                { label: "Employés", icon: <Users size={20} />, path: "/RH/Employes" },
+                { label: "Salaire", icon: <Users size={20} />, path: "/RH/Salary" }
             ]
         },
         employee: {
             main: [
-                { label: "Tableau de bord", icon: <LayoutDashboard size={20} />, path: "/employee/Dashboard" },
-                { label: "Mes Demandes", icon: <FileText size={20} />, path: "/employee/Demande" },
-                { label: "Mon Profil", icon: <User size={20} />, path: "/employee/Profile" },
+                { label: "Tableau de bord", icon: <LayoutDashboard size={20} />, path: "/Employee/Dashboard" },
+                { label: "Mes Demandes", icon: <FileText size={20} />, path: "/Employee/Demande" },
+                { label: "Mon Profil", icon: <User size={20} />, path: "/Employee/Profile" },
             ]
         }
     };

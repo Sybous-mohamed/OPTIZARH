@@ -61,7 +61,10 @@ export default function EmployeeManagement() {
     const [retraiteSettings, setRetraiteSettings] = useState(null);
     const [isRcarDisabled, setIsRcarDisabled] = useState(false);
     const [ageMessage, setAgeMessage] = useState('');   
-    
+
+    const [sendCredentialsEmail, setSendCredentialsEmail] = useState(true); // Par défaut true
+    const [regeneratePassword, setRegeneratePassword] = useState(false);
+
     const [employeeCredits, setEmployeeCredits] = useState([]);
     const [showCreditForm, setShowCreditForm] = useState(false);
     const [tempCredit, setTempCredit] = useState({
@@ -125,15 +128,6 @@ export default function EmployeeManagement() {
         }
     }, [selectedAnnee]);
 
-    const generatePassword = () => {
-        const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
-        let retVal = "";
-        for (let i = 0; i < 12; ++i) {
-            retVal += charset.charAt(Math.floor(Math.random() * charset.length));
-        }
-        setFormData({ ...formData, password: retVal });
-        showNotification("Mot de passe généré avec succès", "success");
-    };
 
     const verifierAgeRetraite = (dateNaissance) => {
         if (!dateNaissance || !retraiteSettings) {
@@ -535,12 +529,15 @@ export default function EmployeeManagement() {
             indice: emp.indice || "",
             statut: emp.statut || "ACTIF",
             cotisation_id: emp.cotisation_id || "",
-            role: emp.role || ""
+            role: emp.role || "",
+            password: "", // On garde vide pour l'édition
         });
         
         setCurrentId(emp.id);
         setIsEdit(true);
         setErrors({});
+        setRegeneratePassword(false);  // 🔥 Reset
+        setSendCredentialsEmail(true);
         
         if (emp.Post_id && configData?.Post) {
             const post = configData.Post.find(p => p.id === emp.Post_id);
@@ -688,7 +685,7 @@ export default function EmployeeManagement() {
             newErrors.email = "Email invalide";
         }
         if (!formData.role) newErrors.role = "Role requis";
-        if (!formData.password && !isEdit) newErrors.password = "Mot de passe requis";
+        // if (!formData.password && !isEdit) newErrors.password = "Mot de passe requis";
         
         if (formData.telephone && !/^[0-9+\-\s]{8,15}$/.test(formData.telephone)) {
             newErrors.telephone = "Telephone invalide";
@@ -728,111 +725,119 @@ export default function EmployeeManagement() {
     };
 
     const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    if (!isYearEditable) {
-        showNotification(`L'annee ${selectedAnnee} est passee. Vous ne pouvez plus ajouter/modifier des employes.`, "error");
-        return;
-    }
-    
-    if (!validateForm()) {
-        showNotification("Veuillez corriger les erreurs", "error");
-        return;
-    }
-    
-    if (!selectedAnneeId) {
-        showNotification("Aucune annee selectionnee", "error");
-        return;
-    }
-    
-    setLoading(true);
-    try {
-        const submitData = {
-            prenom: formData.prenom,
-            nom: formData.nom,
-            email: formData.email,
-            telephone: formData.telephone || null,
-            date_naissance: formData.date_naissance || null,
-            situation_familiale: formData.situation_familiale || null,
-            nombre_enfants: formData.nombre_enfants ? parseInt(formData.nombre_enfants) : 0,
-            date_embauche: formData.date_embauche || null,
-            annee_id: selectedAnneeId,
-            Post_id: formData.Post_id ? parseInt(formData.Post_id) : null,
-            grade_id: formData.grade_id ? parseInt(formData.grade_id) : null,
-            echelle_id: formData.echelle_id ? parseInt(formData.echelle_id) : null,
-            echelon_id: formData.echelon_id ? parseInt(formData.echelon_id) : null,
-            grade: formData.grade || null,
-            echelle: formData.echelle || null,
-            echelon: formData.echelon ? String(formData.echelon) : null,
-            salaire: formData.salaire ? parseFloat(formData.salaire) : null,
-            indice: formData.indice ? parseFloat(formData.indice) : null,
-            statut: formData.statut,
-            cotisation_id: formData.cotisation_id ? parseInt(formData.cotisation_id) : null,
-            password: formData.password,
-            role: formData.role,
-        };
+        e.preventDefault();
         
-        let employeeId;
-        if (isEdit) {
-            const allCredits = employeeCredits.map(credit => {
-                if (credit.id) {
-                    // Crédit existant - garder son ID
-                    return {
-                        id: credit.id,
-                        credit_type_id: credit.credit_type_id,
-                        montant_credit: credit.montant_credit,
-                        taux_credit: credit.taux_credit,
-                        credit_duree: credit.credit_duree,
-                        credit_date_debut: credit.credit_date_debut,
-                        credit_date_fin: credit.credit_date_fin,
-                        credit_mensualite: credit.credit_mensualite,
-                        credit_reste_a_payer: credit.credit_reste_a_payer,
-                        description: credit.description
-                    };
-                } else {
-                    return {
-                        credit_type_id: credit.credit_type_id,
-                        montant_credit: credit.montant_credit,
-                        taux_credit: credit.taux_credit,
-                        credit_duree: credit.credit_duree,
-                        credit_date_debut: credit.credit_date_debut,
-                        credit_date_fin: credit.credit_date_fin,
-                        credit_mensualite: credit.credit_mensualite,
-                        credit_reste_a_payer: credit.credit_reste_a_payer,
-                        description: credit.description
-                    };
+        if (!isYearEditable) {
+            showNotification(`L'annee ${selectedAnnee} est passee. Vous ne pouvez plus ajouter/modifier des employes.`, "error");
+            return;
+        }
+        
+        if (!validateForm()) {
+            showNotification("Veuillez corriger les erreurs", "error");
+            return;
+        }
+        
+        if (!selectedAnneeId) {
+            showNotification("Aucune annee selectionnee", "error");
+            return;
+        }
+        
+        setLoading(true);
+        try {
+            // 🔥 Générer un mot de passe si vide (pour création seulement)
+            let finalPassword = formData.password;
+            if (!isEdit && (!finalPassword || finalPassword.trim() === '')) {
+                finalPassword = generateRandomPassword();
+            }
+            
+            const submitData = {
+                prenom: formData.prenom,
+                nom: formData.nom,
+                email: formData.email,
+                telephone: formData.telephone || null,
+                date_naissance: formData.date_naissance || null,
+                situation_familiale: formData.situation_familiale || null,
+                nombre_enfants: formData.nombre_enfants ? parseInt(formData.nombre_enfants) : 0,
+                date_embauche: formData.date_embauche || null,
+                annee_id: selectedAnneeId,
+                Post_id: formData.Post_id ? parseInt(formData.Post_id) : null,
+                grade_id: formData.grade_id ? parseInt(formData.grade_id) : null,
+                echelle_id: formData.echelle_id ? parseInt(formData.echelle_id) : null,
+                echelon_id: formData.echelon_id ? parseInt(formData.echelon_id) : null,
+                grade: formData.grade || null,
+                echelle: formData.echelle || null,
+                echelon: formData.echelon ? String(formData.echelon) : null,
+                salaire: formData.salaire ? parseFloat(formData.salaire) : null,
+                indice: formData.indice ? parseFloat(formData.indice) : null,
+                statut: formData.statut,
+                cotisation_id: formData.cotisation_id ? parseInt(formData.cotisation_id) : null,
+                password: finalPassword,
+                role: formData.role,
+                send_credentials_email: sendCredentialsEmail,
+            };
+        
+            
+            let employeeId;
+            if (isEdit) {
+                // 🔥 Ajouter l'option pour régénérer le mot de passe
+                if (regeneratePassword) {
+                    submitData.regenerate_password = true;
+                    submitData.send_email = sendCredentialsEmail;
                 }
-            });
+                
+                const allCredits = employeeCredits.map(credit => {
+                    if (credit.id) {
+                        return {
+                            id: credit.id,
+                            credit_type_id: credit.credit_type_id,
+                            montant_credit: credit.montant_credit,
+                            taux_credit: credit.taux_credit,
+                            credit_duree: credit.credit_duree,
+                            credit_date_debut: credit.credit_date_debut,
+                            credit_date_fin: credit.credit_date_fin,
+                            credit_mensualite: credit.credit_mensualite,
+                            credit_reste_a_payer: credit.credit_reste_a_payer,
+                        };
+                    } else {
+                        return {
+                            credit_type_id: credit.credit_type_id,
+                            montant_credit: credit.montant_credit,
+                            taux_credit: credit.taux_credit,
+                            credit_duree: credit.credit_duree,
+                            credit_date_debut: credit.credit_date_debut,
+                            credit_date_fin: credit.credit_date_fin,
+                            credit_mensualite: credit.credit_mensualite,
+                            credit_reste_a_payer: credit.credit_reste_a_payer,
+                        };
+                    }
+                });
+                
+                submitData.credits = allCredits;
+                
+                const res = await axiosClient.put(`/api/employees/${currentId}`, submitData);
+                showNotification(res.data.message || "Employe modifie avec succes", "success");
+            } else {
+                const res = await axiosClient.post('/api/employees', submitData);
+                showNotification(res.data.message || "Employe ajoute avec succes", "success");
+            }
             
-            submitData.credits = allCredits;
-            
-            await axiosClient.put(`/api/employees/${currentId}`, submitData);
-            employeeId = currentId;
-            showNotification("Employe modifie avec succes", "success");
-        } else {
-            const res = await axiosClient.post('/api/employees', submitData);
-            employeeId = res.data.id;
-            showNotification("Employe ajoute avec succes", "success");
+            resetForm();
+            fetchEmployees(currentPage);
+        } catch (error) {
+            console.error("Error:", error.response?.data);
+            if (error.response?.data?.errors) {
+                const errors = error.response.data.errors;
+                Object.keys(errors).forEach(key => {
+                    showNotification(`${key}: ${errors[key][0]}`, "error");
+                });
+                setErrors(errors);
+            } else {
+                showNotification(error.response?.data?.message || "Erreur lors de l'enregistrement", "error");
+            }
+        } finally {
+            setLoading(false);
         }
-        
-
-        resetForm();
-        fetchEmployees(currentPage);
-    } catch (error) {
-        console.error("Error:", error.response?.data);
-        if (error.response?.data?.errors) {
-            const errors = error.response.data.errors;
-            Object.keys(errors).forEach(key => {
-                showNotification(`${key}: ${errors[key][0]}`, "error");
-            });
-            setErrors(errors);
-        } else {
-            showNotification(error.response?.data?.message || "Erreur lors de l'enregistrement", "error");
-        }
-    } finally {
-        setLoading(false);
-    }
-};
+    };
 
     const resetForm = () => {
         setFormData({
@@ -851,6 +856,8 @@ export default function EmployeeManagement() {
         setErrors({});
         setIsEdit(false);
         setCurrentId(null);
+        setSendCredentialsEmail(true);  
+        setRegeneratePassword(false);  
     };
 
     const handleYearChange = (yearValue, yearId) => {
@@ -917,6 +924,14 @@ export default function EmployeeManagement() {
             }, 3000);
         }
     };
+    const generateRandomPassword = () => {
+    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
+    let password = '';
+    for (let i = 0; i < 10; i++) {
+        password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return password;
+};
 
     const posts = configData?.Post || [];
     const grades = selectedPost?.grades || [];
@@ -1581,7 +1596,7 @@ export default function EmployeeManagement() {
                                 </div>
 
                                 {/* Section Sécurité */}
-                                <div className="mt-6">
+                               <div className="mt-6">
                                     <div className="mb-3">
                                         <h3 className={`text-sm font-semibold flex items-center gap-2 ${textClass}`}>
                                             <div className="w-1 h-5 bg-gradient-to-b from-blue-500 to-cyan-600 rounded-full"></div>
@@ -1597,8 +1612,10 @@ export default function EmployeeManagement() {
                                                 <option value="employee">Employé</option>
                                                 <option value="rh">RH</option>
                                                 <option value="admin">Admin</option>
+                                                <option value="superadmin">Super Admin</option>
                                             </select>
                                         </div>
+                                        
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             <div>
                                                 <label className={`block text-xs mb-1 ${textMutedClass}`}>Email professionnelle</label>
@@ -1607,11 +1624,66 @@ export default function EmployeeManagement() {
                                             <div>
                                                 <label className={`block text-xs mb-1 ${textMutedClass}`}>Mot de passe</label>
                                                 <div className="relative">
-                                                    <input type="text" name="password" value={formData.password || ""} onChange={handleChange} className={`w-full p-2.5 pr-24 rounded-lg border bg-transparent ${borderClass} ${textClass} font-mono text-sm transition-all`} placeholder="Générer un mot de passe" />
-                                                    <button type="button" onClick={generatePassword} className="absolute right-1 top-1 bottom-1 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-1 shadow-md">Générer</button>
+                                                    <input type="text" name="password" value={formData.password || ""} onChange={handleChange} className={`w-full p-2.5 rounded-lg border bg-transparent ${borderClass} ${textClass} font-mono text-sm transition-all`} placeholder="Laisser vide pour générer automatiquement" />
                                                 </div>
                                             </div>
                                         </div>
+                                        
+                                        {/* 🔥 Envoi email (seulement pour ajout) */}
+                                        {!isEdit && (
+                                            <div className="flex items-center gap-3 pt-2">
+                                                <input
+                                                    type="checkbox"
+                                                    id="send_credentials_email"
+                                                    checked={sendCredentialsEmail}
+                                                    onChange={(e) => setSendCredentialsEmail(e.target.checked)}
+                                                    className="w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                                                />
+                                                <label htmlFor="send_credentials_email" className={`text-sm font-medium cursor-pointer ${textClass}`}>
+                                                    <Mail size={16} className="inline mr-2 text-indigo-500" />
+                                                    Envoyer les identifiants par email à l'employé
+                                                </label>
+                                            </div>
+                                        )}
+                                        
+                                        {/* 🔥 Régénération mot de passe (seulement en édition) */}
+                                        {isEdit && (
+                                            <div className={`p-3 rounded-lg border ${darkMode ? 'border-amber-800 bg-amber-950/20' : 'border-amber-200 bg-amber-50'}`}>
+                                                <div className="flex items-center gap-3">
+                                                    <input
+                                                        type="checkbox"
+                                                        id="regenerate_password"
+                                                        checked={regeneratePassword}
+                                                        onChange={(e) => setRegeneratePassword(e.target.checked)}
+                                                        className="w-5 h-5 rounded border-gray-300 text-amber-600 focus:ring-amber-500 cursor-pointer"
+                                                    />
+                                                    <label htmlFor="regenerate_password" className={`text-sm font-medium cursor-pointer ${textClass}`}>
+                                                        <RefreshCw size={16} className="inline mr-2 text-amber-500" />
+                                                        Régénérer le mot de passe
+                                                    </label>
+                                                </div>
+                                                {regeneratePassword && (
+                                                    <div className="mt-3">
+                                                        <div className="flex items-center gap-3 ml-7">
+                                                            <input
+                                                                type="checkbox"
+                                                                id="send_email_on_regenerate"
+                                                                checked={sendCredentialsEmail}
+                                                                onChange={(e) => setSendCredentialsEmail(e.target.checked)}
+                                                                className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                                                            />
+                                                            <label htmlFor="send_email_on_regenerate" className={`text-xs cursor-pointer ${textClass}`}>
+                                                                <Mail size={12} className="inline mr-1" />
+                                                                Envoyer le nouveau mot de passe par email
+                                                            </label>
+                                                        </div>
+                                                        <p className={`text-xs ${textMutedClass} mt-2 ml-7`}>
+                                                            Un nouveau mot de passe sera généré. L'employé devra le changer à la première connexion.
+                                                        </p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>

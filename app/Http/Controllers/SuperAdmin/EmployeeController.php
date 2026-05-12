@@ -16,6 +16,46 @@ use Illuminate\Support\Facades\Log;
 
 class EmployeeController extends Controller
 {
+            private function generateSecurePassword($length = 10)
+    {
+        $chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        return substr(str_shuffle($chars), 0, $length);
+    }
+
+    // 📧 Envoyer email avec identifiants (ajoute cette méthode)
+    private function sendCredentialsEmail($employee, $plainPassword, $isUpdate = false)
+    {
+        try {
+            $subject = $isUpdate 
+                ? '🔐 Vos identifiants ont été mis à jour - Portail RH'
+                : '🎉 Bienvenue - Vos identifiants de connexion';
+
+            Mail::send('emails.employee_credentials', [
+                'name'      => $employee->prenom . ' ' . $employee->nom,
+                'email'     => $employee->email,
+                'password'  => $plainPassword,
+                'loginUrl'  => url('/auth/login'),
+                'year'      => date('Y'),
+                'isUpdate'  => $isUpdate
+            ], function ($message) use ($employee, $subject) {
+                $message->to($employee->email)
+                        ->subject($subject);
+            });
+
+            $employee->update([
+                'temp_password' => $plainPassword,
+                'credentials_sent_at' => now()
+            ]);
+
+            Log::info("Email sent to: " . $employee->email);
+            return true;
+
+        } catch (\Exception $e) {
+            Log::error("Failed to send email: " . $e->getMessage());
+            return false;
+        }
+    }
+
     public function getAnnees()
     {
         try {
@@ -88,7 +128,7 @@ class EmployeeController extends Controller
         }
     }
 
-    public function store(Request $request)
+        public function store(Request $request)
     {
         try {
             $validated = $request->validate([
@@ -96,7 +136,7 @@ class EmployeeController extends Controller
                 'nom' => 'required|string|max:255',
                 'email' => 'required|email|unique:users,email',
                 'password' => 'required|min:6',
-                'role' => 'required|string|in:employee,rh,admin',
+                'role' => 'required|string|in:employee,rh,admin,superadmin', 
                 'telephone' => 'nullable|string|max:20',
                 'date_naissance' => 'nullable|date',
                 'adresse' => 'nullable|string',
@@ -117,7 +157,7 @@ class EmployeeController extends Controller
                 'indice' => 'nullable|numeric|min:0',
                 'statut' => 'nullable|string|in:ACTIF,CONGÉ,DÉPART',
                 'cotisation_id' => 'nullable|integer',
-                'credits' => 'nullable|array'
+                'credits' => 'nullable|array',
             ]);
 
             if (empty($request->cotisation_id)) {
@@ -127,11 +167,14 @@ class EmployeeController extends Controller
                 }
             }
 
-            $employee = DB::transaction(function () use ($validated, $request) {
+            // 🔥 Générer mot de passe si non fourni ou utiliser celui du formulaire
+            $plainPassword = $request->filled('password') ? $request->password : $this->generateSecurePassword();
+
+            $employee = DB::transaction(function () use ($validated, $plainPassword, $request) {
                 $user = User::create([
                     'full_name' => $validated['prenom'] . ' ' . $validated['nom'],
                     'email' => $validated['email'],
-                    'password' => Hash::make($request->password),
+                    'password' => Hash::make($plainPassword),
                     'role' => $request->role,
                     'company_name' => null,
                     'sector' => null,
@@ -143,6 +186,7 @@ class EmployeeController extends Controller
                 }
 
                 $validated['user_id'] = $user->id;
+                $validated['temp_password'] = $plainPassword;
                 $employee = Employee::create($validated);
                 
                 // Ajouter les crédits si présents
@@ -187,8 +231,16 @@ class EmployeeController extends Controller
                 return $employee;
             });
 
+            // 🔥 ENVOYER L'EMAIL SI L'UTILISATEUR LE DEMANDE ou par défaut pour les employés
+            $sendEmail = $request->boolean('send_credentials_email', true);
+            if ($sendEmail && ($employee->role === 'employee' || $employee->role === 'rh')) {
+                $this->sendCredentialsEmail($employee, $plainPassword, false);
+            }
+
             $this->logActivity('Ajout employé', 'CREATE', "Ajout de l'employé : {$employee->prenom} {$employee->nom}");
-            return response()->json($employee, 201);
+            
+            $message = $sendEmail ? 'Employé ajouté avec succès. Identifiants envoyés par email.' : 'Employé ajouté avec succès.';
+            return response()->json(['message' => $message, 'employee' => $employee], 201);
 
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json(['errors' => $e->errors()], 422);
@@ -244,14 +296,16 @@ class EmployeeController extends Controller
                 'indice' => 'nullable|numeric|min:0',
                 'statut' => 'nullable|string|in:ACTIF,CONGÉ,DÉPART',
                 'cotisation_id' => 'nullable|integer',
-                'role' => 'nullable|string|in:employee,rh,admin'
+                'role' => 'required|string|in:employee,rh,admin,superadmin', 
             ];
-             if (empty($request->cotisation_id)) {
+            
+            if (empty($request->cotisation_id)) {
                 $defaultOrganisme = DB::table('organisme')->where('is_default', 1)->first();
                 if ($defaultOrganisme) {
                     $request->merge(['cotisation_id' => $defaultOrganisme->id]);
                 }
             }
+            
             if ($request->has('email') && $request->email !== $employee->email) {
                 $rules['email'] = 'required|email|unique:employees,email';
             }
@@ -268,13 +322,28 @@ class EmployeeController extends Controller
             
             $employee->update($data);
             
-            // Mettre à jour le mot de passe si fourni
-            if ($request->filled('password')) {
+            // 🔥 Vérifier si on doit régénérer le mot de passe
+            $passwordRegenerated = false;
+            $newPassword = null;
+            
+            if ($request->boolean('regenerate_password')) {
+                $newPassword = $this->generateSecurePassword();
+                $user = User::find($employee->user_id);
+                if ($user) {
+                    $user->password = Hash::make($newPassword);
+                    $user->must_change_password = true;
+                    $user->save();
+                }
+                $employee->update(['temp_password' => $newPassword]);
+                $passwordRegenerated = true;
+            } elseif ($request->filled('password')) {
+                // Mettre à jour le mot de passe si fourni manuellement
                 $user = User::find($employee->user_id);
                 if ($user) {
                     $user->password = Hash::make($request->password);
                     $user->save();
                 }
+                $employee->update(['temp_password' => $request->password]);
             }
             
             // Gestion des crédits (sans doublons)
@@ -285,6 +354,11 @@ class EmployeeController extends Controller
             // Recalculer le salaire
             $this->calculateAndStoreSalary($employee->id);
             
+            // 🔥 Si mot de passe régénéré, envoyer email
+            if ($passwordRegenerated && $request->boolean('send_email', true)) {
+                $this->sendCredentialsEmail($employee, $newPassword, true);
+            }
+            
             $this->logActivity('Modification employé', 'UPDATE', "Modification de l'employé : {$oldData} → {$employee->prenom} {$employee->nom}");
             
             // Retourner l'employé avec ses crédits et salaire
@@ -293,7 +367,12 @@ class EmployeeController extends Controller
                 ->orderBy('year', 'desc')
                 ->first();
             
+            $responseMessage = $passwordRegenerated 
+                ? 'Employé modifié avec succès. Nouveaux identifiants envoyés par email.'
+                : 'Employé modifié avec succès.';
+            
             return response()->json([
+                'message' => $responseMessage,
                 'employee' => $employee,
                 'salary_details' => $salary ? [
                     'base_salary' => $salary->base_salary,
@@ -1536,5 +1615,4 @@ class EmployeeController extends Controller
     {
         return \App\Models\SuperAdmin\RetraiteSetting::where('year', $year)->first();
     }
-
 }
