@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Models\employee;
+namespace App\Models\Employe;
 
 use App\Models\SuperAdmin\Employee;
 use App\Models\SuperAdmin\SalaryYear;

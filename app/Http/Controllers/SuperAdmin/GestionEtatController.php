@@ -29,10 +29,6 @@ class GestionEtatController extends Controller
             return response()->json(['year' => (int) $year, 'Post' => []]);
         }
         
-<<<<<<< HEAD
-        // ✅ Charger les posts AVEC leurs relations (grades, echelles, echelons)
-=======
->>>>>>> bouray/main
         $posts = Post::where('salary_year_id', $salaryYear->id)
             ->with(['grades' => function($query) {
                 $query->with(['echelles' => function($query) {
@@ -41,10 +37,6 @@ class GestionEtatController extends Controller
             }])
             ->get();
         
-<<<<<<< HEAD
-        // ✅ Construire la réponse
-=======
->>>>>>> bouray/main
         $response = [
             'id' => $salaryYear->id,
             'year' => $salaryYear->year,
@@ -519,21 +511,12 @@ class GestionEtatController extends Controller
 
             if (!$oldStatus && $post->is_starred) {
                 $this->copyPostToAllYears($post);
-<<<<<<< HEAD
-                $message = "⭐ Poste '{$post->name}' étoilé et copié vers toutes les années";
-            } else if ($oldStatus && !$post->is_starred) {
-                $this->removePostFromAllOtherYears($post);
-                $message = "⭐ Poste '{$post->name}' désétoilé et retiré des autres années";
-            } else {
-                $message = $post->is_starred ? "⭐ Poste '{$post->name}' étoilé" : "⭐ Poste '{$post->name}' désétoilé";
-=======
                 $message = " Poste '{$post->name}' étoilé et copié vers toutes les années";
             } else if ($oldStatus && !$post->is_starred) {
                 $this->removePostFromAllOtherYears($post);
                 $message = " Poste '{$post->name}' désétoilé et retiré des autres années";
             } else {
                 $message = $post->is_starred ? " Poste '{$post->name}' étoilé" : " Poste '{$post->name}' désétoilé";
->>>>>>> bouray/main
             }
 
             Cache::forget('starred_posts');

@@ -177,11 +177,7 @@ const GestionRCAR = () => {
   const addType = () => {
     const newType = { 
       id: `new-${Date.now()}`, 
-<<<<<<< HEAD
-      label: 'Nouveau Type de Cotisation', 
-=======
       label: 'Nouveau Type de RCAR',
->>>>>>> bouray/main
       isFavorite: false, 
       isVisible: true, 
       details: [] 
@@ -554,11 +550,7 @@ const GestionRCAR = () => {
                             <td className="py-2 px-2">
                               <input 
                                 className={`w-full rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${inputClass}`}
-<<<<<<< HEAD
-                                placeholder="Ex: Salaire de base"
-=======
                                 placeholder="Ex: RC"
->>>>>>> bouray/main
                                 value={det.name}
                                 onChange={(e) => {
                                   const updated = rcarData.types.map(t => t.id === type.id ? {

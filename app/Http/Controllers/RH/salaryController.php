@@ -3,7 +3,7 @@ namespace App\Http\Controllers\RH;
 use Illuminate\Http\Request;
 
 use App\Http\Controllers\Controller;
-use App\Models\employee\EmployeeSalary;
+use App\Models\Employe\EmployeeSalary;
 use App\Models\SuperAdmin\Employee;
 
 use App\Models\SuperAdmin\SalaryYear;
