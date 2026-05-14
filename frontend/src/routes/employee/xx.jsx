@@ -4,8 +4,7 @@ import {
     TrendingUp, TrendingDown, Shield, Percent,
     CreditCard, Banknote, ArrowLeft, Loader,
     ChevronRight, Calendar, DollarSign, Award,
-    BarChart3, Info, Wallet, Building2,
-    Clock, CheckCircle
+    BarChart3, Info, Wallet, Building2
 } from 'lucide-react';
 import api from '../../lib/apis/axiosConfig';
 import { useTheme } from '../../context/ThemeContext';
@@ -60,6 +59,8 @@ function useTokens(dark) {
     };
 }
 
+
+
 /* ─────────────────────────────────────────────
    Sub-components
 ───────────────────────────────────────────── */
@@ -68,6 +69,7 @@ function useTokens(dark) {
 function AccentBar({ color }) {
     return <div className={`h-[3px] w-full rounded-t-2xl ${color}`} />;
 }
+
 
 /** Section header inside a card */
 function SectionHeader({ icon: Icon, label, value, valueColor, tokens }) {
@@ -102,106 +104,7 @@ function Bar({ pct, color = 'bg-emerald-500' }) {
 }
 
 /* ─────────────────────────────────────────────
-   Leave Balance Card Component
-───────────────────────────────────────────── */
-const LeaveBalanceCard = () => {
-    const [data, setData] = useState(null);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        api.get('/api/leave-requests/balance')
-            .then(res => {
-                console.log("Données de balance reçues:", res.data);
-                setData(res.data);
-                setLoading(false);
-            })
-            .catch(err => {
-                console.error("Erreur API Balance:", err);
-                setLoading(false);
-            });
-    }, []);
-
-    if (loading) return <div className="h-32 bg-gray-100 dark:bg-gray-800 animate-pulse rounded-2xl mb-6"></div>;
-    if (!data) return null;
-
-    const { annual, active_leave } = data;
-    const soldeRestant = annual.duree_consomee; 
-    const joursUtilises = annual.duree_totale;
-    const percentage = active_leave 
-        ? (active_leave.days_passed / active_leave.duration) * 100 
-        : (annual.real_max > 0 ? (joursUtilises / annual.real_max) * 100 : 0);
-
-    return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            <div className="bg-white dark:bg-[#181818] p-5 rounded-2xl border dark:border-gray-800 shadow-sm">
-                <div className="flex items-center gap-2 mb-3">
-                    <Calendar className="text-[#7B7BFF] w-4 h-4" />
-                    <span className="text-[13px] font-bold text-gray-900 dark:text-white uppercase tracking-tight italic">
-                        {active_leave ? `EN COURS : ${active_leave.type}` : 'Solde Restant'}
-                    </span>
-                </div>
-                <div className="flex items-baseline gap-2 mb-2">
-                    <span className="text-5xl font-black text-gray-900 dark:text-white italic">
-                        {active_leave ? active_leave.days_passed : soldeRestant}
-                    </span>
-                    <span className="text-xs font-bold text-gray-400 uppercase tracking-tighter">
-                        {active_leave ? 'jours écoulés' : 'jours restants'}
-                    </span>
-                </div>
-                <div className="w-full bg-slate-100 dark:bg-white/10 h-2 rounded-full overflow-hidden mt-3">
-                    <div 
-                        className="bg-[#5850EC] h-full transition-all duration-1000" 
-                        style={{ width: `${Math.min(percentage, 100)}%` }}
-                    />
-                </div>
-                <div className="flex justify-between items-center mt-5 border-t dark:border-gray-800 pt-3">
-                    <div>
-                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Utilisé</p>
-                        <p className="text-sm font-black text-gray-900 dark:text-white">
-                            {joursUtilises} J
-                        </p>
-                    </div>
-                    <div className="text-right">
-                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest text-right">Total Annuel</p>
-                        <p className="text-sm font-black text-[#5850EC]">
-                            {annual.real_max} J
-                        </p>
-                    </div>
-                </div>
-            </div>
-            <div className="bg-[#7B7BFF] p-5 rounded-2xl shadow-lg text-white relative overflow-hidden flex flex-col justify-between">
-                <div>
-                    <p className="text-[10px] font-bold opacity-80 uppercase tracking-widest mb-1">CONGÉ ACTUEL</p>
-                    {active_leave ? (
-                        <>
-                            <div className="flex items-baseline gap-2">
-                                <span className="text-4xl font-black">{active_leave.duration}</span>
-                                <span className="text-sm font-bold opacity-90">Jours ({active_leave.type})</span>
-                            </div>
-                            <p className="text-sm opacity-90 font-medium mt-1">
-                                {active_leave.start_date} → {active_leave.end_date}
-                            </p>
-                        </>
-                    ) : (
-                        <p className="italic opacity-60 mt-4 text-sm">Aucun congé en cours pour le moment.</p>
-                    )}
-                </div>
-                {active_leave && (
-                    <div className="mt-4">
-                        <div className="bg-[#10B981] text-white text-[11px] font-bold px-3 py-2 rounded-xl w-fit flex items-center gap-2">
-                            <CheckCircle size={14} />
-                            <span className="uppercase tracking-wider font-black">ACTIF</span>
-                        </div>
-                    </div>
-                )}
-            </div>
-        </div>
-    );
-};
-
-
-/* ─────────────────────────────────────────────
-   Main component - Employee Salary Dashboard
+   Main component
 ───────────────────────────────────────────── */
 export default function EmployeeSalaryDashboard() {
     const { user } = useAuth();
@@ -213,8 +116,6 @@ export default function EmployeeSalaryDashboard() {
     const [data, setData]       = useState(null);
     const [employee, setEmployee] = useState(null);
 
-    // balance is not strictly needed here since LeaveBalanceCard fetches its own,
-    // but kept as in the original code
     const [balance, setBalance] = useState(null);
 
     useEffect(() => {
@@ -261,7 +162,6 @@ export default function EmployeeSalaryDashboard() {
             maximumFractionDigits: 2 
         }) + ' MAD';
     };
-    
     const totalRetained = (data?.ir?.total || 0) + 
                       (data?.cotisations?.total || 0) + 
                       (data?.rcar?.total || 0) + 
@@ -340,8 +240,7 @@ export default function EmployeeSalaryDashboard() {
 
             <main className="max-w-6xl mx-auto px-5 py-7 space-y-7">
 
-                {/* ── LEAVE BALANCE CARD ── */}
-                <LeaveBalanceCard />
+            {/* <LeaveBalanceCard data={balance} /> */}
 
                 {/* ── KPI GRID ── */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -431,6 +330,7 @@ export default function EmployeeSalaryDashboard() {
                         </div>
                     </div>
                 </div>
+
 
                 {/* ── DETAIL GRID ── */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

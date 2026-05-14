@@ -253,7 +253,7 @@ export default function Settings() {
                             Paramètres
                         </h1>
                         <p className={`text-sm ${textMutedClass} mt-1`}>
-                            Gérez votre profil et les paramètres de la plateforme
+                            Gérez votre profil et les paramètres
                         </p>
                     </div>
                 </div>
@@ -270,17 +270,6 @@ export default function Settings() {
                     >
                         <User size={16} />
                         <span>Mon Profil</span>
-                    </button>
-                    <button 
-                        onClick={() => setActiveTab('platform')}
-                        className={`cursor-pointer flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
-                            activeTab === 'platform' 
-                                ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-md transform scale-105' 
-                                : `${textMutedClass} hover:bg-gray-100 dark:hover:bg-[#252525] hover:scale-105`
-                        }`}
-                    >
-                        <ShieldCheck size={16} />
-                        <span>Plateforme</span>
                     </button>
                 </div>
 

@@ -3,7 +3,7 @@
 namespace App\Models\Employe;
 
 use Illuminate\Database\Eloquent\Model;
-use App\Models\Employee;
+use App\Models\SuperAdmin\Employee;
 use App\Models\User;
 use App\Models\SuperAdmin\LeaveType; // Import mn dossier SuperAdmin
 

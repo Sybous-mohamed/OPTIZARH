@@ -16,7 +16,6 @@ class AllEmployeSalaire extends Controller
     {
         $this->delegate = app(SuperAdminEmployeeController::class);
     }
-
     public function allEmployeesSalaries()
     {
         try {

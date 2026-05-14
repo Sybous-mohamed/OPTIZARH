@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import api from '../../lib/apis/axiosConfig'; 
-import { DollarSign, AlertCircle, Loader2, ChevronRight, User, Phone, Mail, Calendar, Baby, Briefcase, X, Wallet, Building, FileText, CreditCard } from 'lucide-react';
+import { DollarSign, AlertCircle, Loader2, ChevronRight, User, Phone, Mail, Calendar, Baby, Briefcase, X, Wallet, Building, FileText, CreditCard, MinusCircle } from 'lucide-react';
 
 const SalariesSummaryPage = () => {
     const [salaries, setSalaries] = useState([]);
@@ -31,6 +31,13 @@ const SalariesSummaryPage = () => {
     }, []);
 
     const fmt = (val) => new Intl.NumberFormat('fr-MA', { style: 'currency', currency: 'MAD' }).format(val || 0);
+
+    // Fonction utilitaire pour s'assurer qu'on a bien un tableau (au cas où les données arrivent en string JSON)
+    const getArray = (data) => {
+        if (!data) return [];
+        if (Array.isArray(data)) return data;
+        try { return JSON.parse(data); } catch (e) { return []; }
+    };
 
     if (loading) return (
         <div className="flex h-screen items-center justify-center">
@@ -110,11 +117,11 @@ const SalariesSummaryPage = () => {
                     <div className="h-full w-full max-w-2xl bg-white dark:bg-[#121212] shadow-2xl p-8 overflow-y-auto animate-in slide-in-from-right duration-300">
                         
                         <div className="flex justify-between items-center mb-8">
-                            <h2 className="text-xl font-black dark:text-white uppercase tracking-tighter">Dossier Complet</h2>
+                            <h2 className="text-xl font-black dark:text-white uppercase tracking-tighter">Dossier de Paie Complet</h2>
                             <button onClick={() => setSelectedEmp(null)} className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition-colors"><X size={24} className="dark:text-white" /></button>
                         </div>
 
-                        {/* Card Header Info (Avec Image) */}
+                        {/* Card Header Info */}
                         <div className="flex gap-6 mb-8 p-6 bg-indigo-50 dark:bg-indigo-900/20 rounded-3xl border border-indigo-100 dark:border-indigo-800">
                             {selectedEmp.info_perso?.profile_image ? (
                                 <img src={selectedEmp.info_perso.profile_image} alt={selectedEmp.full_name} className="w-20 h-20 rounded-2xl object-cover shadow-lg border-2 border-indigo-200" />
@@ -129,85 +136,178 @@ const SalariesSummaryPage = () => {
                                 <div className="flex flex-wrap gap-4 mt-2 text-sm text-gray-500">
                                     <span className="flex items-center gap-1"><Calendar size={14}/> {selectedEmp.age} ans</span>
                                     <span className="flex items-center gap-1"><Briefcase size={14}/> Embauche: {selectedEmp.info_perso?.date_embauche}</span>
-                                    {selectedEmp.info_perso?.company_name && (
-                                        <span className="flex items-center gap-1"><Building size={14}/> {selectedEmp.info_perso?.company_name}</span>
-                                    )}
                                 </div>
                             </div>
                         </div>
 
-                        {/* Infos Personnelles */}
                         <h4 className="font-bold mb-4 dark:text-white flex items-center gap-2 text-sm uppercase tracking-wider text-gray-500">
+
                             <User size={16}/> Informations Personnelles
+
                         </h4>
+
                         <div className="grid grid-cols-2 gap-4 mb-8">
+
                             <InfoCard icon={<Mail size={16}/>} label="Email" value={selectedEmp.info_perso?.email} />
+
                             <InfoCard icon={<Phone size={16}/>} label="Téléphone" value={selectedEmp.info_perso?.telephone} />
+
                             <InfoCard icon={<User size={16}/>} label="Situation" value={selectedEmp.info_perso?.situation} />
+
                             <InfoCard icon={<Baby size={16}/>} label="Enfants" value={selectedEmp.info_perso?.enfants} />
+
                         </div>
+
+
 
                         {/* Infos Administratives */}
+
                         <h4 className="font-bold mb-4 dark:text-white flex items-center gap-2 text-sm uppercase tracking-wider text-gray-500">
+
                             <FileText size={16}/> Grade & Échelon
+
                         </h4>
+
                         <div className="grid grid-cols-3 gap-4 mb-8">
+
                             <InfoCard label="Échelle" value={selectedEmp.admin_info?.echelle || '-'} />
+
                             <InfoCard label="Échelon" value={selectedEmp.admin_info?.echelon || '-'} />
+
                             <InfoCard label="Indice" value={selectedEmp.admin_info?.indice || '-'} />
+
                         </div>
 
-                        {/* Salaire Global Section */}
+                        {/* =========================================
+                            NOUVELLE SECTION : SALAIRE DE BASE & INDEMNITÉS
+                        ========================================= */}
                         <h4 className="font-bold mb-4 dark:text-white flex items-center gap-2 text-sm uppercase tracking-wider text-gray-500">
-                            <Wallet className="text-emerald-500" size={16}/> Synthèse Salaire
+                            <Wallet className="text-emerald-500" size={16}/> Salaire de base et indemnités
                         </h4>
                         <div className="bg-gray-50 dark:bg-white/5 rounded-2xl p-6 space-y-3 border border-gray-100 dark:border-gray-800 mb-8">
-                            <SalaryLine label="Salaire de Base" value={fmt(selectedEmp.details?.base_salary)} />
-                            <SalaryLine label="Indemnités" value={fmt(selectedEmp.details?.indemnites?.total)} />
-                            <SalaryLine label="Brut Global" value={fmt(selectedEmp.details?.brut_salary)} bold />
+                            
+                            <SalaryLine label="Salaire de base" value={fmt(selectedEmp.details?.base_salary)} />
+                            
+                            {getArray(selectedEmp.details?.indemnites?.details).length > 0 && (
+                                <>
+                                    <div className="pt-2 text-[11px] text-gray-400 uppercase font-bold tracking-widest">Indemnités appliquées :</div>
+                                    {getArray(selectedEmp.details.indemnites.details).map((indemnite, index) => (
+                                        <SalaryLine 
+                                            key={`ind-${index}`} 
+                                            label={`${indemnite.name || indemnite.label} ${indemnite.type ? `(${indemnite.type})` : ''}`} 
+                                            value={`+ ${fmt(indemnite.montant || indemnite.value)}`} 
+                                        />
+                                    ))}
+                                </>
+                            )}
+                            
+                            <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+                                <SalaryLine label="Total indemnités" value={`+ ${fmt(selectedEmp.details?.indemnites?.total)}`} />
+                            </div>
+                            
+                            <div className="pt-2 mt-2 border-t-2 border-gray-200 dark:border-gray-700">
+                                <SalaryLine label="Salaire brut" value={fmt(selectedEmp.details?.brut_salary)} bold />
+                            </div>
                         </div>
 
-                        {/* Détails des I9ti9a3at (Retenues) */}
+                        {/* =========================================
+                            NOUVELLE SECTION : DÉDUCTIONS (DÉTAILLÉES)
+                        ========================================= */}
                         <h4 className="font-bold mb-4 dark:text-white flex items-center gap-2 text-sm uppercase tracking-wider text-gray-500">
-                            <AlertCircle className="text-orange-500" size={16}/> Détails des Retenues (I9ti9a3at)
+                            <MinusCircle className="text-orange-500" size={16}/> Déductions
                         </h4>
-                        <div className="bg-orange-50 dark:bg-orange-900/10 rounded-2xl p-6 space-y-3 border border-orange-100 dark:border-orange-900/30 mb-8">
-                            {selectedEmp.deductions_info?.cotisation_label && (
+                        
+                        <div className="bg-orange-50 dark:bg-orange-900/10 rounded-2xl p-6 space-y-4 border border-orange-100 dark:border-orange-900/30 mb-8">
+                            
+                            {/* COTISATIONS SOCIALES */}
+                            <div>
+                                <div className="text-[11px] text-gray-500 dark:text-gray-400 uppercase font-bold tracking-widest mb-2">Cotisations sociales</div>
+                                {getArray(selectedEmp.details?.cotisations?.details).map((cot, index) => (
+                                    <SalaryLine 
+                                        key={`cot-${index}`} 
+                                        label={`${cot.name || cot.label} (${cot.taux || cot.percentage}%)`} 
+                                        value={`- ${fmt(cot.montant || cot.value)}`} 
+                                        red 
+                                    />
+                                ))}
+                                <div className="mt-1">
+                                    <SalaryLine label="Total cotisations" value={`- ${fmt(selectedEmp.details?.cotisations?.total)}`} red bold />
+                                </div>
+                            </div>
+
+                            {/* IR (IMPÔT SUR LE REVENU) */}
+                            <div className="border-t border-orange-200/50 dark:border-orange-800/30 pt-3">
+                                <div className="text-[11px] text-gray-500 dark:text-gray-400 uppercase font-bold tracking-widest mb-2">IR (Impôt sur le revenu)</div>
                                 <SalaryLine 
-                                    label={`${selectedEmp.deductions_info.cotisation_label} (${selectedEmp.deductions_info.cotisation_taux}%)`} 
-                                    value={'-' + fmt((selectedEmp.details?.brut_salary * selectedEmp.deductions_info.cotisation_taux) / 100)} 
+                                    label={`Taux: ${selectedEmp.details?.ir?.taux || '0.00'}%`} 
+                                    value={`- ${fmt(selectedEmp.details?.ir?.total)}`} 
                                     red 
                                 />
-                            )}
-                            {selectedEmp.deductions_info?.rcar_label && (
-                                <SalaryLine 
-                                    label={`RCAR : ${selectedEmp.deductions_info.rcar_label} (${selectedEmp.deductions_info.rcar_taux}%)`} 
-                                    value={'-' + fmt((selectedEmp.details?.brut_salary * selectedEmp.deductions_info.rcar_taux) / 100)} 
-                                    red 
-                                />
-                            )}
-                            <SalaryLine label="Total Retenues Fiscales/Sociales" value={'-' + fmt(selectedEmp.details?.total_deductions - (selectedEmp.details?.credits?.total || 0))} red bold />
+                            </div>
+
+                            {/* RCAR */}
+                            <div className="border-t border-orange-200/50 dark:border-orange-800/30 pt-3">
+                                <div className="text-[11px] text-gray-500 dark:text-gray-400 uppercase font-bold tracking-widest mb-2">RCAR (Retraite)</div>
+                                {getArray(selectedEmp.details?.rcar?.details).map((r, index) => (
+                                    <SalaryLine 
+                                        key={`rcar-${index}`} 
+                                        label={`${r.name || r.label} (${r.taux || r.percentage}%)`} 
+                                        value={`- ${fmt(r.montant || r.value)}`} 
+                                        red 
+                                    />
+                                ))}
+                                <div className="mt-1">
+                                    <SalaryLine label="Total RCAR" value={`- ${fmt(selectedEmp.details?.rcar?.total)}`} red bold />
+                                </div>
+                            </div>
+
+                            {/* SNTL */}
+                            <div className="border-t border-orange-200/50 dark:border-orange-800/30 pt-3">
+                                <div className="text-[11px] text-gray-500 dark:text-gray-400 uppercase font-bold tracking-widest mb-2">SNTL</div>
+                                {getArray(selectedEmp.details?.sntl?.details).map((s, index) => (
+                                    <SalaryLine 
+                                        key={`sntl-${index}`} 
+                                        label={`${s.name || s.label} (${s.taux || 'undefined'}%)`} 
+                                        value={`- ${fmt(s.montant || s.value)}`} 
+                                        red 
+                                    />
+                                ))}
+                                <div className="mt-1">
+                                    <SalaryLine label="Total SNTL" value={`- ${fmt(selectedEmp.details?.sntl?.total)}`} red bold />
+                                </div>
+                            </div>
+
+                            {/* TOTAL DES DÉDUCTIONS */}
+                            <div className="border-t-2 border-orange-200 dark:border-orange-800 pt-3 mt-4">
+                                <SalaryLine label="Total des déductions" value={`- ${fmt(selectedEmp.details?.total_deductions)}`} red bold />
+                            </div>
                         </div>
 
-                        {/* Détails Crédits */}
-                        {(selectedEmp.credit_info?.montant_credit > 0 || selectedEmp.details?.credits?.total > 0) && (
+                        {/* Détails Crédits (S'il y en a) */}
+                        {getArray(selectedEmp.details?.credits?.details).length > 0 && (
                             <>
                                 <h4 className="font-bold mb-4 dark:text-white flex items-center gap-2 text-sm uppercase tracking-wider text-gray-500">
-                                    <CreditCard className="text-red-500" size={16}/> Situation de Crédit
+                                    <CreditCard className="text-red-500" size={16}/> Situations de Crédit
                                 </h4>
                                 <div className="bg-red-50 dark:bg-red-900/10 rounded-2xl p-6 space-y-3 border border-red-100 dark:border-red-900/30 mb-8">
-                                    <div className="grid grid-cols-2 gap-4 mb-4">
-                                        <div>
-                                            <div className="text-[10px] text-gray-400 uppercase font-bold">Montant Initial</div>
-                                            <div className="font-semibold dark:text-gray-200">{fmt(selectedEmp.credit_info?.montant_credit)}</div>
+                                    {getArray(selectedEmp.details.credits.details).map((credit, idx) => (
+                                        <div key={idx} className="mb-4 pb-4 border-b border-red-100 dark:border-red-800/30 last:border-0 last:pb-0 last:mb-0">
+                                            <div className="font-bold text-gray-800 dark:text-gray-200 mb-2">{credit.name}</div>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div>
+                                                    <div className="text-[10px] text-gray-400 uppercase font-bold">Reste à Payer</div>
+                                                    <div className="font-semibold dark:text-gray-300">{fmt(credit.reste)}</div>
+                                                </div>
+                                                <div>
+                                                    <div className="text-[10px] text-gray-400 uppercase font-bold">Mensualité retenue</div>
+                                                    <div className="font-semibold text-red-500">- {fmt(credit.mensualite)}</div>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <div className="text-[10px] text-gray-400 uppercase font-bold">Reste à Payer</div>
-                                            <div className="font-semibold dark:text-gray-200">{fmt(selectedEmp.credit_info?.credit_reste_a_payer)}</div>
-                                        </div>
+                                    ))}
+                                    <div className="pt-2 border-t border-red-200 dark:border-red-800/50">
+                                        <SalaryLine label="Total retenues crédit" value={`- ${fmt(selectedEmp.details?.credits?.total)}`} red bold />
                                     </div>
-                                    <hr className="border-red-100 dark:border-red-800/30" />
-                                    <SalaryLine label={`Mensualité (${selectedEmp.credit_info?.taux_credit}% Taux)`} value={'-' + fmt(selectedEmp.credit_info?.credit_mensualite)} red bold />
                                 </div>
                             </>
                         )}
@@ -227,19 +327,26 @@ const SalariesSummaryPage = () => {
         </div>
     );
 };
-
 const InfoCard = ({ icon, label, value }) => (
+
     <div className="p-3 border border-gray-100 dark:border-gray-800 rounded-xl bg-white dark:bg-[#1a1a1a]">
+
         {icon && <div className="text-indigo-500 mb-1">{icon}</div>}
+
         <div className="text-[10px] text-gray-400 uppercase font-bold">{label}</div>
+
         <div className="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate">{value || '-'}</div>
+
     </div>
+
 );
 
 const SalaryLine = ({ label, value, bold, red }) => (
-    <div className="flex justify-between items-center text-sm">
-        <span className="text-gray-600 dark:text-gray-400">{label}</span>
-        <span className={`font-mono ${bold ? 'font-black text-base dark:text-white' : ''} ${red ? 'text-red-500 font-semibold' : 'dark:text-gray-300'}`}>
+    <div className="flex justify-between items-center text-sm py-1">
+        <span className={`${bold ? 'font-semibold text-gray-800 dark:text-gray-200' : 'text-gray-600 dark:text-gray-400'}`}>
+            {label}
+        </span>
+        <span className={`font-mono ${bold ? 'font-black text-base' : ''} ${red ? 'text-red-500 font-medium' : 'text-gray-900 dark:text-gray-200'}`}>
             {value}
         </span>
     </div>

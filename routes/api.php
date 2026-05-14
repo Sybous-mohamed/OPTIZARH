@@ -4,8 +4,6 @@ use App\Http\Controllers\RH\AllEmployeSalaire;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-use App\Http\Controllers\Api\ProfileController as ProfileControllerCommin;
-
 
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
@@ -245,7 +243,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::prefix('leave-requests')->group(function () {
                 Route::get('/my-history', [LeaveRequestController::class, 'myRequests']);
                 Route::post('/store', [LeaveRequestController::class, 'store']);
-                // Route::get('/balance', [LeaveRequestController::class, 'getLeaveStats']);
+                Route::get('/balance', [LeaveRequestController::class, 'getLeaveStats']);
             });
         });
 
@@ -275,8 +273,6 @@ Route::middleware('auth:sanctum')->group(function () {
                 Route::get('/employees/export-pdf', [RHEmployeeController::class, 'exportPDF']);
                 Route::get('/gestionEtat/get-by-year/{year}', [RHEmployeeController::class, 'getClassification']);
                 Route::get('/all-salaries', [RHAllEmployeSalaire::class, 'allEmployeesSalaries']);
-                        
-                // ✅ HAD L MÉTHODES KAYNIN F RHEmployeeController (delegate l SuperAdmin)
                 Route::get('/cotisations', [RHEmployeeController::class, 'getCotisations']);
                 Route::get('/credit-types', [RHEmployeeController::class, 'getCreditTypes']);
             });
