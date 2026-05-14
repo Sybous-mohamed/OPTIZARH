@@ -27,7 +27,7 @@ class UserProfileController extends Controller
             'sector'         => 'nullable|string|max:255',
             'employee_count' => 'nullable|integer|min:0',
             'profile_image'  => 'nullable|string',
-            'theme'    => ['required', Rule::in(['light', 'dark','system'])],
+            'theme'    => [Rule::in(['light', 'dark','system'])],
             'language' => ['required', Rule::in(['en', 'fr', 'ar'])],
         ]);
 

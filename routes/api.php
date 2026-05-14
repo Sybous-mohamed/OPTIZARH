@@ -1,4 +1,6 @@
 <?php
+
+use App\Http\Controllers\RH\AllEmployeSalaire;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -32,7 +34,7 @@ use App\Http\Controllers\RH\salaryController;
 
 // Employe
 use App\Http\Controllers\Employe\LeaveRequestController;
-
+use App\Http\Controllers\RH\AllEmployeSalaire as RHAllEmployeSalaire;
 
 
 Route::get('/check-setup', [SuperAdminController::class, 'checkStatus']);
@@ -198,14 +200,14 @@ Route::middleware('auth:sanctum')->group(function () {
                 Route::get('/configs/{year}', [SntlSettingController::class, 'getByYear']);
             });
 
-            Route::prefix('Settings')->group(function () {
-                Route::get('/profile', [UserProfileController::class, 'show']);
-                Route::post('/profile', [UserProfileController::class, 'updateProfile']);
-                Route::post('/password', [UserProfileController::class, 'updatePassword']);
-                Route::get('/admin/platform-data', [SettingsController::class, 'index']);
-                Route::post('/admin/settings', [SettingsController::class, 'updateRegistration']);
-                Route::patch('/admin/users/{id}/toggle-block', [SettingsController::class, 'toggleBlock']);
-            });
+            // Route::prefix('Settings')->group(function () {
+            //     Route::get('/profile', [UserProfileController::class, 'show']);
+            //     Route::post('/profile', [UserProfileController::class, 'updateProfile']);
+            //     Route::post('/password', [UserProfileController::class, 'updatePassword']);
+            //     Route::get('/admin/platform-data', [SettingsController::class, 'index']);
+            //     Route::post('/admin/settings', [SettingsController::class, 'updateRegistration']);
+            //     Route::patch('/admin/users/{id}/toggle-block', [SettingsController::class, 'toggleBlock']);
+            // });
 
             //Demandes
             Route::prefix('leave-config')->group(function () {
