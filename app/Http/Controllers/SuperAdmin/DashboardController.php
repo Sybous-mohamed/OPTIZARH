@@ -76,13 +76,8 @@ class DashboardController extends Controller
             
             foreach ($employees as $emp) {
                 if ($emp->statut === 'ACTIF') $activeEmployees++;
-<<<<<<< HEAD
-                elseif ($emp->statut === 'CONGE') $congeEmployees++;
-                elseif ($emp->statut === 'DEPART') $departEmployees++;
-=======
                 elseif ($emp->statut === 'CONGE' || $emp->statut === 'CONGÉ') $congeEmployees++;
                 elseif ($emp->statut === 'DEPART' || $emp->statut === 'DÉPART') $departEmployees++;
->>>>>>> bouray/main
                 
                 $indemnitesTotal = $this->calculerIndemnitesPourEmploye($emp, $yearId);
                 $salaireBrut = ($emp->salaire ?? 0) + $indemnitesTotal;
@@ -108,16 +103,11 @@ class DashboardController extends Controller
             $totalCreditAmount = EmployeeCredit::sum('montant_credit') ?: 0;
             $totalCreditsMensualites = EmployeeCredit::where('statut', 'ACTIF')->sum('credit_mensualite') ?: 0;
             
-<<<<<<< HEAD
-            $creditsByYear = EmployeeCredit::select(
-                DB::raw('YEAR(created_at) as year'), 
-=======
             // Compatible SQLite et MySQL
             $creditsByYear = EmployeeCredit::select(
                 DB::raw(DB::connection()->getDriverName() === 'sqlite' 
                     ? "strftime('%Y', created_at) as year" 
                     : "YEAR(created_at) as year"), 
->>>>>>> bouray/main
                 DB::raw('count(*) as total')
             )
             ->whereNotNull('created_at')
@@ -130,18 +120,6 @@ class DashboardController extends Controller
             $totalCotisations = 0;
             $cotisationsDetails = [];
             
-<<<<<<< HEAD
-            if ($totalSalaireBrut > 0) {
-                $cotisations = Cotisation::all();
-                foreach ($cotisations as $cot) {
-                    $montant = ($totalSalaireBrut * ($cot->taux / 100));
-                    $totalCotisations += $montant;
-                    $cotisationsDetails[] = [
-                        'name' => $cot->name ?? 'Cotisation',
-                        'total' => round($montant, 2)
-                    ];
-                }
-=======
             $cotisations = Cotisation::all();
             foreach ($cotisations as $cot) {
                 $montant = ($totalSalaireBrut * ($cot->taux / 100));
@@ -150,16 +128,12 @@ class DashboardController extends Controller
                     'name' => $cot->name ?? 'Cotisation',
                     'total' => round($montant, 2)
                 ];
->>>>>>> bouray/main
             }
             
             // ==================== RCAR ====================
             $totalRCAR = 0;
-<<<<<<< HEAD
-=======
             $rcarDetails = [];
             
->>>>>>> bouray/main
             if ($yearId) {
                 $rcarTypes = RcarType::where('salary_year_id', $yearId)->get();
                 foreach ($rcarTypes as $rcarType) {
@@ -169,35 +143,16 @@ class DashboardController extends Controller
                         if ($detail->plafond && $detail->plafond > 0) {
                             $baseCalcul = min($totalSalaireBrut, $detail->plafond);
                         }
-<<<<<<< HEAD
-                        $totalRCAR += ($baseCalcul * ($detail->percentage / 100));
-=======
                         $montant = ($baseCalcul * ($detail->percentage / 100));
                         $totalRCAR += $montant;
                         $rcarDetails[] = [
                             'name' => $detail->designation ?? $rcarType->label,
                             'total' => round($montant, 2)
                         ];
->>>>>>> bouray/main
                     }
                 }
             }
             
-<<<<<<< HEAD
-            // ==================== IR (estimé) ====================
-            $totalIR = 0;
-            foreach ($employees as $emp) {
-                $salaireBrut = ($emp->salaire ?? 0) + $this->calculerIndemnitesPourEmploye($emp, $yearId);
-                if ($salaireBrut > 10000) {
-                    $totalIR += $salaireBrut * 0.35;
-                } elseif ($salaireBrut > 6000) {
-                    $totalIR += $salaireBrut * 0.25;
-                } elseif ($salaireBrut > 3000) {
-                    $totalIR += $salaireBrut * 0.15;
-                } else {
-                    $totalIR += $salaireBrut * 0.05;
-                }
-=======
             // ==================== IR (calcul précis) ====================
             $totalIR = 0;
             
@@ -232,29 +187,18 @@ class DashboardController extends Controller
                 $irAnnuel = max(0, $irAnnuel);
                 
                 $totalIR += $irAnnuel / 12;
->>>>>>> bouray/main
             }
             
             // ==================== ASSURANCES ====================
             $totalAssurances = 0;
-<<<<<<< HEAD
-            if ($yearId) {
-                $assurances = Assurance::where('annee_id', $yearId)->get();
-=======
             $assurancesDetails = [];
             
             if ($yearId) {
                 $assurances = Assurance::where('annee_id', $yearId)->where('is_active', true)->get();
->>>>>>> bouray/main
                 foreach ($assurances as $assurance) {
                     if ($assurance->taux_employeur > 0) {
                         $baseCalcul = $totalSalaireBrut;
                         if ($assurance->plafond_mensuel && $assurance->plafond_mensuel > 0) {
-<<<<<<< HEAD
-                            $baseCalcul = min($totalSalaireBrut, $assurance->plafond_mensuel);
-                        }
-                        $totalAssurances += ($baseCalcul * ($assurance->taux_employeur / 100));
-=======
                             $nombreEmployes = max(1, $employees->count());
                             $plafondTotal = $assurance->plafond_mensuel * $nombreEmployes;
                             $baseCalcul = min($totalSalaireBrut, $plafondTotal);
@@ -265,28 +209,18 @@ class DashboardController extends Controller
                             'name' => $assurance->name,
                             'total' => round($montant, 2)
                         ];
->>>>>>> bouray/main
                     }
                 }
             }
             
             // ==================== SNTL ====================
             $totalSNTL = 0;
-<<<<<<< HEAD
-=======
             $sntlDetails = [];
             
->>>>>>> bouray/main
             if ($yearId) {
                 $sntlConfigs = SntlSetting::where('salary_year_id', $yearId)->get();
                 foreach ($sntlConfigs as $sntl) {
                     if ($sntl->type_montant === 'pourcentage') {
-<<<<<<< HEAD
-                        $totalSNTL += ($totalSalaireBrut * ($sntl->valeur / 100));
-                    } else {
-                        $totalSNTL += $sntl->valeur * $totalEmployees;
-                    }
-=======
                         $montant = ($totalSalaireBrut * ($sntl->valeur / 100));
                     } else {
                         $montant = $sntl->valeur;
@@ -296,7 +230,6 @@ class DashboardController extends Controller
                         'name' => $sntl->label ?? 'SNTL',
                         'total' => round($montant, 2)
                     ];
->>>>>>> bouray/main
                 }
             }
             
@@ -304,22 +237,6 @@ class DashboardController extends Controller
             $totalDeductionsSalarie = $totalCotisations + $totalRCAR + $totalCreditsMensualites + $totalIR;
             $totalChargesPatronales = $totalAssurances + $totalSNTL;
             
-<<<<<<< HEAD
-            // ==================== ÉVOLUTION DES CHARGES (POUR OPTION 2 - garder pour les stats) ====================
-            $months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
-            $monthlyDummyData = [];
-            
-            for ($i = 0; $i < 12; $i++) {
-                $variation = 0.85 + ($i * 0.03);
-                $monthlyDummyData[] = [
-                    'name' => $months[$i],
-                    'cotisations' => 0,
-                    'rcar' => 0
-                ];
-            }
-            
-=======
->>>>>>> bouray/main
             // ==================== STATUTS ====================
             $employeeStatus = [
                 ['name' => 'Actifs', 'value' => $activeEmployees, 'color' => '#10b981'],
@@ -355,17 +272,11 @@ class DashboardController extends Controller
                 'charts' => [
                     'credits_by_year' => $creditsByYear,
                     'salary_by_grade' => $salaryByGrade,
-<<<<<<< HEAD
-                    'monthly_evolution' => $monthlyDummyData,
-                    'employee_status' => $employeeStatus,
-                    'cotisations_details' => $cotisationsDetails
-=======
                     'employee_status' => $employeeStatus,
                     'cotisations_details' => $cotisationsDetails,
                     'assurances_details' => $assurancesDetails,
                     'rcar_details' => $rcarDetails,
                     'sntl_details' => $sntlDetails
->>>>>>> bouray/main
                 ],
                 'current_year' => (int)$annee,
                 'available_years' => $availableYears
@@ -398,17 +309,11 @@ class DashboardController extends Controller
                 'charts' => [
                     'credits_by_year' => [],
                     'salary_by_grade' => [],
-<<<<<<< HEAD
-                    'monthly_evolution' => [],
-                    'employee_status' => [],
-                    'cotisations_details' => []
-=======
                     'employee_status' => [],
                     'cotisations_details' => [],
                     'assurances_details' => [],
                     'rcar_details' => [],
                     'sntl_details' => []
->>>>>>> bouray/main
                 ],
                 'current_year' => (int)$annee,
                 'available_years' => [date('Y')]

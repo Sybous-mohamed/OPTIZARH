@@ -1,12 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
-<<<<<<< HEAD
-    Save, Trash2, Plus, Loader, 
-    Calendar, Percent, Shield, ChevronDown, ChevronUp, AlertCircle
-=======
     Save, Trash2, Plus, Loader, X,
     Calendar, Percent, Shield, ChevronDown, ChevronUp, AlertCircle, CheckCircle, XCircle
->>>>>>> bouray/main
 } from 'lucide-react';
 import axiosClient from "../../lib/apis/axiosConfig";
 import { useNotification } from '../../context/NotificationContext';
@@ -32,15 +27,6 @@ export default function AssuranceManagement() {
         isNew: false 
     });
 
-<<<<<<< HEAD
-    const bgClass = darkMode ? 'bg-[#0D0D0D]' : 'bg-gray-50';
-    const cardClass = darkMode ? 'bg-[#1A1A1A] border-[#2A2A2A]' : 'bg-white border-gray-200';
-    const textClass = darkMode ? 'text-white' : 'text-gray-800';
-    const textMutedClass = darkMode ? 'text-gray-400' : 'text-gray-500';
-    const inputClass = `p-2 rounded-lg border ${cardClass} ${textClass} outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm w-full`;
-    const inputErrorClass = `p-2 rounded-lg border-2 border-red-500 ${cardClass} ${textClass} outline-none focus:ring-2 focus:ring-red-500 text-sm w-full`;
-
-=======
     // Classes CSS
     const bgClass = darkMode ? 'bg-gradient-to-br from-[#0D0D0D] to-[#1a1a1a]' : 'bg-gradient-to-br from-gray-50 to-gray-100';
     const cardClass = darkMode ? 'bg-[#1A1A1A] border-[#2A2A2A] shadow-xl' : 'bg-white border-gray-200 shadow-lg';
@@ -51,7 +37,6 @@ export default function AssuranceManagement() {
     const inputErrorClass = `p-2 rounded-lg border-2 border-red-500 ${cardClass} ${textClass} outline-none focus:ring-2 focus:ring-red-500 text-sm w-full`;
 
     // Fetch années
->>>>>>> bouray/main
     const fetchAnnees = async () => {
         try {
             const res = await axiosClient.get('/api/assurances/annees');
@@ -68,10 +53,7 @@ export default function AssuranceManagement() {
         }
     };
 
-<<<<<<< HEAD
-=======
     // Fetch configuration
->>>>>>> bouray/main
     const fetchConfig = async (year) => {
         if (!year) return;
         setLoading(true);
@@ -119,10 +101,7 @@ export default function AssuranceManagement() {
         return num;
     };
 
-<<<<<<< HEAD
-=======
     // Ajouter assurance
->>>>>>> bouray/main
     const addAssurance = () => {
         const newAssurance = {
             id: Date.now(),
@@ -140,10 +119,7 @@ export default function AssuranceManagement() {
         showNotification("✨ Nouvelle assurance ajoutée", "success");
     };
 
-<<<<<<< HEAD
-=======
     // Delete modal handlers
->>>>>>> bouray/main
     const openDeleteModal = (id, name, isNew) => {
         setDeleteModal({ isOpen: true, id, name, isNew });
     };
@@ -173,17 +149,10 @@ export default function AssuranceManagement() {
         closeDeleteModal();
     };
 
-<<<<<<< HEAD
-    const updateAssurance = (id, field, value) => {
-        let validatedValue = value;
-        
-        // Validation selon le champ
-=======
     // Update assurance
     const updateAssurance = (id, field, value) => {
         let validatedValue = value;
         
->>>>>>> bouray/main
         if (field === 'taux_employeur' || field === 'taux_salarie') {
             validatedValue = validateTaux(value, field === 'taux_employeur' ? "Taux employeur" : "Taux salarié");
         }
@@ -194,10 +163,6 @@ export default function AssuranceManagement() {
         
         setAssurancesList(assurancesList.map(a => {
             if (a.id === id) {
-<<<<<<< HEAD
-                // Clear error for this field if exists
-=======
->>>>>>> bouray/main
                 if (errors[`${id}_${field}`]) {
                     setErrors(prev => ({ ...prev, [`${id}_${field}`]: null }));
                 }
@@ -208,10 +173,7 @@ export default function AssuranceManagement() {
         setHasUnsavedChanges(true);
     };
 
-<<<<<<< HEAD
-=======
     // Validate all before save
->>>>>>> bouray/main
     const validateAllBeforeSave = () => {
         let hasError = false;
         const newErrors = {};
@@ -248,10 +210,7 @@ export default function AssuranceManagement() {
         return true;
     };
 
-<<<<<<< HEAD
-=======
     // Handle save
->>>>>>> bouray/main
     const handleSave = async () => {
         if (!validateAllBeforeSave()) {
             return;
@@ -283,9 +242,6 @@ export default function AssuranceManagement() {
         }
     };
 
-<<<<<<< HEAD
-    // Helper pour afficher les erreurs
-=======
     // Cancel changes
     const cancelChanges = () => {
         setHasUnsavedChanges(false);
@@ -293,28 +249,11 @@ export default function AssuranceManagement() {
         showNotification("Modifications annulées", "info");
     };
 
->>>>>>> bouray/main
     const getError = (assuranceId, field) => {
         return errors[`${assuranceId}_${field}`];
     };
 
     return (
-<<<<<<< HEAD
-        <div className={`min-h-screen p-4 transition-colors duration-300 ${bgClass}`}>
-            <div className="max-w-5xl mx-auto">
-                {/* Header */}
-                <div className="flex justify-between items-center mb-6 flex-wrap gap-3">
-                    <div>
-                        <h1 className={`text-xl font-bold ${textClass} flex items-center gap-2`}>
-                            <Shield size={22} className="text-indigo-500" />
-                            Assurances Sociales
-                        </h1>
-                        <p className={`text-xs ${textMutedClass} mt-0.5`}>Gestion des taux et plafonds</p>
-                    </div>
-                    <div className="flex gap-3 items-center">
-                        <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border ${cardClass}`}>
-                            <Calendar size={14} className={textMutedClass} />
-=======
         <div className={`min-h-screen p-3 transition-colors duration-300 ${bgClass}`}>
             <div className="max-w-6xl mx-auto">
                 {/* Header */}
@@ -333,7 +272,6 @@ export default function AssuranceManagement() {
                     <div className="flex gap-3 items-center">
                         <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border ${cardClass} shadow-sm`}>
                             <Calendar size={14} className="text-indigo-500" />
->>>>>>> bouray/main
                             <select 
                                 value={selectedAnnee}
                                 onChange={(e) => setSelectedAnnee(e.target.value)}
@@ -344,41 +282,16 @@ export default function AssuranceManagement() {
                                 ))}
                             </select>
                         </div>
-<<<<<<< HEAD
-                        <button onClick={addAssurance} className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all text-sm">
-                            <Plus size={14} /> Nouvelle
-=======
                         <button 
                             onClick={addAssurance} 
                             className=" cursor-pointer flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-xl hover:from-indigo-700 hover:to-indigo-800 transition-all duration-200 hover:scale-105 shadow-lg"
                         >
                             <Plus size={14} /> Nouvelle assurance
->>>>>>> bouray/main
                         </button>
                     </div>
                 </div>
 
                 {/* Stats Cards */}
-<<<<<<< HEAD
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
-                    <div className={`${cardClass} rounded-lg p-3 border`}>
-                        <p className={`text-xs ${textMutedClass}`}>Total</p>
-                        <p className={`text-xl font-bold ${textClass}`}>{assurancesList.length}</p>
-                    </div>
-                    <div className={`${cardClass} rounded-lg p-3 border`}>
-                        <p className={`text-xs ${textMutedClass}`}>Actives</p>
-                        <p className={`text-xl font-bold text-emerald-600`}>{assurancesList.filter(a => a.is_active).length}</p>
-                    </div>
-                    <div className={`${cardClass} rounded-lg p-3 border`}>
-                        <p className={`text-xs ${textMutedClass}`}>Taux employeur</p>
-                        <p className={`text-xl font-bold text-purple-600`}>
-                            {assurancesList.length > 0 ? (assurancesList.reduce((acc, a) => acc + (a.taux_employeur || 0), 0) / assurancesList.length).toFixed(1) : 0}%
-                        </p>
-                    </div>
-                    <div className={`${cardClass} rounded-lg p-3 border`}>
-                        <p className={`text-xs ${textMutedClass}`}>Avec plafond</p>
-                        <p className={`text-xl font-bold text-blue-600`}>{assurancesList.filter(a => a.plafond_mensuel).length}</p>
-=======
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
                     <div className={`${cardClass} rounded-xl p-3 border ${borderClass} hover:shadow-md transition-all duration-200`}>
                         <p className={`text-xs ${textMutedClass} flex items-center gap-1`}>
@@ -406,21 +319,12 @@ export default function AssuranceManagement() {
                             <Shield size={12} className="text-blue-500" /> Avec plafond
                         </p>
                         <p className={`text-2xl font-bold text-blue-600`}>{assurancesList.filter(a => a.plafond_mensuel).length}</p>
->>>>>>> bouray/main
                     </div>
                 </div>
 
                 {/* Liste des Assurances */}
                 <div className="space-y-3">
                     {loading && assurancesList.length === 0 ? (
-<<<<<<< HEAD
-                        <div className="text-center py-12"><Loader size={32} className="animate-spin mx-auto text-indigo-500" /></div>
-                    ) : assurancesList.length === 0 ? (
-                        <div className={`text-center py-12 border-2 border-dashed rounded-xl ${cardClass}`}>
-                            <Shield size={40} className="mx-auto mb-3 opacity-30" />
-                            <p className={textMutedClass}>Aucune assurance configurée pour {selectedAnnee}</p>
-                            <button onClick={addAssurance} className="mt-2 text-indigo-500 text-sm">+ Ajouter</button>
-=======
                         <div className="flex justify-center py-12">
                             <div className="flex flex-col items-center gap-3">
                                 <Loader size={32} className="animate-spin text-indigo-500" />
@@ -434,7 +338,6 @@ export default function AssuranceManagement() {
                             <button onClick={addAssurance} className=" cursor-pointer mt-3 text-indigo-500 hover:text-indigo-600 text-sm font-medium transition-colors">
                                 + Ajouter une assurance
                             </button>
->>>>>>> bouray/main
                         </div>
                     ) : (
                         assurancesList.map((assurance) => {
@@ -446,41 +349,14 @@ export default function AssuranceManagement() {
                             const plafondError = getError(assurance.id, 'plafond_mensuel');
                             
                             return (
-<<<<<<< HEAD
-                                <div key={assurance.id} className={`${cardClass} rounded-lg border ${cardClass} overflow-hidden`}>
-                                    {/* Header */}
-                                    <div 
-                                        className={`p-3 border-b ${darkMode ? 'border-[#2A2A2A]' : 'border-gray-100'} cursor-pointer hover:bg-opacity-50 ${darkMode ? 'hover:bg-[#252525]' : 'hover:bg-gray-50'}`}
-=======
                                 <div key={assurance.id} className={`${cardClass} rounded-xl border ${borderClass} overflow-hidden transition-all duration-200 hover:shadow-lg`}>
                                     {/* Header */}
                                     <div 
                                         className={`p-4 border-b ${borderClass} cursor-pointer transition-all duration-200 ${darkMode ? 'hover:bg-[#252525]' : 'hover:bg-gray-50'}`}
->>>>>>> bouray/main
                                         onClick={() => setExpandedId(isExpanded ? null : assurance.id)}
                                     >
                                         <div className="flex flex-wrap justify-between items-center gap-3">
                                             <div className="flex items-center gap-3 flex-1 min-w-[200px]">
-<<<<<<< HEAD
-                                                <div className="p-1.5 rounded-lg bg-indigo-100 dark:bg-indigo-900/30">
-                                                    <Shield size={14} className="text-indigo-600" />
-                                                </div>
-                                                <div className="flex-1">
-                                                    <div className="flex items-center gap-2 flex-wrap">
-                                                        <div className="flex-1">
-                                                            <input 
-                                                                type="text" 
-                                                                value={assurance.name} 
-                                                                onChange={(e) => { e.stopPropagation(); updateAssurance(assurance.id, 'name', e.target.value); }}
-                                                                className={`font-semibold bg-transparent outline-none border-b focus:border-indigo-500 text-sm w-full ${nameError ? 'border-red-500' : 'border-transparent'}`}
-                                                                placeholder="Nom assurance"
-                                                                onClick={(e) => e.stopPropagation()}
-                                                            />
-                                                            {nameError && <p className="text-red-500 text-[9px] mt-0.5 flex items-center gap-1"><AlertCircle size={8} /> {nameError}</p>}
-                                                        </div>
-                                                        {!assurance.is_active && (
-                                                            <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500">Inactif</span>
-=======
                                                 <div className={`p-2 rounded-lg ${assurance.is_active ? 'bg-emerald-100 dark:bg-emerald-900/30' : 'bg-gray-100 dark:bg-gray-800'}`}>
                                                     {assurance.is_active ? (
                                                         <CheckCircle size={16} className="text-emerald-600" />
@@ -503,7 +379,6 @@ export default function AssuranceManagement() {
                                                             <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 animate-pulse">
                                                                 Nouvelle
                                                             </span>
->>>>>>> bouray/main
                                                         )}
                                                     </div>
                                                     <div className="mt-1">
@@ -511,23 +386,6 @@ export default function AssuranceManagement() {
                                                             type="text" 
                                                             value={assurance.code} 
                                                             onChange={(e) => { e.stopPropagation(); updateAssurance(assurance.id, 'code', e.target.value.toUpperCase()); }}
-<<<<<<< HEAD
-                                                            className={`text-[10px] bg-transparent outline-none font-mono w-24 ${codeError ? 'border-red-500 border' : 'border-transparent border'}`}
-                                                            placeholder="CODE"
-                                                            onClick={(e) => e.stopPropagation()}
-                                                        />
-                                                        {codeError && <p className="text-red-500 text-[9px] flex items-center gap-1"><AlertCircle size={8} /> {codeError}</p>}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-4">
-                                                <div className="text-right">
-                                                    <p className="text-[10px] text-gray-500">Taux emp.</p>
-                                                    <div className="flex items-center gap-1">
-                                                        <input 
-                                                            type="number" 
-                                                            step="0.01" 
-=======
                                                             className={`text-[11px] font-mono bg-transparent outline-none border-b w-32 ${codeError ? 'border-red-500' : 'border-transparent'} ${textMutedClass}`}
                                                             placeholder="CODE"
                                                             onClick={(e) => e.stopPropagation()}
@@ -545,26 +403,10 @@ export default function AssuranceManagement() {
                                                         <input 
                                                             type="number" 
                                                             step="0.1" 
->>>>>>> bouray/main
                                                             min="0" 
                                                             max="100"
                                                             value={assurance.taux_employeur || 0} 
                                                             onChange={(e) => { e.stopPropagation(); updateAssurance(assurance.id, 'taux_employeur', parseFloat(e.target.value)); }}
-<<<<<<< HEAD
-                                                            className={`w-16 text-right font-semibold bg-transparent outline-none border-b ${tauxEmpError ? 'border-red-500' : 'border-gray-300'}`}
-                                                            onClick={(e) => e.stopPropagation()}
-                                                        />
-                                                        <span className="text-xs">%</span>
-                                                    </div>
-                                                    {tauxEmpError && <p className="text-red-500 text-[9px]">{tauxEmpError}</p>}
-                                                </div>
-                                                <div className="text-right">
-                                                    <p className="text-[10px] text-gray-500">Taux sal.</p>
-                                                    <div className="flex items-center gap-1">
-                                                        <input 
-                                                            type="number" 
-                                                            step="0.01" 
-=======
                                                             className={`w-20 text-right font-semibold bg-transparent outline-none border-b-2 ${tauxEmpError ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} ${textClass}`}
                                                             onClick={(e) => e.stopPropagation()}
                                                         />
@@ -580,27 +422,10 @@ export default function AssuranceManagement() {
                                                         <input 
                                                             type="number" 
                                                             step="0.1" 
->>>>>>> bouray/main
                                                             min="0" 
                                                             max="100"
                                                             value={assurance.taux_salarie || 0} 
                                                             onChange={(e) => { e.stopPropagation(); updateAssurance(assurance.id, 'taux_salarie', parseFloat(e.target.value)); }}
-<<<<<<< HEAD
-                                                            className={`w-16 text-right font-semibold bg-transparent outline-none border-b ${tauxSalError ? 'border-red-500' : 'border-gray-300'}`}
-                                                            onClick={(e) => e.stopPropagation()}
-                                                        />
-                                                        <span className="text-xs">%</span>
-                                                    </div>
-                                                    {tauxSalError && <p className="text-red-500 text-[9px]">{tauxSalError}</p>}
-                                                </div>
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); openDeleteModal(assurance.id, assurance.name, assurance._isNew); }}
-                                                    className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
-                                                >
-                                                    <Trash2 size={14} />
-                                                </button>
-                                                {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-=======
                                                             className={`w-20 text-right font-semibold bg-transparent outline-none border-b-2 ${tauxSalError ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} ${textClass}`}
                                                             onClick={(e) => e.stopPropagation()}
                                                         />
@@ -639,40 +464,10 @@ export default function AssuranceManagement() {
                                                 <div className={`p-1 rounded-lg transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}>
                                                     {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                                                 </div>
->>>>>>> bouray/main
                                             </div>
                                         </div>
                                     </div>
 
-<<<<<<< HEAD
-                                    {/* Details (expanded) */}
-                                    {isExpanded && (
-                                        <div className="p-3">
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                                <div>
-                                                    <label className={`text-[10px] ${textMutedClass} block mb-0.5`}>Plafond mensuel (MAD)</label>
-                                                    <input 
-                                                        type="number" 
-                                                        step="1000" 
-                                                        min="0"
-                                                        value={assurance.plafond_mensuel || ''} 
-                                                        onChange={(e) => updateAssurance(assurance.id, 'plafond_mensuel', e.target.value)}
-                                                        className={`${plafondError ? inputErrorClass : inputClass} text-sm py-1.5`} 
-                                                        placeholder="Sans plafond" 
-                                                    />
-                                                    {plafondError && <p className="text-red-500 text-[9px] mt-1 flex items-center gap-1"><AlertCircle size={8} /> {plafondError}</p>}
-                                                </div>
-                                                <div className="flex items-center pt-5">
-                                                    <label className="flex items-center gap-2 cursor-pointer">
-                                                        <input 
-                                                            type="checkbox" 
-                                                            checked={assurance.is_active} 
-                                                            onChange={(e) => updateAssurance(assurance.id, 'is_active', e.target.checked)}
-                                                            className="rounded" 
-                                                        />
-                                                        <span className="text-xs">Assurance active</span>
-                                                    </label>
-=======
                                     {/* Details (expanded) - Plafond */}
                                     {isExpanded && (
                                         <div className="p-4 border-t ${borderClass} bg-gradient-to-r from-indigo-50/5 to-transparent dark:from-indigo-900/5">
@@ -710,7 +505,6 @@ export default function AssuranceManagement() {
                                                             </p>
                                                         </div>
                                                     </div>
->>>>>>> bouray/main
                                                 </div>
                                             </div>
                                         </div>
@@ -721,13 +515,6 @@ export default function AssuranceManagement() {
                     )}
                 </div>
 
-<<<<<<< HEAD
-                {/* Save Button */}
-                {hasUnsavedChanges && (
-                    <div className="fixed bottom-6 right-6 z-50">
-                        <button onClick={handleSave} disabled={loading} className="flex items-center gap-2 px-5 py-2 bg-indigo-600 text-white rounded-full shadow-lg hover:bg-indigo-700 transition-all disabled:opacity-50 text-sm">
-                            {loading ? <Loader size={14} className="animate-spin" /> : <Save size={14} />}
-=======
                 {/* Save Button Float */}
                 {hasUnsavedChanges && (
                     <div className="fixed bottom-6 right-6 z-50 flex gap-3 animate-bounce-in">
@@ -744,7 +531,6 @@ export default function AssuranceManagement() {
                             className=" cursor-pointer flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white rounded-full shadow-lg transition-all duration-200 hover:scale-105 disabled:opacity-50 text-sm font-medium"
                         >
                             {loading ? <Loader size={16} className="animate-spin" /> : <Save size={16} />}
->>>>>>> bouray/main
                             {loading ? "Enregistrement..." : "Sauvegarder"}
                         </button>
                     </div>
@@ -757,11 +543,7 @@ export default function AssuranceManagement() {
                 onClose={closeDeleteModal}
                 onConfirm={confirmDelete}
                 title="Supprimer l'assurance"
-<<<<<<< HEAD
-                message={`Êtes-vous sûr de vouloir supprimer l'assurance "${deleteModal.name}" ?`}
-=======
                 message={`Êtes-vous sûr de vouloir supprimer l'assurance "${deleteModal.name}" ? Cette action est irréversible.`}
->>>>>>> bouray/main
                 darkMode={darkMode}
             />
         </div>

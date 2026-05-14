@@ -6,7 +6,7 @@ import {
     ChevronRight, Calendar, DollarSign, Award,
     BarChart3, Info, Wallet, Building2
 } from 'lucide-react';
-import api from '../../lib/apis/axiosConfig';
+import axiosClient from '../../lib/apis/axiosConfig';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 
@@ -116,25 +116,6 @@ export default function EmployeeSalaryDashboard() {
     const [data, setData]       = useState(null);
     const [employee, setEmployee] = useState(null);
 
-    const [balance, setBalance] = useState(null);
-
-// useEffect(() => {
-//     api.get('/api/leave-requests/balance').then(res => {
-//         console.log("Raw API Response:", res.data);
-        
-//         // Dekhel l-west res.data.global
-//         const globalData = res.data.global || {};
-//         const lastReq = res.data.last_request || null;
-
-//         setBalance({
-//             total: globalData.total || 0,
-//             used: globalData.used || 0,
-//             remaining: globalData.remaining || 0,
-//             last_request: lastReq
-//         });
-//     }).catch(err => console.error("Erreur API Balance:", err));
-// }, []);
-
     useEffect(() => {
         if (user?.id) fetchSalaryData();
         else navigate('/auth/login');
@@ -143,7 +124,7 @@ export default function EmployeeSalaryDashboard() {
     const fetchSalaryData = async () => {
         setLoading(true);
         try {
-            const res = await api.get('/api/my-salary');
+            const res = await axiosClient.get('/api/rh/my-salary');
             if (res.data?.salary_details) {
                 setEmployee(res.data.employee);
                 setData(res.data.salary_details);
@@ -228,56 +209,6 @@ export default function EmployeeSalaryDashboard() {
         },
     ];
 
-//     const LeaveBalanceCard = ({ data }) => {
-//     // 1. T-akked bli data moujouda
-//     if (!data) return null;
-
-//     // 2. Calculer le pourcentage
-//     const percentage = data.total > 0 ? (data.used / data.total) * 100 : 0;
-
-//     console.log('Leave balance data:', data);
-
-//     return (
-//         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-//             {/* Card 1: Solde */}
-//             <div className={`${T.surface} p-5 rounded-2xl border ${T.border} shadow-sm`}>
-//                 <div className="flex items-center gap-2 mb-3">
-//                     <Calendar className={`${T.accent} w-4 h-4`} />
-//                     <span className={`text-[13px] font-bold ${T.textPrimary}`}>Solde de congés</span>
-//                 </div>
-                
-//                 <div className="flex items-baseline gap-2 mb-2">
-//                     <span className={`text-3xl font-bold ${T.textPrimary}`}>{data.remaining}</span>
-//                     <span className={`text-[11px] ${T.muted}`}>jours restants</span>
-//                 </div>
-
-//                 <div className={`w-full ${darkMode ? 'bg-white/10' : 'bg-slate-100'} h-1.5 rounded-full overflow-hidden mt-2`}>
-//                     <div 
-//                         className="bg-[#7B7BFF] h-full transition-all duration-700" 
-//                         style={{ width: `${percentage}%` }}
-//                     />
-//                 </div>
-//                 <p className={`text-[10px] ${T.muted} mt-3 uppercase tracking-wider`}>
-//                     Utilisé: <b>{data.used}j</b> / Total: <b>{data.total}j</b>
-//                 </p>
-//             </div>
-
-//             {/* Card 2: Dernier congé */}
-//             <div className="bg-gradient-to-br from-[#7B7BFF] to-[#4F46E5] p-5 rounded-2xl shadow-lg text-white">
-//                 <p className="text-[10px] font-semibold opacity-80 uppercase tracking-widest mb-1">Dernier congé approuvé</p>
-//                 {data.last_request ? (
-//                     <>
-//                         <div className="text-2xl font-bold mb-1">{data.last_request.duration} Jours</div>
-//                         <p className="text-[11px] opacity-90 font-medium">{data.last_request.type}</p>
-//                     </>
-//                 ) : (
-//                     <p className="text-[11px] opacity-70 mt-2 italic">Aucun historique ce mois-ci</p>
-//                 )}
-//             </div>
-//         </div>
-//     );
-// };
-
     return (
         <div className={`min-h-screen ${T.page} font-sans`}>
 
@@ -306,8 +237,6 @@ export default function EmployeeSalaryDashboard() {
             </header>
 
             <main className="max-w-6xl mx-auto px-5 py-7 space-y-7">
-
-            {/* <LeaveBalanceCard data={balance} /> */}
 
                 {/* ── KPI GRID ── */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

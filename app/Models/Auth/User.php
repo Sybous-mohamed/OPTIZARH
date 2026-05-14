@@ -10,11 +10,7 @@ use Illuminate\Contracts\Auth\MustVerifyEmail;
 class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-<<<<<<< HEAD
-    use HasApiTokens, HasFactory, Notifiable; //
-=======
     use HasApiTokens, HasFactory, Notifiable; 
->>>>>>> bouray/main
 
     /**
      * The attributes that are mass assignable.
@@ -30,15 +26,9 @@ class User extends Authenticatable implements MustVerifyEmail
         'sector',
         'employee_count',
         'role',
-<<<<<<< HEAD
-        'profile_image',
-        'theme',
-        'must_change_password',
-=======
         'must_change_password', 
         'profile_image',
         'theme',
->>>>>>> bouray/main
         'language',
     ];
 
