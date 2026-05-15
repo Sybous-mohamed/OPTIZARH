@@ -19,12 +19,11 @@ class LeaveType extends Model
         return $this->belongsTo(SalaryYear::class);
     }
 
-    // Nou3 wahed i9der ikoun f bzaf d les demandes
     public function leaveRequests(){
         return $this->hasMany(LeaveRequest::class, 'leave_type_id');
     }
 
-    public function category(){
+    public function leaveCategory(){
         return $this->belongsTo(LeaveSetting::class, 'leave_category_id');
     }
 }

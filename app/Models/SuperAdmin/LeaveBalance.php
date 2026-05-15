@@ -3,7 +3,7 @@
 namespace App\Models\SuperAdmin;
 
 use Illuminate\Database\Eloquent\Model;
-use App\Models\Employee; // Assuming your Employee model is here
+use App\Models\SuperAdmin\Employee; 
 use App\Models\SuperAdmin\SalaryYear;
 
 class LeaveBalance extends Model

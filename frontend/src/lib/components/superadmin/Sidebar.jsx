@@ -36,13 +36,13 @@ export default function Sidebar({ onLinkClick, isMobile }) {
                 { label: "Employés", icon: <Users size={20} />, path: "/RH/Employes" },
                 { label: "Salaire", icon: <Users size={20} />, path: "/RH/Salary" },
                 { label: "Demandes", icon: <FileText size={20} />, path: "/RH/Demande" },
+                { label: "GestionEmployes", icon: <FileText size={20} />, path: "/RH/SalaryEmploye" },
             ]
         },
         employee: {
             main: [
                 { label: "Tableau de bord", icon: <LayoutDashboard size={20} />, path: "/Employee/Dashboard" },
                 { label: "Mes Demandes", icon: <FileText size={20} />, path: "/Employee/Demande" },
-                { label: "Mon Profil", icon: <User size={20} />, path: "/Employee/Profile" },
             ]
         }
     };
@@ -70,11 +70,11 @@ export default function Sidebar({ onLinkClick, isMobile }) {
             ];
         } else if (role === 'rh') {
             return [
-                { label: "Paramètres", icon: <Settings size={20} />, path: "/RH/Parametres" },
+                { label: "Paramètres", icon: <Settings size={20} />, path: "/RH/Parametre" },
             ];
         } else if (role === 'employee') {
             return [
-                { label: "Paramètres", icon: <Settings size={20} />, path: "/Employee/Parametres" },
+                { label: "Paramètres", icon: <Settings size={20} />, path: "/Employee/Parametre" },
             ];
         }
         return [];

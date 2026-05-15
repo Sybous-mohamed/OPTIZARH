@@ -10,6 +10,9 @@ use App\Models\SuperAdmin\LeaveType;
 use App\Models\SuperAdmin\LeaveBalance;
 use App\Models\SuperAdmin\SalaryYear;
 
+use Carbon\Carbon;
+use SebastianBergmann\Environment\Console;
+use Illuminate\Support\Facades\Log;
 class LeaveRequestController extends Controller
 {
     // ==========================================
@@ -146,21 +149,23 @@ public function allRequests()
         ]);
 
         if ($request->status === 'APPROVED') {
-            $salaryYearId = $leaveRequest->leaveType->salary_year_id;
+            $salaryYearId = $leaveRequest->salary_year_id;
 
-            $balance = LeaveBalance::where('employee_id', $leaveRequest->employee_id)
-                                    ->where('salary_year_id', $salaryYearId)
-                                    ->first();
-            
-            if ($balance) {
-                $balance->increment('days_used', $leaveRequest->duration);
-            } else {
-                LeaveBalance::create([
+ $totalApprovedDays = LeaveRequest::where('employee_id', $leaveRequest->employee_id)
+            ->where('salary_year_id', $salaryYearId) // HNA L-ISLAH HTA HWA
+            ->where('status', 'APPROVED')
+            ->sum('duration');
+
+        // Update-iw l-balance b l-valeur s-hiha
+        LeaveBalance::updateOrCreate(
+            [
+
                     'employee_id' => $leaveRequest->employee_id,
-                    'salary_year_id' => $salaryYearId,
-                    'days_used' => $leaveRequest->duration
-                ]);
-            }
+                    'salary_year_id' => $salaryYearId
+                    ],
+                    ['days_used' => $leaveRequest->duration
+                ]
+            );
         }
         return response()->json(['message' => "Demande {$request->status} avec succès!"]);
     }
@@ -168,22 +173,37 @@ public function allRequests()
     public function getLeaveStats() {
         $user = auth()->user();
         $employee = $user->employee;
+        $today = now()->startOfDay();
 
-        $nowYear = now()->year; 
 
-        $currentYear = SalaryYear::where('year', $nowYear)->first() 
+        $currentYear = SalaryYear::where('year', now()->year)->first() 
                 ?? SalaryYear::where('status', 'ACTIVE')->first() 
                 ?? SalaryYear::latest()->first();
 
+
+    // LOG 1: Check Year
+        Log::info("Current Salary Year found: " . ($currentYear ? $currentYear->year : 'NONE'));
+
+        if (!$currentYear) {
+            return response()->json(['error' => 'Aucune année de salaire trouvée'], 404);
+        }
+
+
         $globalSettings = LeaveSetting::where('salary_year_id', $currentYear->id)
-                            ->where('category_name', 'ANNUEL')->first();
-        
+                            ->where('category_name', 'conge')->first()
+                            ->first();
+
+                                // LOG 2: Check Setting
+        Log::info("Global Leave Setting for Year ID {$currentYear->id}: " . ($globalSettings ? $globalSettings->annual_global_max : 'NOT FOUND'));
+
         $balance = LeaveBalance::where('employee_id', $employee->id)
-                    ->where('salary_year_id', $currentYear->id)->first();
+                    ->where('salary_year_id', $currentYear->id)
+                    ->first();
+        Log::info("Leave Balance for Employee {$employee->id}: " . ($balance ? $balance->days_used : '0 (No balance record)'));
+        $max = $globalSettings ? (int)$globalSettings->annual_global_max : 0;
+        $used = $balance ? (int)$balance->days_used : 0;
 
-        $totalGlobal = $globalSettings ? $globalSettings->annual_global_max : 0;
-        $usedGlobal = $balance ? $balance->days_used : 0;
-
+        
         $lastApproved = LeaveRequest::where('employee_id', $employee->id)
                         ->where('status', 'APPROVED')
                         ->with('leaveType.leaveCategory')

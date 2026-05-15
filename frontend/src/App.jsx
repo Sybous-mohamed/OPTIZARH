@@ -51,11 +51,13 @@ import RHDashboard from './routes/Rh/Dashboard';
 import EmployeesRH from './routes/RH/Employees';
 import RHsalary from './routes/RH/Salary';
 import RHDemande from './routes/RH/Demande';
+import RHGestionEmployes from './routes/RH/SalaryEmploye';
+import RHParametre from './routes/RH/Parametre';
 
 // Employee Components
 import EmployeeDashboard from './routes/employee/Dashboard';
-import Profile from './routes/employee/Profile';
 import Demande from './routes/employee/Demande';
+import EmployeParametres from './routes/employee/Parametre';
 
 /*
 |--------------------------------------------------------------------------
@@ -232,6 +234,8 @@ function AppContent() {
                         <Route path="/RH/Employes" element={<EmployeesRH />} />
                         <Route path="/RH/Salary" element={<RHsalary />} />
                         <Route path="/RH/Demande" element={<RHDemande />} />
+                        <Route path="RH/SalaryEmploye" element={<RHGestionEmployes/>}/>
+                        <Route path="/RH/Parametre" element={<RHParametre />} />
                     </Route>
                 </Route>
 
@@ -240,7 +244,7 @@ function AppContent() {
                     <Route element={<Layout />}>
                         <Route path="/Employee/Dashboard" element={<EmployeeDashboard />} />
                         <Route path="/Employee/Demande" element={<Demande />} />
-                        <Route path="/Employee/Profile" element={<Profile />} />
+                        <Route path="/Employee/Parametre" element={<EmployeParametres />} />
                     </Route>
                 </Route>
 

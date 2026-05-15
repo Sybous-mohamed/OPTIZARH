@@ -77,8 +77,23 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/my-salary', [EmployeeController::class, 'mySalary']);
 
 
-
     Route::middleware(['verified'])->group(function () {
+
+
+            // Route::get('/userdata', [ProfileControllerCommin::class, 'show']);
+            // Route::put('/profile/update', [ProfileControllerCommin::class, 'updateProfile']);
+            // Route::put('/profile/settings', [ProfileControllerCommin::class, 'updateSettings']);
+            // Route::put('/profile/password', [ProfileControllerCommin::class, 'updatePassword']);
+
+            Route::prefix('Settings')->group(function () {
+                Route::get('/profile', [UserProfileController::class, 'show']);
+                Route::post('/profile', [UserProfileController::class, 'updateProfile']);
+                Route::post('/password', [UserProfileController::class, 'updatePassword']);
+                Route::get('/admin/platform-data', [SettingsController::class, 'index']);
+                Route::post('/admin/settings', [SettingsController::class, 'updateRegistration']);
+                Route::patch('/admin/users/{id}/toggle-block', [SettingsController::class, 'toggleBlock']);
+            });
+
         Route::middleware('role:superadmin')->group(function () {
             Route::get('/superadmin/dashboard-stats', [DashboardController::class, 'getStats']);
     
@@ -256,6 +271,7 @@ Route::middleware('auth:sanctum')->group(function () {
                 Route::get('/gestionEtat/get-by-year/{year}', [RHEmployeeController::class, 'getClassification']);
                 Route::get('/cotisations', [RHEmployeeController::class, 'getCotisations']);
                 Route::get('/credit-types', [RHEmployeeController::class, 'getCreditTypes']);
+                Route::get('/all-salaries', [RHAllEmployeSalaire::class, 'allEmployeesSalaries']);
             });
         });
 

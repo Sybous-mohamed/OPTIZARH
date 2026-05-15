@@ -428,56 +428,72 @@ class EmployeeController extends Controller
         }
     }
 
-    private function syncEmployeeCredits($employeeId, array $creditsData)
-    {
-        $existingCreditIds = EmployeeCredit::where('employee_id', $employeeId)->pluck('id')->toArray();
-        $processedCreditIds = [];
+   // Dans EmployeeController.php, remplacez la méthode syncEmployeeCredits par :
+
+private function syncEmployeeCredits($employeeId, array $creditsData)
+{
+    $existingCreditIds = EmployeeCredit::where('employee_id', $employeeId)->pluck('id')->toArray();
+    $processedCreditIds = [];
+    
+    \Log::info('Syncing credits for employee: ' . $employeeId, ['credits_data' => $creditsData]);
+    
+    foreach ($creditsData as $creditData) {
+        // Nettoyer les données
+        $cleanCreditData = [
+            'credit_type_id' => isset($creditData['credit_type_id']) ? (int)$creditData['credit_type_id'] : null,
+            'montant_credit' => isset($creditData['montant_credit']) ? (float)$creditData['montant_credit'] : 0,
+            'taux_credit' => isset($creditData['taux_credit']) ? (float)$creditData['taux_credit'] : 0,
+            'credit_duree' => isset($creditData['credit_duree']) ? (int)$creditData['credit_duree'] : 0,
+            'credit_date_debut' => $creditData['credit_date_debut'] ?? null,
+            'credit_date_fin' => $creditData['credit_date_fin'] ?? null,
+            'credit_mensualite' => isset($creditData['credit_mensualite']) ? (float)$creditData['credit_mensualite'] : 0,
+            'credit_reste_a_payer' => isset($creditData['credit_reste_a_payer']) ? (float)$creditData['credit_reste_a_payer'] : ($creditData['montant_credit'] ?? 0),
+            'statut' => 'ACTIF'
+        ];
         
-        foreach ($creditsData as $creditData) {
-            $cleanCreditData = [
-                'credit_type_id' => $creditData['credit_type_id'] ?? null,
-                'montant_credit' => $creditData['montant_credit'] ?? 0,
-                'taux_credit' => $creditData['taux_credit'] ?? 0,
-                'credit_duree' => $creditData['credit_duree'] ?? 0,
-                'credit_date_debut' => $creditData['credit_date_debut'] ?? null,
-                'credit_date_fin' => $creditData['credit_date_fin'] ?? null,
-                'credit_mensualite' => $creditData['credit_mensualite'] ?? 0,
-                'credit_reste_a_payer' => $creditData['credit_reste_a_payer'] ?? ($creditData['montant_credit'] ?? 0),
-                'statut' => 'ACTIF'
-            ];
-            
-            if ($cleanCreditData['credit_mensualite'] <= 0 && 
-                $cleanCreditData['montant_credit'] > 0 && 
-                $cleanCreditData['credit_duree'] > 0) {
-                $cleanCreditData['credit_mensualite'] = $this->calculerMensualiteCredit(
-                    $cleanCreditData['montant_credit'],
-                    $cleanCreditData['taux_credit'],
-                    $cleanCreditData['credit_duree']
-                );
-            }
-            
-            if (!$cleanCreditData['credit_date_fin'] && $cleanCreditData['credit_date_debut'] && $cleanCreditData['credit_duree']) {
-                $dateDebut = new \DateTime($cleanCreditData['credit_date_debut']);
-                $dateFin = clone $dateDebut;
-                $dateFin->modify('+' . $cleanCreditData['credit_duree'] . ' months');
-                $cleanCreditData['credit_date_fin'] = $dateFin->format('Y-m-d');
-            }
-            
-            if (isset($creditData['id']) && !isset($creditData['temp_id']) && in_array($creditData['id'], $existingCreditIds)) {
-                EmployeeCredit::where('id', $creditData['id'])->update($cleanCreditData);
-                $processedCreditIds[] = $creditData['id'];
-            } elseif (!isset($creditData['id']) || isset($creditData['temp_id'])) {
-                $cleanCreditData['employee_id'] = $employeeId;
-                $credit = EmployeeCredit::create($cleanCreditData);
-                $processedCreditIds[] = $credit->id;
-            }
+        // Calculer la mensualité si nécessaire
+        if ($cleanCreditData['credit_mensualite'] <= 0 && 
+            $cleanCreditData['montant_credit'] > 0 && 
+            $cleanCreditData['credit_duree'] > 0) {
+            $cleanCreditData['credit_mensualite'] = $this->calculerMensualiteCredit(
+                $cleanCreditData['montant_credit'],
+                $cleanCreditData['taux_credit'],
+                $cleanCreditData['credit_duree']
+            );
         }
         
-        $creditsToDelete = array_diff($existingCreditIds, $processedCreditIds);
-        if (!empty($creditsToDelete)) {
-            EmployeeCredit::whereIn('id', $creditsToDelete)->delete();
+        // Calculer la date de fin si nécessaire
+        if (!$cleanCreditData['credit_date_fin'] && 
+            $cleanCreditData['credit_date_debut'] && 
+            $cleanCreditData['credit_duree']) {
+            $dateDebut = new \DateTime($cleanCreditData['credit_date_debut']);
+            $dateFin = clone $dateDebut;
+            $dateFin->modify('+' . $cleanCreditData['credit_duree'] . ' months');
+            $cleanCreditData['credit_date_fin'] = $dateFin->format('Y-m-d');
+        }
+        
+        // Vérifier si on met à jour un crédit existant ou on en crée un nouveau
+        if (isset($creditData['id']) && !isset($creditData['temp_id']) && in_array($creditData['id'], $existingCreditIds)) {
+            // Mise à jour d'un crédit existant
+            EmployeeCredit::where('id', $creditData['id'])->update($cleanCreditData);
+            $processedCreditIds[] = $creditData['id'];
+            \Log::info('Updated credit: ' . $creditData['id']);
+        } elseif (!isset($creditData['id']) || isset($creditData['temp_id'])) {
+            // Création d'un nouveau crédit
+            $cleanCreditData['employee_id'] = $employeeId;
+            $credit = EmployeeCredit::create($cleanCreditData);
+            $processedCreditIds[] = $credit->id;
+            \Log::info('Created new credit: ' . $credit->id);
         }
     }
+    
+    // Supprimer les crédits qui ne sont plus dans la liste
+    $creditsToDelete = array_diff($existingCreditIds, $processedCreditIds);
+    if (!empty($creditsToDelete)) {
+        EmployeeCredit::whereIn('id', $creditsToDelete)->delete();
+        \Log::info('Deleted credits: ' . implode(',', $creditsToDelete));
+    }
+}
 
     private function calculerMensualiteCredit($montant, $tauxAnnuel, $dureeMois)
     {
@@ -783,18 +799,40 @@ class EmployeeController extends Controller
         return \App\Models\SuperAdmin\GestionIndemnite::where('salary_year_id', $anneeId)->get();
     }
 
-    private function fetchCotisations($year)
-    {
-        try {
-            return DB::table('cotisations')
-                ->select('cotisations.id', 'cotisations.name', 'cotisations.taux', 'cotisations.plafond', 'cotisations.organisme_id', 'organisme.nom as organisme_name')
-                ->join('organisme', 'organisme.id', '=', 'cotisations.organisme_id')
-                ->where('organisme.annee', $year)
+   private function fetchCotisations($year)
+{
+    try {
+        // Récupérer les organismes UNIQUES avec leurs cotisations
+        $organismes = DB::table('organisme')
+            ->select(
+                'organisme.id',
+                'organisme.nom as name',
+                'organisme.is_favorite',
+                'organisme.annee'
+            )
+            ->where('organisme.annee', $year)
+            ->get();
+        
+        // Pour chaque organisme, ajouter ses cotisations
+        foreach ($organismes as $org) {
+            $cotisations = DB::table('cotisations')
+                ->select('id', 'name', 'taux', 'plafond')
+                ->where('organisme_id', $org->id)
                 ->get();
-        } catch (\Exception $e) {
-            return collect([]);
+            $org->cotisations = $cotisations;
         }
+        
+        \Log::info('FetchCotisations result', [
+            'year' => $year,
+            'count' => $organismes->count()
+        ]);
+        
+        return $organismes;
+    } catch (\Exception $e) {
+        \Log::error('Error fetching cotisations: ' . $e->getMessage());
+        return collect([]);
     }
+}
     
     private function fetchRcarTypes($year)
     {
@@ -856,27 +894,44 @@ class EmployeeController extends Controller
         return ['total' => round($total, 2), 'appliedIndemnites' => $appliedIndemnites];
     }
 
-    private function calculateAllCotisations($brutSalary, $cotisationId, $cotisationsList)
-    {
-        $totalCotisations = 0.00;
-        $appliedCotisations = [];
-        if ($cotisationsList->isEmpty() || !$cotisationId) return ['total' => 0.00, 'details' => []];
-        
-        $selectedOrganisme = $cotisationsList->firstWhere('organisme_id', $cotisationId);
-        if (!$selectedOrganisme) return ['total' => 0.00, 'details' => []];
-        
-        $cotisationsDeLEstablishment = $cotisationsList->filter(fn($cot) => $cot->organisme_id == $cotisationId);
-        foreach ($cotisationsDeLEstablishment as $cotisation) {
-            $taux = floatval($cotisation->taux);
-            $plafondMontant = floatval($cotisation->plafond);
-            $montantCalcule = ($brutSalary * $taux) / 100;
-            $montantFinal = $plafondMontant > 0 ? min($montantCalcule, $plafondMontant) : $montantCalcule;
-            $totalCotisations += $montantFinal;
-            $appliedCotisations[] = ['name' => $cotisation->name, 'taux' => $taux, 'montant' => round($montantFinal, 2)];
-        }
-        return ['total' => round($totalCotisations, 2), 'details' => $appliedCotisations];
+   private function calculateAllCotisations($brutSalary, $cotisationId, $cotisationsList)
+{
+    $totalCotisations = 0.00;
+    $appliedCotisations = [];
+    
+    if ($cotisationsList->isEmpty() || !$cotisationId) {
+        return ['total' => 0.00, 'details' => []];
     }
-
+    
+    // 🔥 Chercher l'organisme sélectionné
+    $selectedOrganisme = $cotisationsList->first(function($org) use ($cotisationId) {
+        return $org->id == $cotisationId;
+    });
+    
+    if (!$selectedOrganisme) {
+        \Log::warning('Organisme not found', ['cotisationId' => $cotisationId]);
+        return ['total' => 0.00, 'details' => []];
+    }
+    
+    // Utiliser les cotisations de l'organisme
+    $cotisationsDeLEstablishment = $selectedOrganisme->cotisations ?? collect([]);
+    
+    foreach ($cotisationsDeLEstablishment as $cotisation) {
+        $taux = floatval($cotisation->taux);
+        $plafondMontant = floatval($cotisation->plafond);
+        $montantCalcule = ($brutSalary * $taux) / 100;
+        $montantFinal = $plafondMontant > 0 ? min($montantCalcule, $plafondMontant) : $montantCalcule;
+        $totalCotisations += $montantFinal;
+        $appliedCotisations[] = [
+            'name' => $cotisation->name, 
+            'taux' => $taux, 
+            'montant' => round($montantFinal, 2),
+            'organisme' => $selectedOrganisme->name
+        ];
+    }
+    
+    return ['total' => round($totalCotisations, 2), 'details' => $appliedCotisations];
+}
     private function calculateIR($salaireBrut, $situationFamiliale, $nombreEnfants, $irSettings)
     {
         if (!$irSettings) return ['ir' => 0.00, 'taux' => 0.00];

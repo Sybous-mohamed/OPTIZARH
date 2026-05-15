@@ -14,7 +14,6 @@ class LeaveSetting extends Model
         'annual_global_max',
     ];
 
-    // Rabt m3a l-3am
     public function salaryYear(){
         return $this->belongsTo(SalaryYear::class);
     }

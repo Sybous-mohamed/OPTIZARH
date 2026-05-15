@@ -18,7 +18,7 @@ class Employee extends Model
         'rcar_type_id', 'rcar_type_label', 'rcar_taux', 
         'credit_type_id', 'montant_credit', 'taux_credit',
         'credit_duree', 'credit_date_debut', 'credit_date_fin', 
-        'credit_mensualite', 'credit_reste_a_payer', 'temp_password', 'credentials_sent_at'
+        'credit_mensualite', 'credit_reste_a_payer', 'temp_password', 'credentials_sent_at',
     ];
 
     protected $casts = [

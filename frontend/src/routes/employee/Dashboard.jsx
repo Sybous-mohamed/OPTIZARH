@@ -4,7 +4,7 @@ import {
     TrendingUp, TrendingDown, Shield, Percent,
     CreditCard, Banknote, ArrowLeft, Loader,
     ChevronRight, Calendar, DollarSign, Award,
-    BarChart3, Info, Wallet, Building2
+    BarChart3, Info, Wallet, Building2,Clock, CheckCircle
 } from 'lucide-react';
 import api from '../../lib/apis/axiosConfig';
 import { useTheme } from '../../context/ThemeContext';
@@ -103,6 +103,104 @@ function Bar({ pct, color = 'bg-emerald-500' }) {
     );
 }
 
+const LeaveBalanceCard = () => {
+    const [data, setData] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        api.get('/api/leave-requests/balance')
+            .then(res => {
+                console.log("Données de balance reçues:", res.data);
+                setData(res.data);
+                setLoading(false);
+            })
+            .catch(err => {
+                console.error("Erreur API Balance:", err);
+                setLoading(false);
+            });
+    }, []);
+
+    if (loading) return <div className="h-32 bg-gray-100 dark:bg-gray-800 animate-pulse rounded-2xl mb-6"></div>;
+    if (!data) return null;
+
+    const { annual, active_leave } = data;
+    const soldeRestant = annual.duree_consomee; 
+    const joursUtilises = annual.duree_totale;
+    const percentage = active_leave 
+        ? (active_leave.days_passed / active_leave.duration) * 100 
+        : (annual.real_max > 0 ? (joursUtilises / annual.real_max) * 100 : 0);
+
+    return (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div className="bg-white dark:bg-[#181818] p-5 rounded-2xl border dark:border-gray-800 shadow-sm">
+                <div className="flex items-center gap-2 mb-3">
+                    <Calendar className="text-[#7B7BFF] w-4 h-4" />
+                    <span className="text-[13px] font-bold text-gray-900 dark:text-white uppercase tracking-tight italic">
+                        {active_leave ? `EN COURS : ${active_leave.type}` : 'Solde Restant'}
+                    </span>
+                </div>
+                <div className="flex items-baseline gap-2 mb-2">
+                    <span className="text-5xl font-black text-gray-900 dark:text-white italic">
+                        {active_leave ? active_leave.days_passed : soldeRestant}
+                    </span>
+                    <span className="text-xs font-bold text-gray-400 uppercase tracking-tighter">
+                        {active_leave ? 'jours écoulés' : 'jours restants'}
+                    </span>
+                </div>
+                <div className="w-full bg-slate-100 dark:bg-white/10 h-2 rounded-full overflow-hidden mt-3">
+                    <div 
+                        className="bg-[#5850EC] h-full transition-all duration-1000" 
+                        style={{ width: `${Math.min(percentage, 100)}%` }}
+                    />
+                </div>
+                <div className="flex justify-between items-center mt-5 border-t dark:border-gray-800 pt-3">
+                    <div>
+                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Utilisé</p>
+                        <p className="text-sm font-black text-gray-900 dark:text-white">
+                            {joursUtilises} J
+                        </p>
+                    </div>
+                    <div className="text-right">
+                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest text-right">Total Annuel</p>
+                        <p className="text-sm font-black text-[#5850EC]">
+                            {annual.real_max} J
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div className="bg-[#7B7BFF] p-5 rounded-2xl shadow-lg text-white relative overflow-hidden flex flex-col justify-between">
+                <div>
+                    <p className="text-[10px] font-bold opacity-80 uppercase tracking-widest mb-1">CONGÉ ACTUEL</p>
+                    {active_leave ? (
+                        <>
+                            <div className="flex items-baseline gap-2">
+                                <span className="text-4xl font-black">{active_leave.duration}</span>
+                                <span className="text-sm font-bold opacity-90">Jours ({active_leave.type})</span>
+                            </div>
+                            <p className="text-sm opacity-90 font-medium mt-1">
+                                {active_leave.start_date} → {active_leave.end_date}
+                            </p>
+                        </>
+                    ) : (
+                        <p className="italic opacity-60 mt-4 text-sm">Aucun congé en cours pour le moment.</p>
+                    )}
+                </div>
+                {active_leave && (
+                    <div className="mt-4">
+                        <div className="bg-[#10B981] text-white text-[11px] font-bold px-3 py-2 rounded-xl w-fit flex items-center gap-2">
+                            <CheckCircle size={14} />
+                            <span className="uppercase tracking-wider font-black">ACTIF</span>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
+
+
+
 /* ─────────────────────────────────────────────
    Main component
 ───────────────────────────────────────────── */
@@ -118,22 +216,6 @@ export default function EmployeeSalaryDashboard() {
 
     const [balance, setBalance] = useState(null);
 
-// useEffect(() => {
-//     api.get('/api/leave-requests/balance').then(res => {
-//         console.log("Raw API Response:", res.data);
-        
-//         // Dekhel l-west res.data.global
-//         const globalData = res.data.global || {};
-//         const lastReq = res.data.last_request || null;
-
-//         setBalance({
-//             total: globalData.total || 0,
-//             used: globalData.used || 0,
-//             remaining: globalData.remaining || 0,
-//             last_request: lastReq
-//         });
-//     }).catch(err => console.error("Erreur API Balance:", err));
-// }, []);
 
     useEffect(() => {
         if (user?.id) fetchSalaryData();
@@ -228,55 +310,6 @@ export default function EmployeeSalaryDashboard() {
         },
     ];
 
-//     const LeaveBalanceCard = ({ data }) => {
-//     // 1. T-akked bli data moujouda
-//     if (!data) return null;
-
-//     // 2. Calculer le pourcentage
-//     const percentage = data.total > 0 ? (data.used / data.total) * 100 : 0;
-
-//     console.log('Leave balance data:', data);
-
-//     return (
-//         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-//             {/* Card 1: Solde */}
-//             <div className={`${T.surface} p-5 rounded-2xl border ${T.border} shadow-sm`}>
-//                 <div className="flex items-center gap-2 mb-3">
-//                     <Calendar className={`${T.accent} w-4 h-4`} />
-//                     <span className={`text-[13px] font-bold ${T.textPrimary}`}>Solde de congés</span>
-//                 </div>
-                
-//                 <div className="flex items-baseline gap-2 mb-2">
-//                     <span className={`text-3xl font-bold ${T.textPrimary}`}>{data.remaining}</span>
-//                     <span className={`text-[11px] ${T.muted}`}>jours restants</span>
-//                 </div>
-
-//                 <div className={`w-full ${darkMode ? 'bg-white/10' : 'bg-slate-100'} h-1.5 rounded-full overflow-hidden mt-2`}>
-//                     <div 
-//                         className="bg-[#7B7BFF] h-full transition-all duration-700" 
-//                         style={{ width: `${percentage}%` }}
-//                     />
-//                 </div>
-//                 <p className={`text-[10px] ${T.muted} mt-3 uppercase tracking-wider`}>
-//                     Utilisé: <b>{data.used}j</b> / Total: <b>{data.total}j</b>
-//                 </p>
-//             </div>
-
-//             {/* Card 2: Dernier congé */}
-//             <div className="bg-gradient-to-br from-[#7B7BFF] to-[#4F46E5] p-5 rounded-2xl shadow-lg text-white">
-//                 <p className="text-[10px] font-semibold opacity-80 uppercase tracking-widest mb-1">Dernier congé approuvé</p>
-//                 {data.last_request ? (
-//                     <>
-//                         <div className="text-2xl font-bold mb-1">{data.last_request.duration} Jours</div>
-//                         <p className="text-[11px] opacity-90 font-medium">{data.last_request.type}</p>
-//                     </>
-//                 ) : (
-//                     <p className="text-[11px] opacity-70 mt-2 italic">Aucun historique ce mois-ci</p>
-//                 )}
-//             </div>
-//         </div>
-//     );
-// };
 
     return (
         <div className={`min-h-screen ${T.page} font-sans`}>
@@ -307,8 +340,8 @@ export default function EmployeeSalaryDashboard() {
 
             <main className="max-w-6xl mx-auto px-5 py-7 space-y-7">
 
-            {/* <LeaveBalanceCard data={balance} /> */}
-
+            
+                <LeaveBalanceCard />
                 {/* ── KPI GRID ── */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     {kpis.map((k) => {

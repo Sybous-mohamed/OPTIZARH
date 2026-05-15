@@ -62,7 +62,6 @@ export default function EmployeeManagement() {
         credit_date_debut: '',
         credit_date_fin: '',
     });
-    
     // États pour l'email
     const [sendCredentialsEmail, setSendCredentialsEmail] = useState(true);
     const [regeneratePassword, setRegeneratePassword] = useState(false);
@@ -207,21 +206,18 @@ export default function EmployeeManagement() {
 
     const fetchCotisations = async () => {
         if (!selectedAnnee) return;
+        setLoading(true);
         try {
             const res = await axiosClient.get('/api/cotisations', {
                 params: { year: selectedAnnee }
             });
-            setCotisationsList(res.data || []);
-            if (res.data && res.data.length > 0 && !formData.cotisation_id && !isEdit) {
-                const defaultOrg = res.data.find(org => org.is_favorite === true) || res.data[0];
-                if (defaultOrg) {
-                    setFormData(prev => ({ ...prev, cotisation_id: defaultOrg.id }));
-                    setSelectedCotisation(defaultOrg);
-                }
-            }
+            const organismesList = res.data || [];
+            setCotisationsList(organismesList);
         } catch (err) {
             console.error(err);
             setCotisationsList([]);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -307,7 +303,6 @@ export default function EmployeeManagement() {
             showNotification("Crédit ajouté à la liste", "success");
         }
         
-        // Reset form
         setTempCredit({
             credit_type_id: '', montant_credit: '', taux_credit: '',
             credit_duree: '', credit_date_debut: '', credit_date_fin: '',
@@ -320,7 +315,6 @@ export default function EmployeeManagement() {
     };
 
     const editTempCredit = (credit) => {
-   
         setTempCredit({
             credit_type_id: credit.credit_type_id,
             montant_credit: credit.montant_credit,
@@ -333,6 +327,7 @@ export default function EmployeeManagement() {
         setShowCreditForm(true);
         window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
     };
+
     // ============================================================
     // useEffectS
     // ============================================================
@@ -344,11 +339,80 @@ export default function EmployeeManagement() {
         }
     }, [selectedAnnee]);
 
+    // 🔥 AJOUT : Chargement des cotisations au démarrage
     useEffect(() => {
         if (selectedAnnee) {
             fetchCotisations();
         }
     }, [selectedAnnee]);
+
+    // 🔥 AJOUT : Restaurer la sélection de l'organisme après chargement de la liste
+    useEffect(() => {
+        if (cotisationsList.length > 0 && formData.cotisation_id) {
+            const existingOrg = cotisationsList.find(o => o.id === parseInt(formData.cotisation_id));
+            if (existingOrg && !selectedCotisation) {
+                setSelectedCotisation(existingOrg);
+            }
+        }
+    }, [cotisationsList, formData.cotisation_id]);
+// Ajoutez ce useEffect après les autres useEffects (vers ligne 320)
+useEffect(() => {
+    const handleStorageChange = (e) => {
+        if (e.key === 'cotisations_updated') {
+            console.log('🔄 Changement détecté dans GestionCotisation, rechargement...');
+            const currentId = formData.cotisation_id;
+            
+            fetchCotisations().then(() => {
+                if (currentId) {
+                    setTimeout(() => {
+                        const restored = cotisationsList.find(o => o.id === parseInt(currentId));
+                        if (restored) {
+                            setSelectedCotisation(restored);
+                            setFormData(prev => ({ ...prev, cotisation_id: currentId }));
+                            showNotification("Liste des organismes actualisée", "success");
+                        }
+                    }, 200);
+                }
+            });
+        }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+}, [formData.cotisation_id, cotisationsList]);
+    // 🔥 AJOUT : Sauvegarde et restauration au focus
+    useEffect(() => {
+        const beforeUnload = () => {
+            if (formData.cotisation_id) {
+                sessionStorage.setItem('temp_cotisation_id', formData.cotisation_id);
+            }
+        };
+        
+        const handleFocus = async () => {
+            const savedId = sessionStorage.getItem('temp_cotisation_id');
+            if (savedId && selectedAnnee) {
+                await fetchCotisations();
+                setTimeout(() => {
+                    const restored = cotisationsList.find(o => o.id === parseInt(savedId));
+                    if (restored) {
+                        setSelectedCotisation(restored);
+                        setFormData(prev => ({ ...prev, cotisation_id: savedId }));
+                        sessionStorage.removeItem('temp_cotisation_id');
+                    }
+                }, 150);
+            } else if (selectedAnnee) {
+                await fetchCotisations();
+            }
+        };
+        
+        window.addEventListener('beforeunload', beforeUnload);
+        window.addEventListener('focus', handleFocus);
+        
+        return () => {
+            window.removeEventListener('beforeunload', beforeUnload);
+            window.removeEventListener('focus', handleFocus);
+        };
+    }, [selectedAnnee, cotisationsList]);
 
     useEffect(() => {
         fetchAnnees();
@@ -430,10 +494,23 @@ export default function EmployeeManagement() {
                 }
             }
         }
-        if (emp.cotisation_id && cotisationsList.length) {
-            const cotisation = cotisationsList.find(c => c.id === emp.cotisation_id);
-            if (cotisation) setSelectedCotisation(cotisation);
+        
+        // 🔥 AJOUT : Restaurer l'organisme après chargement
+        if (emp.cotisation_id) {
+            const restoreOrganisme = () => {
+                if (cotisationsList.length > 0) {
+                    const cotisation = cotisationsList.find(c => c.id === parseInt(emp.cotisation_id));
+                    if (cotisation) {
+                        setSelectedCotisation(cotisation);
+                        setFormData(prev => ({ ...prev, cotisation_id: emp.cotisation_id }));
+                    }
+                } else {
+                    setTimeout(restoreOrganisme, 100);
+                }
+            };
+            restoreOrganisme();
         }
+        
         setEmployeeCredits((emp.credits || []).map(c => ({ ...c, temp_id: c.id || Date.now() + Math.random() })));
         setShowCreditForm(false);
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -528,7 +605,8 @@ export default function EmployeeManagement() {
         }
         return password;
     };
-// validation 
+
+    // validation 
     const verifierAge = (dateNaissance) => {
         if (!dateNaissance) return false;
         const aujourdhui = new Date();
@@ -588,65 +666,54 @@ export default function EmployeeManagement() {
         if (!formData.echelle_id) newErrors.echelle_id = "Veuillez selectionner une echelle";
         if (!formData.echelon_id) newErrors.echelon_id = "Veuillez selectionner un echelon";
         if (!formData.cotisation_id) newErrors.cotisation_id = "Veuillez selectionner un organisme de cotisation";
+        
         if (employeeCredits.length > 0) {
-        const creditErrors = [];
-        
-        employeeCredits.forEach((credit, index) => {
-            const creditId = credit.temp_id || index;
-            const errors = {};
-            
-            // Validation du type de crédit
-            if (!credit.credit_type_id) {
-                errors.credit_type = "Type de crédit requis";
-            }
-            
-            // Validation du montant
-            const montant = parseFloat(credit.montant_credit);
-            if (!credit.montant_credit || isNaN(montant) || montant <= 0) {
-                errors.montant = "Montant invalide (doit être > 0)";
-            } else if (montant > 10000000) {
-                errors.montant = "Montant trop élevé (max 10,000,000 MAD)";
-            }
-            
-            // Validation du taux
-            const taux = parseFloat(credit.taux_credit);
-            if (!credit.taux_credit && credit.taux_credit !== 0) {
-                errors.taux = "Taux requis";
-            } else if (isNaN(taux) || taux < 0 || taux > 100) {
-                errors.taux = "Taux invalide (0-100%)";
-            }
-            
-            // Validation de la durée
-            const duree = parseInt(credit.credit_duree);
-            if (!credit.credit_duree || isNaN(duree) || duree <= 0) {
-                errors.duree = "Durée invalide (doit être > 0 mois)";
-            } else if (duree > 360) {
-                errors.duree = "Durée trop longue (max 360 mois / 30 ans)";
-            } else if (duree < 1) {
-                errors.duree = "Durée minimale: 1 mois";
-            }    
-            // Vérifier si la mensualité calculée est cohérente
-            const mensualiteCalculee = calculerMensualiteCredit(montant, taux, duree);
-            if (mensualiteCalculee > 0 && montant > 0) {
-                const mensualiteMax = montant / 3; // Mensualité max = montant/3 (très élevé)
-                if (mensualiteCalculee > mensualiteMax) {
-                    errors.mensualite = `Mensualité (${Math.round(mensualiteCalculee).toLocaleString()} MAD) très élevée par rapport au montant`;
+            const creditErrors = [];
+            employeeCredits.forEach((credit, index) => {
+                const creditId = credit.temp_id || index;
+                const errors = {};
+                if (!credit.credit_type_id) {
+                    errors.credit_type = "Type de crédit requis";
                 }
+                const montant = parseFloat(credit.montant_credit);
+                if (!credit.montant_credit || isNaN(montant) || montant <= 0) {
+                    errors.montant = "Montant invalide (doit être > 0)";
+                } else if (montant > 10000000) {
+                    errors.montant = "Montant trop élevé (max 10,000,000 MAD)";
+                }
+                const taux = parseFloat(credit.taux_credit);
+                if (!credit.taux_credit && credit.taux_credit !== 0) {
+                    errors.taux = "Taux requis";
+                } else if (isNaN(taux) || taux < 0 || taux > 100) {
+                    errors.taux = "Taux invalide (0-100%)";
+                }
+                const duree = parseInt(credit.credit_duree);
+                if (!credit.credit_duree || isNaN(duree) || duree <= 0) {
+                    errors.duree = "Durée invalide (doit être > 0 mois)";
+                } else if (duree > 360) {
+                    errors.duree = "Durée trop longue (max 360 mois / 30 ans)";
+                } else if (duree < 1) {
+                    errors.duree = "Durée minimale: 1 mois";
+                }    
+                const mensualiteCalculee = calculerMensualiteCredit(montant, taux, duree);
+                if (mensualiteCalculee > 0 && montant > 0) {
+                    const mensualiteMax = montant / 3;
+                    if (mensualiteCalculee > mensualiteMax) {
+                        errors.mensualite = `Mensualité (${Math.round(mensualiteCalculee).toLocaleString()} MAD) très élevée par rapport au montant`;
+                    }
+                }
+                if (Object.keys(errors).length > 0) {
+                    creditErrors.push({ index: creditId, errors, credit });
+                }
+            });
+            if (creditErrors.length > 0) {
+                newErrors.credits = creditErrors;
+                const firstError = creditErrors[0];
+                const firstErrorMsg = Object.values(firstError.errors)[0];
+                showNotification(`Erreur crédit: ${firstErrorMsg}`, "error");
             }
-            
-            if (Object.keys(errors).length > 0) {
-                creditErrors.push({ index: creditId, errors, credit });
-            }
-        });
-        
-        if (creditErrors.length > 0) {
-            newErrors.credits = creditErrors;
-            // Afficher la première erreur
-            const firstError = creditErrors[0];
-            const firstErrorMsg = Object.values(firstError.errors)[0];
-            showNotification(`Erreur crédit: ${firstErrorMsg}`, "error");
         }
-    }
+        
         setErrors(newErrors);
         if (Object.keys(newErrors).length > 0) {
             const firstErrorField = Object.keys(newErrors)[0];
@@ -657,8 +724,7 @@ export default function EmployeeManagement() {
         return true;
     };
 
-
-// Submet DATA
+    // Submit DATA
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!isYearEditable) {
@@ -747,8 +813,7 @@ export default function EmployeeManagement() {
         }
     };
 
-
-// ReSET FORM
+    // Reset FORM
     const resetForm = () => {
         setFormData({
             prenom: "", nom: "", email: "", telephone: "", role: "", password: "",
@@ -806,8 +871,6 @@ export default function EmployeeManagement() {
         }
     };
 
-
-
     const posts = configData?.Post || [];
     const grades = selectedPost?.grades || [];
     const echelles = selectedGrade?.echelles || [];
@@ -823,7 +886,6 @@ export default function EmployeeManagement() {
             return (amount || 0).toLocaleString() + ' MAD';
         };
         
-        // Fonction pour le badge du rôle
         const getRoleBadge = (role) => {
             switch(role) {
                 case 'rh': 
@@ -849,8 +911,6 @@ export default function EmployeeManagement() {
         return (
             <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
                 <div className={`${cardClass} rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl animate-fadeInUp`}>
-                    
-                    {/* HEADER */}
                     <div className={`sticky top-0 z-10 ${cardClass} px-6 py-4 border-b ${borderClass} flex justify-between items-center bg-opacity-95 backdrop-blur-sm`}>
                         <div className="flex items-center gap-3">
                             <div className="p-2 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600">
@@ -867,8 +927,6 @@ export default function EmployeeManagement() {
                     </div>
                     
                     <div className="p-6 space-y-6">
-                        
-                        {/* ===== SECTION 1: INFOS PERSONNELLES ===== */}
                         <div>
                             <div className="mb-3">
                                 <h3 className={`text-sm font-semibold flex items-center gap-2 ${textClass}`}>
@@ -877,7 +935,6 @@ export default function EmployeeManagement() {
                                 </h3>
                                 <div className="h-px bg-gradient-to-r from-emerald-500 to-transparent mt-2"></div>
                             </div>
-                            
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 <div className={`p-3 rounded-lg ${cardClass} border ${borderClass}`}>
                                     <p className={`text-xs ${textMutedClass}`}>Nom complet</p>
@@ -915,7 +972,6 @@ export default function EmployeeManagement() {
                                     <p className={`text-xs ${textMutedClass}`}>Date d'embauche</p>
                                     <p className={`text-sm font-medium ${textClass} mt-1`}>{employee.date_embauche ? new Date(employee.date_embauche).toLocaleDateString('fr-FR') : '-'}</p>
                                 </div>
-                                {/* 🔥 AJOUT DU RÔLE ICI */}
                                 <div className={`p-3 rounded-lg ${cardClass} border ${borderClass}`}>
                                     <p className={`text-xs ${textMutedClass}`}>Rôle système</p>
                                     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium mt-1 ${roleBadge.bg}`}>
@@ -925,7 +981,6 @@ export default function EmployeeManagement() {
                             </div>
                         </div>
                         
-                        {/* ===== SECTION 2: CLASSIFICATION ===== */}
                         <div>
                             <div className="mb-3">
                                 <h3 className={`text-sm font-semibold flex items-center gap-2 ${textClass}`}>
@@ -934,7 +989,6 @@ export default function EmployeeManagement() {
                                 </h3>
                                 <div className="h-px bg-gradient-to-r from-indigo-500 to-transparent mt-2"></div>
                             </div>
-                            
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                 <div className={`p-3 rounded-lg ${cardClass} border ${borderClass}`}>
                                     <p className={`text-xs ${textMutedClass}`}>Poste</p>
@@ -955,7 +1009,6 @@ export default function EmployeeManagement() {
                             </div>
                         </div>
                         
-                        {/* ===== SECTION 3: SALAIRE DE BASE + INDEMNITÉS ===== */}
                         <div>
                             <div className="mb-3">
                                 <h3 className={`text-sm font-semibold flex items-center gap-2 ${textClass}`}>
@@ -964,13 +1017,11 @@ export default function EmployeeManagement() {
                                 </h3>
                                 <div className="h-px bg-gradient-to-r from-blue-500 to-transparent mt-2"></div>
                             </div>
-                            
                             <div className={`p-4 rounded-lg ${cardClass} border ${borderClass}`}>
                                 <div className="flex justify-between items-center pb-2 border-b ${borderClass}">
                                     <span className={`text-sm font-medium ${textClass}`}>Salaire de base</span>
                                     <span className="text-sm font-semibold text-emerald-600">{formatMoney(details.base_salary)}</span>
                                 </div>
-                                
                                 {details.indemnites?.details?.length > 0 && (
                                     <div className="mt-3">
                                         <p className={`text-xs ${textMutedClass} mb-2`}>Indemnités appliquées :</p>
@@ -991,7 +1042,6 @@ export default function EmployeeManagement() {
                                         </div>
                                     </div>
                                 )}
-                                
                                 <div className="flex justify-between items-center mt-3 pt-2 border-t ${borderClass}">
                                     <span className={`text-base font-bold ${textClass}`}>Salaire brut</span>
                                     <span className="text-base font-bold text-purple-600">{formatMoney(details.brut_salary)}</span>
@@ -999,7 +1049,6 @@ export default function EmployeeManagement() {
                             </div>
                         </div>
                         
-                        {/* ===== SECTION 4: DÉDUCTIONS ===== */}
                         <div>
                             <div className="mb-3">
                                 <h3 className={`text-sm font-semibold flex items-center gap-2 ${textClass}`}>
@@ -1008,10 +1057,7 @@ export default function EmployeeManagement() {
                                 </h3>
                                 <div className="h-px bg-gradient-to-r from-rose-500 to-transparent mt-2"></div>
                             </div>
-                            
                             <div className="space-y-4">
-                                
-                                {/* Cotisations */}
                                 {details.cotisations?.details?.length > 0 && (
                                     <div className={`p-4 rounded-lg ${cardClass} border ${borderClass}`}>
                                         <div className="flex items-center gap-2 mb-3">
@@ -1036,8 +1082,6 @@ export default function EmployeeManagement() {
                                         </div>
                                     </div>
                                 )}
-                                
-                                {/* IR */}
                                 <div className={`p-4 rounded-lg ${cardClass} border ${borderClass}`}>
                                     <div className="flex justify-between items-center">
                                         <div>
@@ -1047,8 +1091,6 @@ export default function EmployeeManagement() {
                                         <span className="text-sm font-semibold text-rose-600">- {formatMoney(details.ir?.total || 0)}</span>
                                     </div>
                                 </div>
-                                
-                                {/* RCAR */}
                                 {details.rcar?.details?.length > 0 && (
                                     <div className={`p-4 rounded-lg ${cardClass} border ${borderClass}`}>
                                         <div className="flex items-center gap-2 mb-3">
@@ -1075,8 +1117,6 @@ export default function EmployeeManagement() {
                                         </div>
                                     </div>
                                 )}
-                                
-                                {/* SNTL */}
                                 {details.sntl?.details?.length > 0 && (
                                     <div className={`p-4 rounded-lg ${cardClass} border ${borderClass}`}>
                                         <div className="flex items-center gap-2 mb-3">
@@ -1102,8 +1142,6 @@ export default function EmployeeManagement() {
                                         </div>
                                     </div>
                                 )}
-                                
-                                {/* Assurances */}
                                 {details.assurances?.details?.length > 0 && (
                                     <div className={`p-4 rounded-lg ${cardClass} border ${borderClass}`}>
                                         <div className="flex items-center gap-2 mb-3">
@@ -1127,8 +1165,6 @@ export default function EmployeeManagement() {
                                         </div>
                                     </div>
                                 )}
-                                
-                                {/* Crédits */}
                                 {details.credits?.details?.length > 0 && (
                                     <div className={`p-4 rounded-lg ${cardClass} border ${borderClass}`}>
                                         <div className="flex items-center gap-2 mb-3">
@@ -1155,8 +1191,6 @@ export default function EmployeeManagement() {
                                         </div>
                                     </div>
                                 )}
-                                
-                                {/* Total déductions */}
                                 <div className={`p-4 rounded-lg ${cardClass} border ${borderClass} bg-gray-50 dark:bg-gray-800`}>
                                     <div className="flex justify-between items-center">
                                         <span className={`text-base font-bold ${textClass}`}>Total des déductions</span>
@@ -1166,7 +1200,6 @@ export default function EmployeeManagement() {
                             </div>
                         </div>
                         
-                        {/* ===== SECTION 5: SALAIRE NET ===== */}
                         <div>
                             <div className={`p-5 rounded-xl border-2 ${darkMode ? 'border-indigo-800 bg-indigo-950/20' : 'border-indigo-200 bg-indigo-50'}`}>
                                 <div className="flex justify-between items-center">
@@ -1179,13 +1212,11 @@ export default function EmployeeManagement() {
                             </div>
                         </div>
                         
-                        {/* ===== BOUTON FERMER ===== */}
                         <div className="flex gap-3 pt-4 border-t ${borderClass}">
                             <button onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium hover:from-blue-700 hover:to-indigo-700 transition-all cursor-pointer">
                                 Fermer
                             </button>
                         </div>
-                        
                     </div>
                 </div>
             </div>
@@ -1198,7 +1229,6 @@ export default function EmployeeManagement() {
     return (
         <div className={`min-h-screen transition-colors duration-300 ${bgClass}`}>
             <div className="max-w-7xl mx-auto p-1 md:p-2">
-                {/* Header */}
                 <div className="mb-6">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                         <div>
@@ -1241,7 +1271,6 @@ export default function EmployeeManagement() {
                     </div>
                 </div>
 
-                {/* Add/Edit form */}
                 {showForm && (
                     <div className={`${cardClass} rounded-xl p-4 md:p-5 mb-6 border shadow-xl`}>
                         <div className="flex justify-between items-center mb-5">
@@ -1253,7 +1282,6 @@ export default function EmployeeManagement() {
                         </div>
 
                         <form onSubmit={handleSubmit} className="space-y-6">
-                            {/* Personal Info */}
                             <div>
                                 <div className="mb-3">
                                     <h3 className={`text-sm font-semibold flex items-center gap-2 ${textClass}`}>
@@ -1312,7 +1340,6 @@ export default function EmployeeManagement() {
                                 </div>
                             </div>
 
-                            {/* Professional Info */}
                             <div>
                                 <div className="mb-3">
                                     <h3 className={`text-sm font-semibold flex items-center gap-2 ${textClass}`}>
@@ -1380,9 +1407,17 @@ export default function EmployeeManagement() {
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
                                     <div className="w-full">
                                         <label className={`text-xs font-medium ${textMutedClass} mb-1 block`}>Organisme (Cotisation)</label>
-                                        <select value={formData.cotisation_id || ""} onChange={(e) => handleCotisationChange(e.target.value)} className={`w-full ${errors.cotisation_id ? inputErrorClass : inputClass}`}>
+                                        <select 
+                                            value={formData.cotisation_id || ""} 
+                                            onChange={(e) => handleCotisationChange(e.target.value)} 
+                                            className={`w-full ${errors.cotisation_id ? inputErrorClass : inputClass}`}
+                                        >
                                             <option value="">-- Sélectionner un organisme --</option>
-                                            {cotisationsList.map(org => (<option key={org.id} value={org.id}>{org.name} {org.is_favorite && '⭐'}</option>))}
+                                            {cotisationsList.map(org => (
+                                                <option key={org.id} value={org.id}>
+                                                    {org.name} {org.is_favorite && '⭐'}
+                                                </option>
+                                            ))}
                                         </select>
                                         {errors.cotisation_id && <p className="text-red-500 text-xs mt-1">{errors.cotisation_id}</p>}
                                     </div>
@@ -1399,27 +1434,8 @@ export default function EmployeeManagement() {
                                             <Plus size={14} /> Ajouter un crédit
                                         </button>
                                     </div>
-                                    <div className="flex items-end"><button type="button" onClick={() => setShowCreditForm(!showCreditForm)} className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 transition-all cursor-pointer shadow-md"><Plus size={14} /> Ajouter un crédit</button></div>
-                                </div>
-                                <div className="mt-3">
-                                    {employeeCredits.length > 0 && (<div className="space-y-2 mb-3"><p className={`text-xs font-medium ${textMutedClass}`}>Crédits à ajouter :</p>
-                                        {employeeCredits.map((credit) => (<div key={credit.temp_id} className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl"><div><p className="text-sm font-medium">{CreditList.find(c => c.id === parseInt(credit.credit_type_id))?.name || 'Crédit'}</p><p className="text-xs text-gray-500">{Number(credit.montant_credit).toLocaleString()} MAD • {credit.taux_credit}% • {credit.credit_duree} mois</p><p className="text-xs text-indigo-600">Mensualité: {Number(credit.credit_mensualite).toLocaleString()} MAD</p></div><button type="button" onClick={() => removeTempCredit(credit.temp_id)} className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg transition-all"><Trash2 size={14} /></button></div>))}
-                                    </div>)}
-                                    {showCreditForm && (<div className="mt-3 p-4 rounded-xl border-2 border-indigo-200 dark:border-indigo-800 bg-indigo-50/50 dark:bg-indigo-950/20 animate-fadeIn">
-                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                                            <div><label className={`text-xs font-medium ${textMutedClass} mb-1 block`}>Type de crédit</label><select value={tempCredit.credit_type_id} onChange={(e) => setTempCredit({...tempCredit, credit_type_id: e.target.value})} className={inputClass}><option value="">-- Sélectionner --</option>{CreditList.map(c => (<option key={c.id} value={c.id}>{c.name}</option>))}</select></div>
-                                            <div><label className={`text-xs font-medium ${textMutedClass} mb-1 block`}>Montant (MAD)</label><input type="number" placeholder="Ex: 100000" className={inputClass} value={tempCredit.montant_credit} onChange={(e) => setTempCredit({...tempCredit, montant_credit: e.target.value})} /></div>
-                                            <div><label className={`text-xs font-medium ${textMutedClass} mb-1 block`}>Taux (%)</label><input type="number" step="0.1" placeholder="Ex: 6" className={inputClass} value={tempCredit.taux_credit} onChange={(e) => setTempCredit({...tempCredit, taux_credit: e.target.value})} /></div>
-                                            <div><label className={`text-xs font-medium ${textMutedClass} mb-1 block`}>Durée (mois)</label><input type="number" placeholder="Ex: 60" className={inputClass} value={tempCredit.credit_duree} onChange={(e) => setTempCredit({...tempCredit, credit_duree: e.target.value})} /></div>
-                                            <div><label className={`text-xs font-medium ${textMutedClass} mb-1 block`}>Date début</label><input type="date" className={inputClass} value={tempCredit.credit_date_debut} onChange={(e) => { const newDateDebut = e.target.value; setTempCredit({...tempCredit, credit_date_debut: newDateDebut}); if (tempCredit.credit_duree && newDateDebut) { const dateFin = calculerDateFin(newDateDebut, tempCredit.credit_duree); setTempCredit(prev => ({ ...prev, credit_date_fin: dateFin })); } }} /></div>
-                                            <div><label className={`text-xs font-medium ${textMutedClass} mb-1 block`}>Date fin</label><input type="date" className={`${inputClass} bg-gray-100 dark:bg-gray-800 cursor-not-allowed`} value={tempCredit.credit_date_fin} readOnly /></div>
-                                        </div>
-                                        {tempCredit.montant_credit && tempCredit.taux_credit && tempCredit.credit_duree && (<div className="mt-3 p-2 rounded-lg bg-indigo-100 dark:bg-indigo-900/30"><p className="text-sm text-indigo-600 dark:text-indigo-400">Mensualité estimée: <strong>{calculerMensualiteCredit(tempCredit.montant_credit, tempCredit.taux_credit, tempCredit.credit_duree).toLocaleString()} MAD</strong></p></div>)}
-                                        <div className="flex justify-end gap-3 mt-4"><button type="button" onClick={() => { setShowCreditForm(false); setTempCredit({ credit_type_id: '', montant_credit: '', taux_credit: '', credit_duree: '', credit_date_debut: '', credit_date_fin: '', description: '' }); }} className="px-4 py-1.5 text-sm text-white bg-red-500 rounded-lg hover:bg-red-600 transition-all cursor-pointer">Annuler</button><button type="button" onClick={addTempCredit} className="px-4 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all cursor-pointer">Ajouter</button></div>
-                                    </div>)}
                                 </div>
                                 
-                                {/* Credits list */}
                                 <div className="mt-3">
                                     {employeeCredits.length > 0 && (
                                         <div className="space-y-2 mb-3">
@@ -1429,23 +1445,12 @@ export default function EmployeeManagement() {
                                                     Total: {employeeCredits.length} crédit(s)
                                                 </span>
                                             </div>
-                                            
                                             {employeeCredits.map((credit) => {
                                                 const creditErrors = errors.credits?.find(e => e.index === credit.temp_id)?.errors || {};
                                                 const hasErrors = Object.keys(creditErrors).length > 0;
                                                 const isEditing = editingCredit?.temp_id === credit.temp_id;
-                                                
                                                 return (
-                                                    <div 
-                                                        key={credit.temp_id} 
-                                                        className={`flex items-center justify-between p-3 rounded-lg transition-all duration-200 ${
-                                                            hasErrors 
-                                                                ? 'bg-red-50 dark:bg-red-950/20 border-l-4 border-red-500' 
-                                                                : isEditing
-                                                                ? 'bg-indigo-50 dark:bg-indigo-950/20 border-l-4 border-indigo-500'
-                                                                : 'bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-700/50'
-                                                        }`}
-                                                    >
+                                                    <div key={credit.temp_id} className={`flex items-center justify-between p-3 rounded-lg transition-all duration-200 ${hasErrors ? 'bg-red-50 dark:bg-red-950/20 border-l-4 border-red-500' : isEditing ? 'bg-indigo-50 dark:bg-indigo-950/20 border-l-4 border-indigo-500' : 'bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-700/50'}`}>
                                                         <div className="flex-1">
                                                             <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
                                                                 <span className={`text-sm font-medium ${hasErrors ? 'text-red-600 dark:text-red-400' : isEditing ? 'text-indigo-600 dark:text-indigo-400' : textClass}`}>
@@ -1469,29 +1474,12 @@ export default function EmployeeManagement() {
                                                                     {creditErrors.montant && <span className="text-red-500 text-[10px]">{creditErrors.montant}</span>}
                                                                     {creditErrors.taux && <span className="text-red-500 text-[10px]">{creditErrors.taux}</span>}
                                                                     {creditErrors.duree && <span className="text-red-500 text-[10px]">{creditErrors.duree}</span>}
-                                                                    {creditErrors.date_debut && <span className="text-red-500 text-[10px]">{creditErrors.date_debut}</span>}
                                                                 </div>
                                                             )}
                                                         </div>
-                                                        
-                                                        {/* Actions */}
                                                         <div className="flex items-center gap-1 shrink-0 ml-2">
-                                                            <button 
-                                                                type="button" 
-                                                                onClick={() => editTempCredit(credit)} 
-                                                                className="cursor-pointer p-1.5 text-blue-500 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-all"
-                                                                title="Modifier ce crédit"
-                                                            >
-                                                                <Edit2 size={14} />
-                                                            </button>
-                                                            <button 
-                                                                type="button" 
-                                                                onClick={() => removeTempCredit(credit.temp_id)} 
-                                                                className="cursor-pointer p-1.5 text-gray-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg transition-all"
-                                                                title="Supprimer ce crédit"
-                                                            >
-                                                                <Trash2 size={14} />
-                                                            </button>
+                                                            <button type="button" onClick={() => editTempCredit(credit)} className="cursor-pointer p-1.5 text-blue-500 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-all" title="Modifier ce crédit"><Edit2 size={14} /></button>
+                                                            <button type="button" onClick={() => removeTempCredit(credit.temp_id)} className="cursor-pointer p-1.5 text-gray-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg transition-all" title="Supprimer ce crédit"><Trash2 size={14} /></button>
                                                         </div>
                                                     </div>
                                                 );
@@ -1500,175 +1488,53 @@ export default function EmployeeManagement() {
                                     )}
                                     {showCreditForm && (
                                         <div className="mt-3 p-4 rounded-xl border-2 border-indigo-200 dark:border-indigo-800 bg-indigo-50/50 dark:bg-indigo-950/20 animate-fadeIn">
-                                            
-                                            {/* 🔥 EN-TÊTE AVEC MODE (AJOUT / MODIFICATION) */}
                                             <div className="flex justify-between items-center mb-4 pb-2 border-b border-indigo-200 dark:border-indigo-800">
                                                 <h4 className={`text-sm font-semibold ${textClass} flex items-center gap-2`}>
-                                                    {editingCredit ? (
-                                                        <>
-                                                            <Edit2 size={14} className="text-amber-500" />
-                                                            Modifier le crédit
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <Plus size={14} className="text-indigo-500" />
-                                                            Ajouter un crédit
-                                                        </>
-                                                    )}
+                                                    {editingCredit ? (<><Edit2 size={14} className="text-amber-500" /> Modifier le crédit</>) : (<><Plus size={14} className="text-indigo-500" /> Ajouter un crédit</>)}
                                                 </h4>
-                                                {editingCredit && (
-                                                    <button 
-                                                        type="button" 
-                                                        onClick={() => {
-                                                            setEditingCredit(null);
-                                                            setTempCredit({
-                                                                credit_type_id: '', montant_credit: '', taux_credit: '',
-                                                                credit_duree: '', credit_date_debut: '', credit_date_fin: '',
-                                                            });
-                                                        }}
-                                                        className="text-xs text-gray-500 hover:text-red-500 transition-colors flex items-center gap-1"
-                                                    >
-                                                        <X size={12} /> Annuler modification
-                                                    </button>
-                                                )}
+                                                {editingCredit && (<button type="button" onClick={() => { setEditingCredit(null); setTempCredit({ credit_type_id: '', montant_credit: '', taux_credit: '', credit_duree: '', credit_date_debut: '', credit_date_fin: '' }); }} className="text-xs text-gray-500 hover:text-red-500 transition-colors flex items-center gap-1"><X size={12} /> Annuler modification</button>)}
                                             </div>
-                                            
-                                            {/* Champs du formulaire */}
                                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                                                 <div>
                                                     <label className={`text-xs font-medium ${textMutedClass} mb-1 block`}>Type de crédit *</label>
-                                                    <select 
-                                                        value={tempCredit.credit_type_id} 
-                                                        onChange={(e) => setTempCredit({...tempCredit, credit_type_id: e.target.value})} 
-                                                        className={`w-full ${inputClass} ${!tempCredit.credit_type_id && tempCredit.credit_type_id !== '' ? 'border-red-500' : ''}`}
-                                                    >
+                                                    <select value={tempCredit.credit_type_id} onChange={(e) => setTempCredit({...tempCredit, credit_type_id: e.target.value})} className={`w-full ${inputClass}`}>
                                                         <option value="">-- Sélectionner --</option>
                                                         {CreditList.map(c => (<option key={c.id} value={c.id}>{c.name}</option>))}
                                                     </select>
-                                                    {!tempCredit.credit_type_id && <p className="text-red-500 text-xs mt-1">Type requis</p>}
                                                 </div>
                                                 <div>
                                                     <label className={`text-xs font-medium ${textMutedClass} mb-1 block`}>Montant (MAD) *</label>
-                                                    <input 
-                                                        type="number" 
-                                                        placeholder="Ex: 100000" 
-                                                        className={`w-full ${inputClass} ${tempCredit.montant_credit && (parseFloat(tempCredit.montant_credit) <= 0 || parseFloat(tempCredit.montant_credit) > 10000000) ? 'border-red-500' : ''}`} 
-                                                        value={tempCredit.montant_credit} 
-                                                        onChange={(e) => setTempCredit({...tempCredit, montant_credit: e.target.value})} 
-                                                    />
-                                                    {tempCredit.montant_credit && parseFloat(tempCredit.montant_credit) <= 0 && 
-                                                        <p className="text-red-500 text-xs mt-1">Montant doit être supérieur à 0</p>}
-                                                    {tempCredit.montant_credit && parseFloat(tempCredit.montant_credit) > 10000000 && 
-                                                        <p className="text-red-500 text-xs mt-1">Montant max: 10,000,000 MAD</p>}
+                                                    <input type="number" placeholder="Ex: 100000" className={`w-full ${inputClass}`} value={tempCredit.montant_credit} onChange={(e) => setTempCredit({...tempCredit, montant_credit: e.target.value})} />
                                                 </div>
                                                 <div>
                                                     <label className={`text-xs font-medium ${textMutedClass} mb-1 block`}>Taux (%) *</label>
-                                                    <input 
-                                                        type="number" 
-                                                        step="0.1" 
-                                                        placeholder="Ex: 6" 
-                                                        className={`w-full ${inputClass} ${tempCredit.taux_credit && (parseFloat(tempCredit.taux_credit) < 0 || parseFloat(tempCredit.taux_credit) > 100) ? 'border-red-500' : ''}`} 
-                                                        value={tempCredit.taux_credit} 
-                                                        onChange={(e) => setTempCredit({...tempCredit, taux_credit: e.target.value})} 
-                                                    />
-                                                    {tempCredit.taux_credit && (parseFloat(tempCredit.taux_credit) < 0 || parseFloat(tempCredit.taux_credit) > 100) && 
-                                                        <p className="text-red-500 text-xs mt-1">Taux entre 0% et 100%</p>}
+                                                    <input type="number" step="0.1" placeholder="Ex: 6" className={`w-full ${inputClass}`} value={tempCredit.taux_credit} onChange={(e) => setTempCredit({...tempCredit, taux_credit: e.target.value})} />
                                                 </div>
                                                 <div>
                                                     <label className={`text-xs font-medium ${textMutedClass} mb-1 block`}>Durée (mois) *</label>
-                                                    <input 
-                                                        type="number" 
-                                                        placeholder="Ex: 60" 
-                                                        className={`w-full ${inputClass} ${tempCredit.credit_duree && (parseInt(tempCredit.credit_duree) <= 0 || parseInt(tempCredit.credit_duree) > 360) ? 'border-red-500' : ''}`} 
-                                                        value={tempCredit.credit_duree} 
-                                                        onChange={(e) => setTempCredit({...tempCredit, credit_duree: e.target.value})} 
-                                                    />
-                                                    {tempCredit.credit_duree && parseInt(tempCredit.credit_duree) <= 0 && 
-                                                        <p className="text-red-500 text-xs mt-1">Durée doit être supérieure à 0</p>}
-                                                    {tempCredit.credit_duree && parseInt(tempCredit.credit_duree) > 360 && 
-                                                        <p className="text-red-500 text-xs mt-1">Durée max: 360 mois (30 ans)</p>}
+                                                    <input type="number" placeholder="Ex: 60" className={`w-full ${inputClass}`} value={tempCredit.credit_duree} onChange={(e) => setTempCredit({...tempCredit, credit_duree: e.target.value})} />
                                                 </div>
                                                 <div>
                                                     <label className={`text-xs font-medium ${textMutedClass} mb-1 block`}>Date début</label>
-                                                    <input 
-                                                        type="date" 
-                                                        className={`w-full ${inputClass}`} 
-                                                        value={tempCredit.credit_date_debut} 
-                                                        onChange={(e) => { 
-                                                            const newDateDebut = e.target.value; 
-                                                            setTempCredit({...tempCredit, credit_date_debut: newDateDebut}); 
-                                                            if (tempCredit.credit_duree && newDateDebut) { 
-                                                                const dateFin = calculerDateFin(newDateDebut, tempCredit.credit_duree); 
-                                                                setTempCredit(prev => ({ ...prev, credit_date_fin: dateFin })); 
-                                                            } 
-                                                        }} 
-                                                    />
+                                                    <input type="date" className={`w-full ${inputClass}`} value={tempCredit.credit_date_debut} onChange={(e) => { const newDateDebut = e.target.value; setTempCredit({...tempCredit, credit_date_debut: newDateDebut}); if (tempCredit.credit_duree && newDateDebut) { const dateFin = calculerDateFin(newDateDebut, tempCredit.credit_duree); setTempCredit(prev => ({ ...prev, credit_date_fin: dateFin })); } }} />
                                                 </div>
                                                 <div>
                                                     <label className={`text-xs font-medium ${textMutedClass} mb-1 block`}>Date fin</label>
-                                                    <input 
-                                                        type="date" 
-                                                        className={`w-full ${inputClass} bg-gray-100 dark:bg-gray-800 cursor-not-allowed`} 
-                                                        value={tempCredit.credit_date_fin} 
-                                                        readOnly 
-                                                    />
+                                                    <input type="date" className={`w-full ${inputClass} bg-gray-100 dark:bg-gray-800 cursor-not-allowed`} value={tempCredit.credit_date_fin} readOnly />
                                                 </div>
                                             </div>
-                                            
-                                            {/* Message d'aide */}
-                                            <div className="mt-3 p-2 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 text-xs text-indigo-600 dark:text-indigo-400">
-                                                💡 <strong>Conseils :</strong> 
-                                                Taux maximum 100%, durée maximum 360 mois (30 ans), montant maximum 10,000,000 MAD
-                                            </div>
-                                            
-                                            {/* Aperçu mensualité */}
+                                            <div className="mt-3 p-2 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 text-xs text-indigo-600 dark:text-indigo-400">💡 <strong>Conseils :</strong> Taux maximum 100%, durée maximum 360 mois (30 ans), montant maximum 10,000,000 MAD</div>
                                             {tempCredit.montant_credit && tempCredit.taux_credit && tempCredit.credit_duree && (
-                                                <div className="mt-3 p-2 rounded-lg bg-indigo-100 dark:bg-indigo-900/30">
-                                                    <p className="text-sm text-indigo-600 dark:text-indigo-400">
-                                                        Mensualité estimée: <strong>{calculerMensualiteCredit(tempCredit.montant_credit, tempCredit.taux_credit, tempCredit.credit_duree).toLocaleString()} MAD</strong>
-                                                    </p>
-                                                </div>
+                                                <div className="mt-3 p-2 rounded-lg bg-indigo-100 dark:bg-indigo-900/30"><p className="text-sm text-indigo-600 dark:text-indigo-400">Mensualité estimée: <strong>{calculerMensualiteCredit(tempCredit.montant_credit, tempCredit.taux_credit, tempCredit.credit_duree).toLocaleString()} MAD</strong></p></div>
                                             )}
-                                            
-                                            {/* Boutons */}
                                             <div className="flex justify-end gap-3 mt-4">
-                                                <button 
-                                                    type="button" 
-                                                    onClick={() => { 
-                                                        setShowCreditForm(false); 
-                                                        setEditingCredit(null);
-                                                        setTempCredit({ 
-                                                            credit_type_id: '', montant_credit: '', taux_credit: '', 
-                                                            credit_duree: '', credit_date_debut: '', credit_date_fin: '', 
-                                                        }); 
-                                                    }} 
-                                                    className="px-4 py-1.5 text-sm text-white bg-red-500 rounded-lg hover:bg-red-600 transition-all cursor-pointer"
-                                                >
-                                                    Annuler
-                                                </button>
-                                                <button 
-                                                    type="button" 
-                                                    onClick={addTempCredit} 
-                                                    className="px-4 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all cursor-pointer flex items-center gap-1"
-                                                >
-                                                    {editingCredit ? (
-                                                        <>
-                                                            <Edit2 size={12} /> Mettre à jour
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <Plus size={12} /> Ajouter
-                                                        </>
-                                                    )}
-                                                </button>
+                                                <button type="button" onClick={() => { setShowCreditForm(false); setEditingCredit(null); setTempCredit({ credit_type_id: '', montant_credit: '', taux_credit: '', credit_duree: '', credit_date_debut: '', credit_date_fin: '' }); }} className="px-4 py-1.5 text-sm text-white bg-red-500 rounded-lg hover:bg-red-600 transition-all cursor-pointer">Annuler</button>
+                                                <button type="button" onClick={addTempCredit} className="px-4 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all cursor-pointer flex items-center gap-1">{editingCredit ? (<><Edit2 size={12} /> Mettre à jour</>) : (<><Plus size={12} /> Ajouter</>)}</button>
                                             </div>
                                         </div>
-                                        {!isEdit && (<div className="flex items-center gap-3 pt-2"><input type="checkbox" id="send_credentials_email" checked={sendCredentialsEmail} onChange={(e) => setSendCredentialsEmail(e.target.checked)} className="w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" /><label htmlFor="send_credentials_email" className={`text-sm font-medium cursor-pointer ${textClass}`}><Mail size={16} className="inline mr-2 text-indigo-500" /> Envoyer les identifiants par email à l'employé</label></div>)}
-                                        {isEdit && (<div className={`p-3 rounded-lg border ${darkMode ? 'border-amber-800 bg-amber-950/20' : 'border-amber-200 bg-amber-50'}`}><div className="flex items-center gap-3"><input type="checkbox" id="regenerate_password" checked={regeneratePassword} onChange={(e) => setRegeneratePassword(e.target.checked)} className="w-5 h-5 rounded border-gray-300 text-amber-600 focus:ring-amber-500 cursor-pointer" /><label htmlFor="regenerate_password" className={`text-sm font-medium cursor-pointer ${textClass}`}><RefreshCw size={16} className="inline mr-2 text-amber-500" /> Régénérer le mot de passe</label></div>{regeneratePassword && (<div className="mt-3"><div className="flex items-center gap-3 ml-7"><input type="checkbox" id="send_email_on_regenerate" checked={sendCredentialsEmail} onChange={(e) => setSendCredentialsEmail(e.target.checked)} className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" /><label htmlFor="send_email_on_regenerate" className={`text-xs cursor-pointer ${textClass}`}><Mail size={12} className="inline mr-1" /> Envoyer le nouveau mot de passe par email</label></div><p className={`text-xs ${textMutedClass} mt-2 ml-7`}>Un nouveau mot de passe sera généré. L'employé devra le changer à la première connexion.</p></div>)}</div>)}
-                                    </div>
+                                    )}
                                 </div>
                                 
-                                {/* Security Section */}
                                 <div className="mt-6">
                                     <div className="mb-3">
                                         <h3 className={`text-sm font-semibold flex items-center gap-2 ${textClass}`}>
@@ -1678,92 +1544,39 @@ export default function EmployeeManagement() {
                                         <div className="h-px bg-gradient-to-r from-blue-500 to-transparent mt-2"></div>
                                     </div>
                                     <div className={`p-5 rounded-xl ${cardClass} border ${borderClass} space-y-4`}>
-                                        {/* Rôle Système */}
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
                                             <label className={`text-sm font-medium ${textClass}`}>Rôle Système</label>
-                                            <select 
-                                                name="role" 
-                                                value={formData.role || ""} 
-                                                onChange={handleChange} 
-                                                disabled={isEdit}
-                                                className={`w-full p-2.5 rounded-xl border transition-all duration-200
-                                                    ${isEdit 
-                                                        ? `bg-gray-100 dark:bg-gray-800 ${borderClass} ${textClass} opacity-70 cursor-not-allowed` 
-                                                        : `${inputClass}`
-                                                    }`}
-                                            >
+                                            <select name="role" value={formData.role || ""} onChange={handleChange} disabled={isEdit} className={`w-full p-2.5 rounded-xl border transition-all duration-200 ${isEdit ? `bg-gray-100 dark:bg-gray-800 ${borderClass} ${textClass} opacity-70 cursor-not-allowed` : `${inputClass}`}`}>
                                                 <option value="">Sélectionner un rôle</option>
                                                 <option value="employee"> Employé</option>
                                                 <option value="rh"> RH</option>
                                             </select>
                                         </div>
-                                        
-                                        {/* Email */}
                                         <div className="grid grid-cols-1 gap-4">
                                             <div>
                                                 <label className={`block text-xs mb-1 ${textMutedClass}`}>Email professionnelle</label>
-                                                <input 
-                                                    type="email" 
-                                                    name="email" 
-                                                    value={formData.email} 
-                                                    onChange={handleChange} 
-                                                    className={`w-full p-2.5 rounded-lg border bg-transparent ${borderClass} ${textClass} transition-all`} 
-                                                    required 
-                                                />
+                                                <input type="email" name="email" value={formData.email} onChange={handleChange} className={`w-full p-2.5 rounded-lg border bg-transparent ${borderClass} ${textClass} transition-all`} required />
                                             </div>
                                         </div>
-                                        
-                                        {/* Envoi email (seulement pour ajout) */}
                                         {!isEdit && (
                                             <div className="flex items-center gap-3 pt-2">
-                                                <input 
-                                                    type="checkbox" 
-                                                    id="send_credentials_email" 
-                                                    checked={sendCredentialsEmail} 
-                                                    onChange={(e) => setSendCredentialsEmail(e.target.checked)} 
-                                                    className="w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" 
-                                                />
-                                                <label htmlFor="send_credentials_email" className={`text-sm font-medium cursor-pointer ${textClass}`}>
-                                                    <Mail size={16} className="inline mr-2 text-indigo-500" /> 
-                                                    Envoyer les identifiants par email à l'employé
-                                                </label>
+                                                <input type="checkbox" id="send_credentials_email" checked={sendCredentialsEmail} onChange={(e) => setSendCredentialsEmail(e.target.checked)} className="w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
+                                                <label htmlFor="send_credentials_email" className={`text-sm font-medium cursor-pointer ${textClass}`}><Mail size={16} className="inline mr-2 text-indigo-500" /> Envoyer les identifiants par email à l'employé</label>
                                             </div>
                                         )}
-                                        
-                                        {/* Régénération mot de passe (seulement en édition) */}
                                         {isEdit && (
                                             <div className={`p-3 rounded-lg border ${darkMode ? 'border-amber-800 bg-amber-950/20' : 'border-amber-200 bg-amber-50'}`}>
                                                 <div className="flex items-center gap-3">
-                                                    <input 
-                                                        type="checkbox" 
-                                                        id="regenerate_password" 
-                                                        checked={regeneratePassword} 
-                                                        onChange={(e) => setRegeneratePassword(e.target.checked)} 
-                                                        className="w-5 h-5 rounded border-gray-300 text-amber-600 focus:ring-amber-500 cursor-pointer" 
-                                                    />
-                                                    <label htmlFor="regenerate_password" className={`text-sm font-medium cursor-pointer ${textClass}`}>
-                                                        <RefreshCw size={16} className="inline mr-2 text-amber-500" /> 
-                                                        Régénérer le mot de passe
-                                                    </label>
+                                                    <input type="checkbox" id="regenerate_password" checked={regeneratePassword} onChange={(e) => setRegeneratePassword(e.target.checked)} className="w-5 h-5 rounded border-gray-300 text-amber-600 focus:ring-amber-500 cursor-pointer" />
+                                                    <label htmlFor="regenerate_password" className={`text-sm font-medium cursor-pointer ${textClass}`}><RefreshCw size={16} className="inline mr-2 text-amber-500" /> Régénérer le mot de passe</label>
                                                 </div>
                                                 {regeneratePassword && (
                                                     <div className="mt-3">
                                                         <div className="flex items-center gap-3 ml-7">
-                                                            <input 
-                                                                type="checkbox" 
-                                                                id="send_email_on_regenerate" 
-                                                                checked={sendCredentialsEmail} 
-                                                                onChange={(e) => setSendCredentialsEmail(e.target.checked)} 
-                                                                className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" 
-                                                            />
-                                                            <label htmlFor="send_email_on_regenerate" className={`text-xs cursor-pointer ${textClass}`}>
-                                                                <Mail size={12} className="inline mr-1" /> 
-                                                                Envoyer le nouveau mot de passe par email
-                                                            </label>
+                                                            <input type="checkbox" id="send_email_on_regenerate" checked={sendCredentialsEmail} onChange={(e) => setSendCredentialsEmail(e.target.checked)} className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
+                                                            <label htmlFor="send_email_on_regenerate" className={`text-xs cursor-pointer ${textClass}`}><Mail size={12} className="inline mr-1" /> Envoyer le nouveau mot de passe par email</label>
                                                         </div>
-                                                        <p className={`text-xs ${textMutedClass} mt-2 ml-7`}>
-                                                            Un nouveau mot de passe sera généré. L'employé devra le changer à la première connexion.
-                                                        </p>
+                                                        <p className={`text-xs ${textMutedClass} mt-2 ml-7`}>Un nouveau mot de passe sera généré. L'employé devra le changer à la première connexion.</p>
                                                     </div>
                                                 )}
                                             </div>
@@ -1779,28 +1592,22 @@ export default function EmployeeManagement() {
                         </form>
                     </div>
                 )}
-                {/* Filters */}
+                
                 <div className={`${cardClass} rounded-xl p-4 mb-4 border flex flex-wrap gap-3 items-center`}>
                     <div className="relative flex-1 min-w-[180px]">
                         <Search size={14} className={`absolute left-3 top-1/2 -translate-y-1/2 ${textMutedClass}`} />
-                        <input type="text" placeholder="Rechercher..."
-                            className={`w-full pl-9 pr-3 py-2 rounded-lg border ${cardClass} ${textClass} outline-none text-sm`}
-                            onChange={e => setFilters(f => ({ ...f, search: e.target.value }))} />
+                        <input type="text" placeholder="Rechercher..." className={`w-full pl-9 pr-3 py-2 rounded-lg border ${cardClass} ${textClass} outline-none text-sm`} onChange={e => setFilters(f => ({ ...f, search: e.target.value }))} />
                     </div>
-                    <select value={filters.statut} onChange={e => setFilters(f => ({ ...f, statut: e.target.value }))}
-                        className={`px-3 py-2 rounded-lg border ${cardClass} ${textClass} outline-none text-sm cursor-pointer`}>
+                    <select value={filters.statut} onChange={e => setFilters(f => ({ ...f, statut: e.target.value }))} className={`px-3 py-2 rounded-lg border ${cardClass} ${textClass} outline-none text-sm cursor-pointer`}>
                         <option value="Tous">Tous statuts</option>
                         <option value="ACTIF">Actif</option>
                         <option value="CONGE">Congé</option>
                         <option value="DEPART">Départ</option>
                     </select>
-                    {(filters.statut !== 'Tous' || filters.search) && (
-                        <button onClick={() => setFilters({ statut: 'Tous', search: '' })}
-                            className="text-xs text-red-500 hover:text-red-700">Réinitialiser</button>
-                    )}
+                    {(filters.statut !== 'Tous' || filters.search) && (<button onClick={() => setFilters({ statut: 'Tous', search: '' })} className="text-xs text-red-500 hover:text-red-700">Réinitialiser</button>)}
                     <div className="flex justify-end gap-2">
-                        <button onClick={() => setViewMode('table')} className={` cursor-pointer p-2 rounded-lg transition-all ${viewMode === 'table' ? 'bg-indigo-600 text-white' : cardClass + ' ' + textClass}`}><List size={18} /></button>
-                        <button onClick={() => setViewMode('grid')} className={` cursor-pointer p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-indigo-600 text-white' : cardClass + ' ' + textClass}`}><Grid3x3 size={18} /></button>
+                        <button onClick={() => setViewMode('table')} className={`cursor-pointer p-2 rounded-lg transition-all ${viewMode === 'table' ? 'bg-indigo-600 text-white' : cardClass + ' ' + textClass}`}><List size={18} /></button>
+                        <button onClick={() => setViewMode('grid')} className={`cursor-pointer p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-indigo-600 text-white' : cardClass + ' ' + textClass}`}><Grid3x3 size={18} /></button>
                     </div>
                 </div>
 
@@ -1810,71 +1617,27 @@ export default function EmployeeManagement() {
                             <table className="w-full min-w-[900px]">
                                 <thead className={darkMode ? 'bg-gradient-to-r from-gray-800 to-gray-900' : 'bg-gradient-to-r from-gray-100 to-gray-200'}>
                                     <tr className={`text-left text-xs font-semibold uppercase tracking-wider ${textMutedClass}`}>
-                                        {['Employé', 'Poste', 'Grade', 'Rôle', 'Brut', 'Net', 'Statut', 'Actions'].map(h => (
-                                            <th key={h} className="p-4">{h}</th>
-                                        ))}
+                                        {['Employé', 'Poste', 'Grade', 'Rôle', 'Brut', 'Net', 'Statut', 'Actions'].map(h => (<th key={h} className="p-4">{h}</th>))}
                                     </tr>
                                 </thead>
-
                                 <tbody>
                                     {loading && !employeesList.length ? (
                                         <tr><td colSpan="8" className="p-12 text-center"><Loader size={32} className="animate-spin mx-auto text-indigo-500" /></td></tr>
                                     ) : !employeesList.length ? (
-                                        <tr><td colSpan="8" className={`p-12 text-center ${textMutedClass}`}>
-                                            <Users size={48} className="mx-auto mb-3 opacity-30" />
-                                            <p>Aucun employé trouvé</p>
-                                        </td></tr>
+                                        <tr><td colSpan="8" className={`p-12 text-center ${textMutedClass}`}><Users size={48} className="mx-auto mb-3 opacity-30" /><p>Aucun employé trouvé</p></td></tr>
                                     ) : (
-                                        employeesList.map((emp, idx) => {
-                                            return (
-                                                <tr key={emp.id} className={`border-t ${borderClass} hover:bg-gray-50/50 dark:hover:bg-white/5 transition-all duration-150 ${idx % 2 === 0 ? (darkMode ? 'bg-black/20' : 'bg-gray-50/30') : ''}`}>
-                                                    <td className="p-4">
-                                                        <div className={`font-semibold text-sm ${textClass}`}>{emp.prenom} {emp.nom}</div>
-                                                        <div className={`text-xs ${textMutedClass} truncate max-w-[180px]`}>{emp.email}</div>
-                                                    </td>
-                                                    <td className={`p-4 text-sm ${textClass}`}>{emp.post?.name || '-'}</td>
-                                                    <td className={`p-4 text-sm ${textClass}`}>{emp.grade || '-'}</td>
-                                                    <td className="p-4">
-                                                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${
-                                                            emp.role === 'rh' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
-                                                            'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
-                                                        }`}>
-                                                            {emp.role === 'rh' ? ' RH' : ' Employé'}
-                                                        </span>
-                                                    </td>
-                                                    <td className="p-4 font-semibold text-purple-600 dark:text-purple-400 text-sm whitespace-nowrap">
-                                                        {emp.details ? Math.round(emp.details.brut_salary).toLocaleString() + ' MAD' : '…'}
-                                                    </td>
-                                                    <td className="p-4 font-semibold text-emerald-600 dark:text-emerald-400 text-sm whitespace-nowrap">
-                                                        {emp.details ? Math.round(emp.details.net_salary).toLocaleString() + ' MAD' : '…'}
-                                                    </td>
-                                                    <td className="p-4">
-                                                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${
-                                                            emp.statut === 'ACTIF' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 
-                                                            emp.statut === 'CONGE' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 
-                                                            'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400'
-                                                        }`}>
-                                                            <CheckCircle size={10} /> {emp.statut}
-                                                        </span>
-                                                    </td>
-                                                    <td className="p-4">
-                                                        <div className="flex items-center gap-1">
-                                                            <button onClick={() => handleViewEmployee(emp)} className="p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg cursor-pointer" title="Voir">
-                                                                <Eye size={16} />
-                                                            </button>
-                                                            <button onClick={() => handleEdit(emp)} disabled={!isYearEditable} 
-                                                                className={`p-1.5 rounded-lg cursor-pointer ${!isYearEditable ? 'text-gray-400' : 'text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30'}`} title="Modifier">
-                                                                <Edit2 size={16} />
-                                                            </button>
-                                                            <button onClick={() => handleDeleteClick(emp.id, `${emp.prenom} ${emp.nom}`)} disabled={!isYearEditable}
-                                                                className={`p-1.5 rounded-lg cursor-pointer ${!isYearEditable ? 'text-gray-400' : 'text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30'}`} title="Supprimer">
-                                                                <Trash2 size={16} />
-                                                            </button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })
+                                        employeesList.map((emp, idx) => (
+                                            <tr key={emp.id} className={`border-t ${borderClass} hover:bg-gray-50/50 dark:hover:bg-white/5 transition-all duration-150 ${idx % 2 === 0 ? (darkMode ? 'bg-black/20' : 'bg-gray-50/30') : ''}`}>
+                                                <td className="p-4"><div className={`font-semibold text-sm ${textClass}`}>{emp.prenom} {emp.nom}</div><div className={`text-xs ${textMutedClass} truncate max-w-[180px]`}>{emp.email}</div></td>
+                                                <td className={`p-4 text-sm ${textClass}`}>{emp.post?.name || '-'}</td>
+                                                <td className={`p-4 text-sm ${textClass}`}>{emp.grade || '-'}</td>
+                                                <td className="p-4"><span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${emp.role === 'rh' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'}`}>{emp.role === 'rh' ? ' RH' : ' Employé'}</span></td>
+                                                <td className="p-4 font-semibold text-purple-600 dark:text-purple-400 text-sm whitespace-nowrap">{emp.details ? Math.round(emp.details.brut_salary).toLocaleString() + ' MAD' : '…'}</td>
+                                                <td className="p-4 font-semibold text-emerald-600 dark:text-emerald-400 text-sm whitespace-nowrap">{emp.details ? Math.round(emp.details.net_salary).toLocaleString() + ' MAD' : '…'}</td>
+                                                <td className="p-4"><span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${emp.statut === 'ACTIF' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : emp.statut === 'CONGE' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400'}`}><CheckCircle size={10} /> {emp.statut}</span></td>
+                                                <td className="p-4"><div className="flex items-center gap-1"><button onClick={() => handleViewEmployee(emp)} className="p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg cursor-pointer" title="Voir"><Eye size={16} /></button><button onClick={() => handleEdit(emp)} disabled={!isYearEditable} className={`p-1.5 rounded-lg cursor-pointer ${!isYearEditable ? 'text-gray-400' : 'text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30'}`} title="Modifier"><Edit2 size={16} /></button><button onClick={() => handleDeleteClick(emp.id, `${emp.prenom} ${emp.nom}`)} disabled={!isYearEditable} className={`p-1.5 rounded-lg cursor-pointer ${!isYearEditable ? 'text-gray-400' : 'text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30'}`} title="Supprimer"><Trash2 size={16} /></button></div></td>
+                                            </tr>
+                                        ))
                                     )}
                                 </tbody>
                             </table>
@@ -1883,17 +1646,14 @@ export default function EmployeeManagement() {
                             <div className={`flex flex-col sm:flex-row justify-between items-center gap-3 p-4 border-t ${borderClass}`}>
                                 <span className={`text-sm ${textMutedClass}`}>{paginationData.from || 0} – {paginationData.to || 0} sur {paginationData.total || 0}</span>
                                 <div className="flex gap-2">
-                                    <button onClick={() => setCurrentPage(p => Math.max(p - 1, 1))} disabled={currentPage === 1} 
-                                        className="px-3 py-1.5 rounded-lg border disabled:opacity-50 text-sm hover:bg-indigo-50 dark:hover:bg-indigo-900/30 cursor-pointer">←</button>
+                                    <button onClick={() => setCurrentPage(p => Math.max(p - 1, 1))} disabled={currentPage === 1} className="px-3 py-1.5 rounded-lg border disabled:opacity-50 text-sm hover:bg-indigo-50 dark:hover:bg-indigo-900/30 cursor-pointer">←</button>
                                     <span className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm min-w-[40px] text-center">{currentPage}</span>
-                                    <button onClick={() => setCurrentPage(p => Math.min(p + 1, paginationData.last_page))} disabled={currentPage === paginationData.last_page}
-                                        className="px-3 py-1.5 rounded-lg border disabled:opacity-50 text-sm hover:bg-indigo-50 dark:hover:bg-indigo-900/30 cursor-pointer">→</button>
+                                    <button onClick={() => setCurrentPage(p => Math.min(p + 1, paginationData.last_page))} disabled={currentPage === paginationData.last_page} className="px-3 py-1.5 rounded-lg border disabled:opacity-50 text-sm hover:bg-indigo-50 dark:hover:bg-indigo-900/30 cursor-pointer">→</button>
                                 </div>
                             </div>
                         )}
                     </div>
                 ) : (
-                    // Card view avec rôle aussi
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                         {employeesList.map(emp => {
                             const getRoleBadge = (role) => {
@@ -1907,19 +1667,10 @@ export default function EmployeeManagement() {
                                 <div key={emp.id} className={`${cardClass} rounded-xl border p-4 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1`}>
                                     <div className="flex justify-between items-start mb-3">
                                         <div className="flex items-center gap-3">
-                                            <div className="p-2 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-md">
-                                                <User size={16} className="text-white" />
-                                            </div>
-                                            <div>
-                                                <h3 className={`font-semibold ${textClass}`}>{emp.prenom} {emp.nom}</h3>
-                                                <p className={`text-xs ${textMutedClass}`}>{emp.email}</p>
-                                            </div>
+                                            <div className="p-2 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-md"><User size={16} className="text-white" /></div>
+                                            <div><h3 className={`font-semibold ${textClass}`}>{emp.prenom} {emp.nom}</h3><p className={`text-xs ${textMutedClass}`}>{emp.email}</p></div>
                                         </div>
-                                        <div className="flex gap-1">
-                                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${roleBadge.bg}`}>
-                                                {roleBadge.icon} {emp.role === 'superadmin' ? 'Super Admin' : emp.role === 'admin' ? 'Admin' : emp.role === 'rh' ? 'RH' : 'Employé'}
-                                            </span>
-                                        </div>
+                                        <div className="flex gap-1"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${roleBadge.bg}`}>{roleBadge.icon} {emp.role === 'superadmin' ? 'Super Admin' : emp.role === 'admin' ? 'Admin' : emp.role === 'rh' ? 'RH' : 'Employé'}</span></div>
                                     </div>
                                     <div className="grid grid-cols-2 gap-2 mb-4 p-3 rounded-lg bg-gray-50/50 dark:bg-gray-800/30">
                                         <div><p className={`text-xs ${textMutedClass}`}>Poste</p><p className={`text-sm font-medium ${textClass}`}>{emp.post?.name || '-'}</p></div>
@@ -1938,7 +1689,6 @@ export default function EmployeeManagement() {
                     </div>
                 )}
 
-                {/* Modals */}
                 {showDetailsModal && selectedEmployeeDetails && (<EmployeeDetailsModal employee={selectedEmployeeDetails} onClose={() => setShowDetailsModal(false)} />)}
                 <DeleteConfirmModal isOpen={deleteModal.isOpen} onClose={() => setDeleteModal({ isOpen: false, employeeId: null, employeeName: "" })} onConfirm={confirmDelete} title="Confirmation de suppression" message={`Êtes-vous sûr de vouloir supprimer l'employé "${deleteModal.employeeName}" ? Cette action est irréversible.`} darkMode={darkMode} />
             </div>
