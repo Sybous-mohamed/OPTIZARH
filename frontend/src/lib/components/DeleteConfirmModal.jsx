@@ -1,4 +1,3 @@
-// lib/components/DeleteConfirmModal.jsx
 import React from 'react';
 import { AlertCircle, X } from 'lucide-react';
 

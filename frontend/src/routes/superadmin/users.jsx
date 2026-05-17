@@ -10,17 +10,16 @@ import DeleteConfirmModal from '../../lib/components/DeleteConfirmModal';
 import axiosClient from "../../lib/apis/axiosConfig";
 import { useNotification } from '../../context/NotificationContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useNavigate } from 'react-router-dom';
 
 export default function EmployeeManagement() {
     const { darkMode } = useTheme();
     const { showNotification } = useNotification();
+    const navigate = useNavigate();
 
     // ============================================================
     // ETATS PRINCIPAUX
     // ============================================================
-    const [editingCredit, setEditingCredit] = useState(null); 
-    const [editCreditData, setEditCreditData] = useState(null);
-
     const [loading, setLoading] = useState(false);
     const [employeesList, setEmployeesList] = useState([]);
     const [isEdit, setIsEdit] = useState(false);
@@ -49,19 +48,7 @@ export default function EmployeeManagement() {
     
     const [cotisationsList, setCotisationsList] = useState([]);
     const [selectedCotisation, setSelectedCotisation] = useState(null);
-    const [CreditList, setCreditList] = useState([]);
     
-    // États pour les crédits temporaires
-    const [employeeCredits, setEmployeeCredits] = useState([]);
-    const [showCreditForm, setShowCreditForm] = useState(false);
-    const [tempCredit, setTempCredit] = useState({
-        credit_type_id: '',
-        montant_credit: '',
-        taux_credit: '',
-        credit_duree: '',
-        credit_date_debut: '',
-        credit_date_fin: '',
-    });
     // États pour l'email
     const [sendCredentialsEmail, setSendCredentialsEmail] = useState(true);
     const [regeneratePassword, setRegeneratePassword] = useState(false);
@@ -183,19 +170,18 @@ export default function EmployeeManagement() {
             const res = await axiosClient.get(`/api/employees`, { 
                 params: { ...filters, page, annee_id: selectedAnneeId } 
             });
-            const employeesWithCredits = await Promise.all(
+            const employeesWithDetails = await Promise.all(
                 (res.data.data || []).map(async (emp) => {
                     try {
-                        const creditsRes = await axiosClient.get(`/api/employees/${emp.id}/credits`);
                         const salaryRes = await axiosClient.get(`/api/employees/${emp.id}/salary-dashboard`);
-                        return { ...emp, credits: creditsRes.data || [], details: salaryRes.data.salary_details };
+                        return { ...emp, details: salaryRes.data.salary_details };
                     } catch (err) {
-                        return { ...emp, credits: [], details: null };
+                        return { ...emp, details: null };
                     }
                 })
             );
-            setEmployeesList(employeesWithCredits);
-            setPaginationData({ ...res.data, data: employeesWithCredits });
+            setEmployeesList(employeesWithDetails);
+            setPaginationData({ ...res.data, data: employeesWithDetails });
         } catch (err) { 
             console.error(err);
             showNotification("Erreur chargement des employes", "error");
@@ -221,113 +207,6 @@ export default function EmployeeManagement() {
         }
     };
 
-    const fetchCredit = async () => {
-        try {
-            const res = await axiosClient.get('/api/credit-types', {
-                params: { year: selectedAnnee }
-            });
-            setCreditList(res.data || []);
-        } catch (err) {
-            console.error("Erreur chargement credits:", err);
-            setCreditList([]);
-        }
-    };
-
-    // ============================================================
-    // FONCTIONS POUR CREDITS
-    // ============================================================
-    const calculerMensualiteCredit = (montant, tauxAnnuel, dureeMois) => {
-        const montantVal = parseFloat(montant);
-        const tauxVal = parseFloat(tauxAnnuel);
-        const dureeVal = parseInt(dureeMois);
-        if (isNaN(montantVal) || isNaN(tauxVal) || isNaN(dureeVal)) return 0;
-        if (montantVal <= 0 || dureeVal <= 0) return 0;
-        if (tauxVal === 0) return Number(montantVal / dureeVal).toFixed(2);
-        const tauxMensuel = (tauxVal / 100) / 12;
-        const puissance = Math.pow(1 + tauxMensuel, dureeVal);
-        const mensualite = montantVal * (tauxMensuel * puissance) / (puissance - 1);
-        return Number(mensualite).toFixed(2);
-    };
-
-    const calculerDateFin = (dateDebut, dureeMois) => {
-        if (!dateDebut || !dureeMois) return '';
-        const debut = new Date(dateDebut);
-        const fin = new Date(debut);
-        fin.setMonth(fin.getMonth() + parseInt(dureeMois));
-        return fin.toISOString().split('T')[0];
-    };
-
-    const addTempCredit = () => {
-        if (!tempCredit.credit_type_id) {
-            showNotification("Veuillez selectionner un type de credit", "warning");
-            return;
-        }
-        if (!tempCredit.montant_credit || parseFloat(tempCredit.montant_credit) <= 0) {
-            showNotification("Veuillez saisir un montant valide", "warning");
-            return;
-        }
-        if (parseFloat(tempCredit.taux_credit) < 0 || parseFloat(tempCredit.taux_credit) > 100) {
-            showNotification("Veuillez saisir un taux valide (0-100%)", "warning");
-            return;
-        }
-        if (!tempCredit.credit_duree || parseInt(tempCredit.credit_duree) <= 0) {
-            showNotification("Veuillez saisir une duree valide", "warning");
-            return;
-        }
-        
-        const mensualite = calculerMensualiteCredit(tempCredit.montant_credit, tempCredit.taux_credit, tempCredit.credit_duree);
-        const dateFin = tempCredit.credit_date_debut ? calculerDateFin(tempCredit.credit_date_debut, tempCredit.credit_duree) : '';
-        
-        const newCredit = {
-            credit_type_id: tempCredit.credit_type_id,
-            montant_credit: tempCredit.montant_credit,
-            taux_credit: tempCredit.taux_credit,
-            credit_duree: tempCredit.credit_duree,
-            credit_date_debut: tempCredit.credit_date_debut || null,
-            credit_date_fin: dateFin,
-            credit_mensualite: mensualite,
-            credit_reste_a_payer: tempCredit.montant_credit,
-            temp_id: Date.now()
-        };
-        
-        if (editingCredit) {
-            const updatedCredits = employeeCredits.map(credit => 
-                credit.temp_id === editingCredit.temp_id ? newCredit : credit
-            );
-            setEmployeeCredits(updatedCredits);
-            setEditingCredit(null);
-            setEditCreditData(null);
-            showNotification("Crédit modifié avec succès", "success");
-        } else {
-            setEmployeeCredits([...employeeCredits, newCredit]);
-            showNotification("Crédit ajouté à la liste", "success");
-        }
-        
-        setTempCredit({
-            credit_type_id: '', montant_credit: '', taux_credit: '',
-            credit_duree: '', credit_date_debut: '', credit_date_fin: '',
-        });
-        setShowCreditForm(false);
-    };
-
-    const removeTempCredit = (tempId) => {
-        setEmployeeCredits(employeeCredits.filter(c => c.temp_id !== tempId));
-    };
-
-    const editTempCredit = (credit) => {
-        setTempCredit({
-            credit_type_id: credit.credit_type_id,
-            montant_credit: credit.montant_credit,
-            taux_credit: credit.taux_credit,
-            credit_duree: credit.credit_duree,
-            credit_date_debut: credit.credit_date_debut || '',
-            credit_date_fin: credit.credit_date_fin || '',
-        });
-        setEditingCredit(credit);
-        setShowCreditForm(true);
-        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-    };
-
     // ============================================================
     // useEffectS
     // ============================================================
@@ -335,84 +214,14 @@ export default function EmployeeManagement() {
         if (selectedAnnee) {
             fetchConfig(selectedAnnee);
             fetchEmployees();
-            fetchCredit();
         }
     }, [selectedAnnee]);
 
-    // 🔥 AJOUT : Chargement des cotisations au démarrage
     useEffect(() => {
         if (selectedAnnee) {
             fetchCotisations();
         }
     }, [selectedAnnee]);
-
-    // 🔥 AJOUT : Restaurer la sélection de l'organisme après chargement de la liste
-    useEffect(() => {
-        if (cotisationsList.length > 0 && formData.cotisation_id) {
-            const existingOrg = cotisationsList.find(o => o.id === parseInt(formData.cotisation_id));
-            if (existingOrg && !selectedCotisation) {
-                setSelectedCotisation(existingOrg);
-            }
-        }
-    }, [cotisationsList, formData.cotisation_id]);
-// Ajoutez ce useEffect après les autres useEffects (vers ligne 320)
-useEffect(() => {
-    const handleStorageChange = (e) => {
-        if (e.key === 'cotisations_updated') {
-            console.log('🔄 Changement détecté dans GestionCotisation, rechargement...');
-            const currentId = formData.cotisation_id;
-            
-            fetchCotisations().then(() => {
-                if (currentId) {
-                    setTimeout(() => {
-                        const restored = cotisationsList.find(o => o.id === parseInt(currentId));
-                        if (restored) {
-                            setSelectedCotisation(restored);
-                            setFormData(prev => ({ ...prev, cotisation_id: currentId }));
-                            showNotification("Liste des organismes actualisée", "success");
-                        }
-                    }, 200);
-                }
-            });
-        }
-    };
-    
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-}, [formData.cotisation_id, cotisationsList]);
-    // 🔥 AJOUT : Sauvegarde et restauration au focus
-    useEffect(() => {
-        const beforeUnload = () => {
-            if (formData.cotisation_id) {
-                sessionStorage.setItem('temp_cotisation_id', formData.cotisation_id);
-            }
-        };
-        
-        const handleFocus = async () => {
-            const savedId = sessionStorage.getItem('temp_cotisation_id');
-            if (savedId && selectedAnnee) {
-                await fetchCotisations();
-                setTimeout(() => {
-                    const restored = cotisationsList.find(o => o.id === parseInt(savedId));
-                    if (restored) {
-                        setSelectedCotisation(restored);
-                        setFormData(prev => ({ ...prev, cotisation_id: savedId }));
-                        sessionStorage.removeItem('temp_cotisation_id');
-                    }
-                }, 150);
-            } else if (selectedAnnee) {
-                await fetchCotisations();
-            }
-        };
-        
-        window.addEventListener('beforeunload', beforeUnload);
-        window.addEventListener('focus', handleFocus);
-        
-        return () => {
-            window.removeEventListener('beforeunload', beforeUnload);
-            window.removeEventListener('focus', handleFocus);
-        };
-    }, [selectedAnnee, cotisationsList]);
 
     useEffect(() => {
         fetchAnnees();
@@ -495,7 +304,6 @@ useEffect(() => {
             }
         }
         
-        // 🔥 AJOUT : Restaurer l'organisme après chargement
         if (emp.cotisation_id) {
             const restoreOrganisme = () => {
                 if (cotisationsList.length > 0) {
@@ -511,8 +319,6 @@ useEffect(() => {
             restoreOrganisme();
         }
         
-        setEmployeeCredits((emp.credits || []).map(c => ({ ...c, temp_id: c.id || Date.now() + Math.random() })));
-        setShowCreditForm(false);
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
@@ -667,53 +473,6 @@ useEffect(() => {
         if (!formData.echelon_id) newErrors.echelon_id = "Veuillez selectionner un echelon";
         if (!formData.cotisation_id) newErrors.cotisation_id = "Veuillez selectionner un organisme de cotisation";
         
-        if (employeeCredits.length > 0) {
-            const creditErrors = [];
-            employeeCredits.forEach((credit, index) => {
-                const creditId = credit.temp_id || index;
-                const errors = {};
-                if (!credit.credit_type_id) {
-                    errors.credit_type = "Type de crédit requis";
-                }
-                const montant = parseFloat(credit.montant_credit);
-                if (!credit.montant_credit || isNaN(montant) || montant <= 0) {
-                    errors.montant = "Montant invalide (doit être > 0)";
-                } else if (montant > 10000000) {
-                    errors.montant = "Montant trop élevé (max 10,000,000 MAD)";
-                }
-                const taux = parseFloat(credit.taux_credit);
-                if (!credit.taux_credit && credit.taux_credit !== 0) {
-                    errors.taux = "Taux requis";
-                } else if (isNaN(taux) || taux < 0 || taux > 100) {
-                    errors.taux = "Taux invalide (0-100%)";
-                }
-                const duree = parseInt(credit.credit_duree);
-                if (!credit.credit_duree || isNaN(duree) || duree <= 0) {
-                    errors.duree = "Durée invalide (doit être > 0 mois)";
-                } else if (duree > 360) {
-                    errors.duree = "Durée trop longue (max 360 mois / 30 ans)";
-                } else if (duree < 1) {
-                    errors.duree = "Durée minimale: 1 mois";
-                }    
-                const mensualiteCalculee = calculerMensualiteCredit(montant, taux, duree);
-                if (mensualiteCalculee > 0 && montant > 0) {
-                    const mensualiteMax = montant / 3;
-                    if (mensualiteCalculee > mensualiteMax) {
-                        errors.mensualite = `Mensualité (${Math.round(mensualiteCalculee).toLocaleString()} MAD) très élevée par rapport au montant`;
-                    }
-                }
-                if (Object.keys(errors).length > 0) {
-                    creditErrors.push({ index: creditId, errors, credit });
-                }
-            });
-            if (creditErrors.length > 0) {
-                newErrors.credits = creditErrors;
-                const firstError = creditErrors[0];
-                const firstErrorMsg = Object.values(firstError.errors)[0];
-                showNotification(`Erreur crédit: ${firstErrorMsg}`, "error");
-            }
-        }
-        
         setErrors(newErrors);
         if (Object.keys(newErrors).length > 0) {
             const firstErrorField = Object.keys(newErrors)[0];
@@ -772,25 +531,6 @@ useEffect(() => {
                     submitData.regenerate_password = true;
                     submitData.send_email = sendCredentialsEmail;
                 }
-                const allCredits = employeeCredits.map(credit => {
-                    if (credit.id && !credit.temp_id) {
-                        return {
-                            id: credit.id, credit_type_id: credit.credit_type_id,
-                            montant_credit: credit.montant_credit, taux_credit: credit.taux_credit,
-                            credit_duree: credit.credit_duree, credit_date_debut: credit.credit_date_debut,
-                            credit_date_fin: credit.credit_date_fin, credit_mensualite: credit.credit_mensualite,
-                            credit_reste_a_payer: credit.credit_reste_a_payer,
-                        };
-                    } else {
-                        return {
-                            credit_type_id: credit.credit_type_id, montant_credit: credit.montant_credit,
-                            taux_credit: credit.taux_credit, credit_duree: credit.credit_duree,
-                            credit_date_debut: credit.credit_date_debut, credit_date_fin: credit.credit_date_fin,
-                            credit_mensualite: credit.credit_mensualite, credit_reste_a_payer: credit.credit_reste_a_payer,
-                        };
-                    }
-                });
-                submitData.credits = allCredits;
                 const res = await axiosClient.put(`/api/employees/${currentId}`, submitData);
                 showNotification(res.data.message || "Employe modifie avec succes", "success");
             } else {
@@ -822,8 +562,6 @@ useEffect(() => {
             grade: "", echelle: "", echelon: "", salaire: "", indice: "", statut: "ACTIF",
             cotisation_id: ""
         });
-        setEmployeeCredits([]);
-        setShowCreditForm(false);
         setSelectedPost(null);
         setSelectedGrade(null);
         setSelectedEchelle(null);
@@ -1404,7 +1142,7 @@ useEffect(() => {
                                     </div>
                                 )}
                                 
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                                     <div className="w-full">
                                         <label className={`text-xs font-medium ${textMutedClass} mb-1 block`}>Organisme (Cotisation)</label>
                                         <select 
@@ -1429,110 +1167,6 @@ useEffect(() => {
                                             <option value="DEPART">Départ</option>
                                         </select>
                                     </div>
-                                    <div className="flex items-end justify-start md:justify-end">
-                                        <button type="button" onClick={() => setShowCreditForm(!showCreditForm)} className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 transition-all cursor-pointer shadow-md w-full md:w-auto justify-center">
-                                            <Plus size={14} /> Ajouter un crédit
-                                        </button>
-                                    </div>
-                                </div>
-                                
-                                <div className="mt-3">
-                                    {employeeCredits.length > 0 && (
-                                        <div className="space-y-2 mb-3">
-                                            <div className="flex items-center justify-between mb-2">
-                                                <p className={`text-xs font-medium ${textMutedClass}`}>Crédits à ajouter</p>
-                                                <span className={`text-xs ${textMutedClass}`}>
-                                                    Total: {employeeCredits.length} crédit(s)
-                                                </span>
-                                            </div>
-                                            {employeeCredits.map((credit) => {
-                                                const creditErrors = errors.credits?.find(e => e.index === credit.temp_id)?.errors || {};
-                                                const hasErrors = Object.keys(creditErrors).length > 0;
-                                                const isEditing = editingCredit?.temp_id === credit.temp_id;
-                                                return (
-                                                    <div key={credit.temp_id} className={`flex items-center justify-between p-3 rounded-lg transition-all duration-200 ${hasErrors ? 'bg-red-50 dark:bg-red-950/20 border-l-4 border-red-500' : isEditing ? 'bg-indigo-50 dark:bg-indigo-950/20 border-l-4 border-indigo-500' : 'bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-700/50'}`}>
-                                                        <div className="flex-1">
-                                                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-                                                                <span className={`text-sm font-medium ${hasErrors ? 'text-red-600 dark:text-red-400' : isEditing ? 'text-indigo-600 dark:text-indigo-400' : textClass}`}>
-                                                                    {CreditList.find(c => c.id === parseInt(credit.credit_type_id))?.name || 'Crédit'}
-                                                                </span>
-                                                                <span className={`text-xs ${creditErrors.montant ? 'text-red-500' : 'text-emerald-600 dark:text-emerald-400'} font-medium`}>
-                                                                    {Number(credit.montant_credit).toLocaleString()} MAD
-                                                                </span>
-                                                                <span className={`text-xs ${creditErrors.taux ? 'text-red-500' : textMutedClass}`}>
-                                                                    {credit.taux_credit}%
-                                                                </span>
-                                                                <span className={`text-xs ${creditErrors.duree ? 'text-red-500' : textMutedClass}`}>
-                                                                    {credit.credit_duree} mois
-                                                                </span>
-                                                                <span className="text-xs text-indigo-600 dark:text-indigo-400 font-medium">
-                                                                    → {Number(credit.credit_mensualite).toLocaleString()} MAD/mois
-                                                                </span>
-                                                            </div>
-                                                            {hasErrors && (
-                                                                <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
-                                                                    {creditErrors.montant && <span className="text-red-500 text-[10px]">{creditErrors.montant}</span>}
-                                                                    {creditErrors.taux && <span className="text-red-500 text-[10px]">{creditErrors.taux}</span>}
-                                                                    {creditErrors.duree && <span className="text-red-500 text-[10px]">{creditErrors.duree}</span>}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                        <div className="flex items-center gap-1 shrink-0 ml-2">
-                                                            <button type="button" onClick={() => editTempCredit(credit)} className="cursor-pointer p-1.5 text-blue-500 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-all" title="Modifier ce crédit"><Edit2 size={14} /></button>
-                                                            <button type="button" onClick={() => removeTempCredit(credit.temp_id)} className="cursor-pointer p-1.5 text-gray-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg transition-all" title="Supprimer ce crédit"><Trash2 size={14} /></button>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    )}
-                                    {showCreditForm && (
-                                        <div className="mt-3 p-4 rounded-xl border-2 border-indigo-200 dark:border-indigo-800 bg-indigo-50/50 dark:bg-indigo-950/20 animate-fadeIn">
-                                            <div className="flex justify-between items-center mb-4 pb-2 border-b border-indigo-200 dark:border-indigo-800">
-                                                <h4 className={`text-sm font-semibold ${textClass} flex items-center gap-2`}>
-                                                    {editingCredit ? (<><Edit2 size={14} className="text-amber-500" /> Modifier le crédit</>) : (<><Plus size={14} className="text-indigo-500" /> Ajouter un crédit</>)}
-                                                </h4>
-                                                {editingCredit && (<button type="button" onClick={() => { setEditingCredit(null); setTempCredit({ credit_type_id: '', montant_credit: '', taux_credit: '', credit_duree: '', credit_date_debut: '', credit_date_fin: '' }); }} className="text-xs text-gray-500 hover:text-red-500 transition-colors flex items-center gap-1"><X size={12} /> Annuler modification</button>)}
-                                            </div>
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                                                <div>
-                                                    <label className={`text-xs font-medium ${textMutedClass} mb-1 block`}>Type de crédit *</label>
-                                                    <select value={tempCredit.credit_type_id} onChange={(e) => setTempCredit({...tempCredit, credit_type_id: e.target.value})} className={`w-full ${inputClass}`}>
-                                                        <option value="">-- Sélectionner --</option>
-                                                        {CreditList.map(c => (<option key={c.id} value={c.id}>{c.name}</option>))}
-                                                    </select>
-                                                </div>
-                                                <div>
-                                                    <label className={`text-xs font-medium ${textMutedClass} mb-1 block`}>Montant (MAD) *</label>
-                                                    <input type="number" placeholder="Ex: 100000" className={`w-full ${inputClass}`} value={tempCredit.montant_credit} onChange={(e) => setTempCredit({...tempCredit, montant_credit: e.target.value})} />
-                                                </div>
-                                                <div>
-                                                    <label className={`text-xs font-medium ${textMutedClass} mb-1 block`}>Taux (%) *</label>
-                                                    <input type="number" step="0.1" placeholder="Ex: 6" className={`w-full ${inputClass}`} value={tempCredit.taux_credit} onChange={(e) => setTempCredit({...tempCredit, taux_credit: e.target.value})} />
-                                                </div>
-                                                <div>
-                                                    <label className={`text-xs font-medium ${textMutedClass} mb-1 block`}>Durée (mois) *</label>
-                                                    <input type="number" placeholder="Ex: 60" className={`w-full ${inputClass}`} value={tempCredit.credit_duree} onChange={(e) => setTempCredit({...tempCredit, credit_duree: e.target.value})} />
-                                                </div>
-                                                <div>
-                                                    <label className={`text-xs font-medium ${textMutedClass} mb-1 block`}>Date début</label>
-                                                    <input type="date" className={`w-full ${inputClass}`} value={tempCredit.credit_date_debut} onChange={(e) => { const newDateDebut = e.target.value; setTempCredit({...tempCredit, credit_date_debut: newDateDebut}); if (tempCredit.credit_duree && newDateDebut) { const dateFin = calculerDateFin(newDateDebut, tempCredit.credit_duree); setTempCredit(prev => ({ ...prev, credit_date_fin: dateFin })); } }} />
-                                                </div>
-                                                <div>
-                                                    <label className={`text-xs font-medium ${textMutedClass} mb-1 block`}>Date fin</label>
-                                                    <input type="date" className={`w-full ${inputClass} bg-gray-100 dark:bg-gray-800 cursor-not-allowed`} value={tempCredit.credit_date_fin} readOnly />
-                                                </div>
-                                            </div>
-                                            <div className="mt-3 p-2 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 text-xs text-indigo-600 dark:text-indigo-400">💡 <strong>Conseils :</strong> Taux maximum 100%, durée maximum 360 mois (30 ans), montant maximum 10,000,000 MAD</div>
-                                            {tempCredit.montant_credit && tempCredit.taux_credit && tempCredit.credit_duree && (
-                                                <div className="mt-3 p-2 rounded-lg bg-indigo-100 dark:bg-indigo-900/30"><p className="text-sm text-indigo-600 dark:text-indigo-400">Mensualité estimée: <strong>{calculerMensualiteCredit(tempCredit.montant_credit, tempCredit.taux_credit, tempCredit.credit_duree).toLocaleString()} MAD</strong></p></div>
-                                            )}
-                                            <div className="flex justify-end gap-3 mt-4">
-                                                <button type="button" onClick={() => { setShowCreditForm(false); setEditingCredit(null); setTempCredit({ credit_type_id: '', montant_credit: '', taux_credit: '', credit_duree: '', credit_date_debut: '', credit_date_fin: '' }); }} className="px-4 py-1.5 text-sm text-white bg-red-500 rounded-lg hover:bg-red-600 transition-all cursor-pointer">Annuler</button>
-                                                <button type="button" onClick={addTempCredit} className="px-4 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all cursor-pointer flex items-center gap-1">{editingCredit ? (<><Edit2 size={12} /> Mettre à jour</>) : (<><Plus size={12} /> Ajouter</>)}</button>
-                                            </div>
-                                        </div>
-                                    )}
                                 </div>
                                 
                                 <div className="mt-6">
@@ -1635,7 +1269,7 @@ useEffect(() => {
                                                 <td className="p-4 font-semibold text-purple-600 dark:text-purple-400 text-sm whitespace-nowrap">{emp.details ? Math.round(emp.details.brut_salary).toLocaleString() + ' MAD' : '…'}</td>
                                                 <td className="p-4 font-semibold text-emerald-600 dark:text-emerald-400 text-sm whitespace-nowrap">{emp.details ? Math.round(emp.details.net_salary).toLocaleString() + ' MAD' : '…'}</td>
                                                 <td className="p-4"><span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${emp.statut === 'ACTIF' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : emp.statut === 'CONGE' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400'}`}><CheckCircle size={10} /> {emp.statut}</span></td>
-                                                <td className="p-4"><div className="flex items-center gap-1"><button onClick={() => handleViewEmployee(emp)} className="p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg cursor-pointer" title="Voir"><Eye size={16} /></button><button onClick={() => handleEdit(emp)} disabled={!isYearEditable} className={`p-1.5 rounded-lg cursor-pointer ${!isYearEditable ? 'text-gray-400' : 'text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30'}`} title="Modifier"><Edit2 size={16} /></button><button onClick={() => handleDeleteClick(emp.id, `${emp.prenom} ${emp.nom}`)} disabled={!isYearEditable} className={`p-1.5 rounded-lg cursor-pointer ${!isYearEditable ? 'text-gray-400' : 'text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30'}`} title="Supprimer"><Trash2 size={16} /></button></div></td>
+                                                <td className="p-4"><div className="flex items-center gap-1"><button onClick={() => handleViewEmployee(emp)} className="p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg cursor-pointer" title="Voir"><Eye size={16} /></button><button onClick={() => handleEdit(emp)} disabled={!isYearEditable} className={`p-1.5 rounded-lg cursor-pointer ${!isYearEditable ? 'text-gray-400' : 'text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30'}`} title="Modifier"><Edit2 size={16} /></button><button onClick={() => handleManageCredits(emp)} className="p-1.5 text-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded-lg cursor-pointer" title="Gérer les crédits"><DollarSign size={16} /></button><button onClick={() => handleDeleteClick(emp.id, `${emp.prenom} ${emp.nom}`)} disabled={!isYearEditable} className={`p-1.5 rounded-lg cursor-pointer ${!isYearEditable ? 'text-gray-400' : 'text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30'}`} title="Supprimer"><Trash2 size={16} /></button></div></td>
                                             </tr>
                                         ))
                                     )}

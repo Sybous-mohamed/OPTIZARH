@@ -417,16 +417,166 @@ class EmployeeController extends Controller
     // CREDITS MANAGEMENT
     // ============================================================
 
-    public function getCredits($employeeId)
-    {
-        try {
-            $employee = Employee::findOrFail($employeeId);
-            $credits = $employee->credits()->with('creditType')->get();
-            return response()->json($credits);
-        } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 500);
+    public function addCredit(Request $request, $employeeId)
+{
+    try {
+        $employee = Employee::findOrFail($employeeId);
+        
+        $validated = $request->validate([
+            'credit_type_id' => 'required|exists:credit_types,id',
+            'montant_credit' => 'required|numeric|min:0|max:10000000',
+            'taux_credit' => 'required|numeric|min:0|max:100',
+            'credit_duree' => 'required|integer|min:1|max:360',
+            'credit_date_debut' => 'nullable|date',
+            'credit_date_fin' => 'nullable|date',
+            'credit_mensualite' => 'nullable|numeric',
+            'credit_reste_a_payer' => 'nullable|numeric',
+        ]);
+        
+        DB::beginTransaction();
+        
+        // Calculer la mensualité si non fournie
+        if (!isset($validated['credit_mensualite']) || $validated['credit_mensualite'] == 0) {
+            $validated['credit_mensualite'] = $this->calculerMensualiteCredit(
+                $validated['montant_credit'],
+                $validated['taux_credit'],
+                $validated['credit_duree']
+            );
         }
+        
+        // Définir le reste à payer
+        if (!isset($validated['credit_reste_a_payer'])) {
+            $validated['credit_reste_a_payer'] = $validated['montant_credit'];
+        }
+        
+        // Calculer la date de fin si non fournie
+        if (empty($validated['credit_date_fin']) && !empty($validated['credit_date_debut'])) {
+            $dateDebut = new \DateTime($validated['credit_date_debut']);
+            $dateFin = clone $dateDebut;
+            $dateFin->modify('+' . $validated['credit_duree'] . ' months');
+            $validated['credit_date_fin'] = $dateFin->format('Y-m-d');
+        }
+        
+        $credit = $employee->credits()->create($validated);
+        
+        // Recalculer le salaire de l'employé
+        $this->calculateAndStoreSalary($employee->id);
+        
+        DB::commit();
+        
+        return response()->json([
+            'message' => 'Crédit ajouté avec succès',
+            'credit' => $credit->load('creditType')
+        ], 201);
+        
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        return response()->json(['errors' => $e->errors()], 422);
+    } catch (\Exception $e) {
+        DB::rollBack();
+        \Log::error('Erreur ajout crédit: ' . $e->getMessage());
+        return response()->json(['message' => 'Erreur lors de l\'ajout du crédit: ' . $e->getMessage()], 500);
     }
+}
+
+/**
+ * Mettre à jour un crédit
+ */
+public function updateCredit(Request $request, $creditId)
+{
+    try {
+        $credit = EmployeeCredit::findOrFail($creditId);
+        
+        $validated = $request->validate([
+            'credit_type_id' => 'sometimes|exists:credit_types,id',
+            'montant_credit' => 'sometimes|numeric|min:0|max:10000000',
+            'taux_credit' => 'sometimes|numeric|min:0|max:100',
+            'credit_duree' => 'sometimes|integer|min:1|max:360',
+            'credit_date_debut' => 'nullable|date',
+            'credit_date_fin' => 'nullable|date',
+            'credit_mensualite' => 'nullable|numeric',
+            'credit_reste_a_payer' => 'nullable|numeric',
+            'statut' => 'sometimes|string|in:ACTIF,TERMINE'
+        ]);
+        
+        DB::beginTransaction();
+        
+        // Recalculer la mensualité si nécessaire
+        $montant = $validated['montant_credit'] ?? $credit->montant_credit;
+        $taux = $validated['taux_credit'] ?? $credit->taux_credit;
+        $duree = $validated['credit_duree'] ?? $credit->credit_duree;
+        
+        if (!isset($validated['credit_mensualite']) || $validated['credit_mensualite'] == 0) {
+            $validated['credit_mensualite'] = $this->calculerMensualiteCredit($montant, $taux, $duree);
+        }
+        
+        // Recalculer la date de fin si nécessaire
+        $dateDebut = $validated['credit_date_debut'] ?? $credit->credit_date_debut;
+        if (empty($validated['credit_date_fin']) && !empty($dateDebut) && $duree > 0) {
+            $dateDebutObj = new \DateTime($dateDebut);
+            $dateFin = clone $dateDebutObj;
+            $dateFin->modify('+' . $duree . ' months');
+            $validated['credit_date_fin'] = $dateFin->format('Y-m-d');
+        }
+        
+        $credit->update($validated);
+        
+        // Recalculer le salaire de l'employé
+        $this->calculateAndStoreSalary($credit->employee_id);
+        
+        DB::commit();
+        
+        return response()->json([
+            'message' => 'Crédit modifié avec succès',
+            'credit' => $credit->load('creditType')
+        ]);
+        
+    } catch (\Exception $e) {
+        DB::rollBack();
+        \Log::error('Erreur modification crédit: ' . $e->getMessage());
+        return response()->json(['message' => 'Erreur lors de la modification du crédit'], 500);
+    }
+}
+
+/**
+ * Supprimer un crédit
+ */
+public function deleteCredit($creditId)
+{
+    try {
+        DB::beginTransaction();
+        
+        $credit = EmployeeCredit::findOrFail($creditId);
+        $employeeId = $credit->employee_id;
+        
+        $credit->delete();
+        
+        // Recalculer le salaire de l'employé
+        $this->calculateAndStoreSalary($employeeId);
+        
+        DB::commit();
+        
+        return response()->json(['message' => 'Crédit supprimé avec succès']);
+        
+    } catch (\Exception $e) {
+        DB::rollBack();
+        \Log::error('Erreur suppression crédit: ' . $e->getMessage());
+        return response()->json(['message' => 'Erreur lors de la suppression du crédit'], 500);
+    }
+}
+
+/**
+ * Récupérer tous les crédits d'un employé (déjà existante, mais vérifiez qu'elle est là)
+ */
+public function getCredits($employeeId)
+{
+    try {
+        $employee = Employee::findOrFail($employeeId);
+        $credits = $employee->credits()->with('creditType')->orderBy('created_at', 'desc')->get();
+        return response()->json($credits);
+    } catch (\Exception $e) {
+        return response()->json(['error' => $e->getMessage()], 500);
+    }
+}
 
    // Dans EmployeeController.php, remplacez la méthode syncEmployeeCredits par :
 

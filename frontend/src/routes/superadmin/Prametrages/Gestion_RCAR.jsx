@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Plus, Trash2, Save, Users, Layers, 
   Grid, Database, DollarSign, FileText, Download, ChevronDown,
-  Layout, Loader2, Star, Eye, Settings2, ArrowLeft, AlertCircle
+  Layout, Loader2, Star, Eye, Settings2, ArrowLeft, AlertCircle, Edit2, Check, X
 } from 'lucide-react';
 import api from '../../../lib/apis/axiosConfig'; 
 import jsPDF from 'jspdf';
@@ -27,17 +27,21 @@ const GestionRCAR = () => {
   const [isYearOpen, setIsYearOpen] = useState(false);
   const yearRef = useRef(null);
   
+  // État pour gérer le mode édition de chaque ligne
+  const [editingRows, setEditingRows] = useState({});
+  const [editedData, setEditedData] = useState({});
+  
   // Modal de confirmation
   const [deleteModal, setDeleteModal] = useState({
     isOpen: false,
-    type: null, // 'type' or 'detail'
+    type: null,
     typeId: null,
     detailId: null,
     name: ''
   });
 
   // Dark mode classes
-  const bgClass = darkMode ? 'bg-[#0D0D0D]' : 'bg-[#F8FAFC]';
+  const bgClass = darkMode ? 'bg-black' : 'bg-[#F8FAFC]';
   const cardClass = darkMode ? 'bg-[#1A1A1A] border-[#2A2A2A]' : 'bg-white border-gray-200';
   const cardHeaderClass = darkMode ? 'bg-gradient-to-r from-indigo-700 to-indigo-600' : 'bg-gradient-to-r from-indigo-700 to-indigo-600';
   const textClass = darkMode ? 'text-gray-100' : 'text-gray-800';
@@ -55,7 +59,13 @@ const GestionRCAR = () => {
   const primaryButtonClass = `${buttonClass} bg-blue-600 text-white hover:from-indigo-600 hover:to-indigo-700 shadow-md`;
   const successButtonClass = `${buttonClass} bg-blue-600 text-white hover:from-emerald-600 hover:to-emerald-700 shadow-md`;
   const dangerButtonClass = `${buttonClass} bg-gradient-to-r from-rose-500 to-rose-600 text-white hover:from-rose-600 hover:to-rose-700 shadow-md`;
-  const outlineButtonClass = `${buttonClass} border ${borderClass} ${textClass} hover:bg-gray-100 dark:hover:bg-[#252525] cursor-pointer`;
+  
+  // Style simple pour les boutons d'action
+  const actionButtonClass = "p-1.5 rounded-md transition-all duration-200 cursor-pointer";
+  const editButtonClass = `${actionButtonClass} text-indigo-500 hover:bg-indigo-100 dark:hover:bg-indigo-900/30`;
+  const deleteActionButtonClass = `${actionButtonClass} text-rose-500 hover:bg-rose-100 dark:hover:bg-rose-900/30`;
+  const saveEditButtonClass = `${actionButtonClass} text-emerald-500 hover:bg-emerald-100 dark:hover:bg-emerald-900/30`;
+  const cancelEditButtonClass = `${actionButtonClass} text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800`;
 
   // ============================================================
   // FONCTIONS DE VALIDATION
@@ -126,7 +136,9 @@ const GestionRCAR = () => {
     setIsYearOpen(false);
     localStorage.setItem('rcar_selected_year', yearValue);
     localStorage.setItem('rcar_selected_year_id', yearId);
-    showNotification(`📅 Année ${yearValue} sélectionnée`, "success");
+    showNotification(` Année ${yearValue} sélectionnée`, "success");
+    setEditingRows({});
+    setEditedData({});
   };
 
   // ============================================================
@@ -157,6 +169,8 @@ const GestionRCAR = () => {
       } else {
         setRcarData({ salary_year_id: data?.id || null, types: [] });
       }
+      setEditingRows({});
+      setEditedData({});
     } catch (error) {
       console.error("Erreur de chargement:", error);
       showNotification(" Erreur chargement configuration", "error");
@@ -222,7 +236,7 @@ const GestionRCAR = () => {
       
       if (String(typeId).startsWith('new-')) {
         setRcarData(prev => ({ ...prev, types: prev.types.filter(t => t.id !== typeId) }));
-        showNotification("🗑️ Type supprimé", "success");
+        showNotification(" Type supprimé", "success");
         closeDeleteModal();
         return;
       }
@@ -242,7 +256,7 @@ const GestionRCAR = () => {
           t.id === typeId ? { ...t, details: t.details.filter(d => d.id !== detailId) } : t
         );
         setRcarData(prev => ({ ...prev, types: updated }));
-        showNotification("🗑️ Ligne supprimée", "success");
+        showNotification(" Ligne supprimée", "success");
         closeDeleteModal();
         return;
       }
@@ -262,7 +276,7 @@ const GestionRCAR = () => {
   };
 
   // ============================================================
-  // GESTION DES DÉTAILS
+  // GESTION DES DÉTAILS AVEC MODE ÉDITION
   // ============================================================
   const addDetail = (typeId) => {
     const updated = rcarData.types.map(t => {
@@ -273,6 +287,86 @@ const GestionRCAR = () => {
     });
     setRcarData(prev => ({ ...prev, types: updated }));
     showNotification("➕ Nouvelle ligne ajoutée", "success");
+  };
+
+  const enableEdit = (typeId, detailId) => {
+    const type = rcarData.types.find(t => t.id === typeId);
+    const detail = type?.details.find(d => d.id === detailId);
+    
+    if (detail) {
+      setEditedData(prev => ({
+        ...prev,
+        [`${typeId}_${detailId}`]: {
+          name: detail.name,
+          plafond: detail.plafond,
+          percentage: detail.percentage
+        }
+      }));
+      setEditingRows(prev => ({ ...prev, [`${typeId}_${detailId}`]: true }));
+    }
+  };
+
+  const cancelEdit = (typeId, detailId) => {
+    const key = `${typeId}_${detailId}`;
+    setEditingRows(prev => ({ ...prev, [key]: false }));
+    setEditedData(prev => {
+      const newData = { ...prev };
+      delete newData[key];
+      return newData;
+    });
+  };
+
+  const saveEdit = (typeId, detailId) => {
+    const key = `${typeId}_${detailId}`;
+    const editedDetail = editedData[key];
+    
+    if (editedDetail) {
+      const taux = parseFloat(editedDetail.percentage);
+      if (taux < 0 || taux > 100) {
+        showNotification(" Le taux doit être entre 0 et 100%", "warning");
+        return;
+      }
+      const plafond = parseFloat(editedDetail.plafond);
+      if (plafond < 0) {
+        showNotification(" Le plafond ne peut pas être négatif", "warning");
+        return;
+      }
+
+      const updated = rcarData.types.map(t => 
+        t.id === typeId ? {
+          ...t,
+          details: t.details.map(d => 
+            d.id === detailId ? {
+              ...d,
+              name: editedDetail.name,
+              plafond: editedDetail.plafond,
+              percentage: editedDetail.percentage
+            } : d
+          )
+        } : t
+      );
+      setRcarData(prev => ({ ...prev, types: updated }));
+      
+      setEditingRows(prev => ({ ...prev, [key]: false }));
+      setEditedData(prev => {
+        const newData = { ...prev };
+        delete newData[key];
+        return newData;
+      });
+      
+      showNotification(" Modification enregistrée", "success");
+    }
+  };
+
+  const handleEditChange = (typeId, detailId, field, value) => {
+    const key = `${typeId}_${detailId}`;
+    setEditedData(prev => ({
+      ...prev,
+      [key]: {
+        ...prev[key],
+        [field]: value
+      }
+    }));
   };
 
   const handleToggleFavorite = async (typeId, currentStatus) => {
@@ -286,7 +380,7 @@ const GestionRCAR = () => {
         await api.patch(`/api/rcar/type/${typeId}/toggle-favorite`, {
           is_favorite: !currentStatus
         });
-        showNotification(`⭐ ${!currentStatus ? 'Favori ajouté' : 'Favori retiré'}`, "success");
+        showNotification(` ${!currentStatus ? 'Favori ajouté' : 'Favori retiré'}`, "success");
       }
     } catch (error) {
       console.error("Erreur favorite:", error);
@@ -303,25 +397,29 @@ const GestionRCAR = () => {
   };
 
   // ============================================================
-  // SAUVEGARDE
+  // SAUVEGARDE GLOBALE
   // ============================================================
   const handleSave = async () => {
+    if (Object.keys(editingRows).some(key => editingRows[key] === true)) {
+      showNotification(" Veuillez sauvegarder ou annuler les modifications en cours", "warning");
+      return;
+    }
+
     if (!rcarData.salary_year_id) {
       showNotification(" Erreur: Aucun ID d'année trouvé", "error");
       return;
     }
 
-    // Validation des données avant envoi
     for (const type of rcarData.types) {
       for (const detail of type.details) {
         const taux = parseFloat(detail.percentage);
         if (taux < 0 || taux > 100) {
-          showNotification(`⚠️ Le taux "${detail.name || 'sans nom'}" doit être entre 0 et 100%`, "warning");
+          showNotification(` Le taux "${detail.name || 'sans nom'}" doit être entre 0 et 100%`, "warning");
           return;
         }
         const plafond = parseFloat(detail.plafond);
         if (plafond < 0) {
-          showNotification(`⚠️ Le plafond "${detail.name || 'sans nom'}" ne peut pas être négatif`, "warning");
+          showNotification(` Le plafond "${detail.name || 'sans nom'}" ne peut pas être négatif`, "warning");
           return;
         }
       }
@@ -397,7 +495,7 @@ const GestionRCAR = () => {
     });
 
     doc.save(`Grille_RCAR_${selectedYear}.pdf`);
-    showNotification("📄 PDF exporté avec succès", "success");
+    showNotification(" PDF exporté avec succès", "success");
   };
 
   const handleGoBack = () => {
@@ -405,11 +503,109 @@ const GestionRCAR = () => {
   };
 
   // ============================================================
+  // RENDU D'UNE LIGNE DE TABLEAU
+  // ============================================================
+  const renderDetailRow = (type, detail, typeId) => {
+    const isEditing = editingRows[`${typeId}_${detail.id}`] || false;
+    const editedDetail = editedData[`${typeId}_${detail.id}`];
+    
+    if (isEditing && editedDetail) {
+      return (
+        <tr key={detail.id} className={`border-b ${borderClass} last:border-0 bg-indigo-50/30 dark:bg-indigo-900/10`}>
+          <td className="py-2 px-2">
+            <input 
+              className={`w-full rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${inputClass}`}
+              placeholder="Ex: RC"
+              value={editedDetail.name}
+              onChange={(e) => handleEditChange(typeId, detail.id, 'name', e.target.value)}
+            />
+          </td>
+          <td className="py-2 px-3">
+            <input 
+              type="number"
+              min="0"
+              placeholder="0"
+              className={`w-full rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${inputClass}`}
+              value={editedDetail.plafond}
+              onChange={(e) => handleEditChange(typeId, detail.id, 'plafond', e.target.value)}
+            />
+          </td>
+          <td className="py-2 px-3">
+            <div className="flex items-center gap-1">
+              <input 
+                type="number"
+                step="0.1"
+                min="0"
+                max="100"
+                placeholder="0"
+                className={`w-full rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${inputClass}`}
+                value={editedDetail.percentage}
+                onChange={(e) => handleEditChange(typeId, detail.id, 'percentage', e.target.value)}
+              />
+              <span className={`text-xs font-bold ${textMutedClass}`}>%</span>
+            </div>
+          </td>
+          <td className="py-2 text-center whitespace-nowrap">
+            <div className="flex items-center justify-center gap-1">
+              <button 
+                onClick={() => saveEdit(typeId, detail.id)} 
+                className={saveEditButtonClass}
+                title="Sauvegarder"
+              >
+                <Check size={16} />
+              </button>
+              <button 
+                onClick={() => cancelEdit(typeId, detail.id)} 
+                className={cancelEditButtonClass}
+                title="Annuler"
+              >
+                <X size={16} />
+              </button>
+            </div>
+          </td>
+        </tr>
+      );
+    }
+    
+    return (
+      <tr key={detail.id} className={`border-b ${borderClass} last:border-0 hover:bg-gray-50/50 dark:hover:bg-white/5 transition-colors`}>
+        <td className="py-2 px-2">
+          <span className={`text-sm ${textClass}`}>{detail.name || '_'}</span>
+        </td>
+        <td className="py-2 px-3">
+          <span className={`text-sm ${textClass}`}>{detail.plafond ? `${Number(detail.plafond).toLocaleString()} DH` : '0'}</span>
+        </td>
+        <td className="py-2 px-3">
+          <span className={`text-sm ${textClass}`}>{detail.percentage ? `${detail.percentage} %` : '0'}</span>
+        </td>
+        <td className="py-2 text-center whitespace-nowrap">
+          <div className="flex items-center justify-center gap-1">
+            <button 
+              onClick={() => enableEdit(typeId, detail.id)} 
+              className={editButtonClass}
+              title="Modifier"
+            >
+              <Edit2 size={16} />
+            </button>
+            <button 
+              onClick={() => openDeleteDetailModal(typeId, detail.id, detail.name || 'cette ligne')} 
+              className={deleteActionButtonClass}
+              title="Supprimer"
+            >
+              <Trash2 size={16} />
+            </button>
+          </div>
+        </td>
+      </tr>
+    );
+  };
+
+  // ============================================================
   // RENDU PRINCIPAL
   // ============================================================
   return (
-    <div className={`min-h-screen transition-colors duration-300  ${bgClass}`}>
-      <div className="max-w-7xl mx-auto">
+    <div className={`min-h-screen transition-colors duration-300 ${bgClass}`}>
+      <div className="max-w-7xl mx-auto ">
         
         {/* HEADER avec bouton retour */}
         <div className="mb-4">
@@ -468,8 +664,6 @@ const GestionRCAR = () => {
             <button onClick={exportToPDF} className={`${dangerButtonClass} cursor-pointer`}>
               <Download size={16} /> Exporter PDF
             </button>
-            
-
             
             {fetching && <Loader2 className="animate-spin text-indigo-500" size={20} />}
           </div>
@@ -541,83 +735,13 @@ const GestionRCAR = () => {
                           <th className={`text-left py-3 px-3 text-xs font-semibold ${textMutedClass} w-1/4`}>
                             Taux (%)
                           </th>
-                          <th className={`py-3 w-10 ${textMutedClass}`}></th>
+                          <th className={`py-3 w-20 text-center text-xs font-semibold ${textMutedClass}`}>
+                            Actions
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
-                        {type.details.map((det) => (
-                          <tr key={det.id} className={`border-b ${borderClass} last:border-0`}>
-                            <td className="py-2 px-2">
-                              <input 
-                                className={`w-full rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${inputClass}`}
-                                placeholder="Ex: RC"
-                                value={det.name}
-                                onChange={(e) => {
-                                  const updated = rcarData.types.map(t => t.id === type.id ? {
-                                    ...t, details: t.details.map(d => d.id === det.id ? {...d, name: e.target.value} : d)
-                                  } : t);
-                                  setRcarData({...rcarData, types: updated});
-                                }}
-                              />
-                            </td>
-                            <td className="py-2 px-3">
-                              <input 
-                                type="number"
-                                min="0"
-                                placeholder="0"
-                                className={`w-full rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${inputClass}`}
-                                value={det.plafond}
-                                onChange={(e) => {
-                                  let validatedValue = validatePlafond(e.target.value);
-                                  const updated = rcarData.types.map(t => t.id === type.id ? {
-                                    ...t, details: t.details.map(d => d.id === det.id ? {...d, plafond: validatedValue} : d)
-                                  } : t);
-                                  setRcarData({...rcarData, types: updated});
-                                  if (parseFloat(e.target.value) < 0) {
-                                    showNotification("⚠️ Le plafond ne peut pas être négatif", "warning");
-                                  }
-                                }}
-                              />
-                            </td>
-                            <td className="py-2 px-3">
-                              <div className="flex items-center gap-1">
-                                <input 
-                                  type="number"
-                                  step="0.1"
-                                  min="0"
-                                  max="100"
-                                  placeholder="0"
-                                  className={`w-full rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${inputClass}`}
-                                  value={det.percentage}
-                                  onChange={(e) => {
-                                    let rawValue = e.target.value;
-                                    let validatedValue = validateTaux(rawValue);
-                                    const updated = rcarData.types.map(t => t.id === type.id ? {
-                                      ...t, details: t.details.map(d => d.id === det.id ? {...d, percentage: validatedValue} : d)
-                                    } : t);
-                                    setRcarData({...rcarData, types: updated});
-                                    if (parseFloat(rawValue) > 100) {
-                                      showNotification("⚠️ Le taux ne peut pas dépasser 100%", "warning");
-                                    }
-                                    if (parseFloat(rawValue) < 0) {
-                                      showNotification("⚠️ Le taux ne peut pas être négatif", "warning");
-                                    }
-                                  }}
-                                />
-                                <span className={`text-xs font-bold ${textMutedClass}`}>%</span>
-                              </div>
-                            </td>
-                            <td className="py-2 text-center">
-                              <button 
-                                onClick={() => openDeleteDetailModal(type.id, det.id, det.name || 'cette ligne')} 
-                                className={`p-2 ${textMutedClass} hover:text-rose-500 transition-colors cursor-pointer`}
-                                title="Supprimer"
-                              >
-                                <Trash2 size={14} />
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
+                        {type.details.map((det) => renderDetailRow(type, det, type.id))}
                         {type.details.length === 0 && (
                           <tr>
                             <td colSpan="4" className={`py-8 text-center ${textMutedClass}`}>

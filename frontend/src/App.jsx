@@ -5,7 +5,6 @@ import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-
 
 import { superAdminApi } from './lib/apis/superadmin';
 import { attachLoadingHandler } from "./lib/apis/axiosConfig";
-
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from "./context/ThemeContext";
 import { LoadingProvider, useLoading } from "./context/LoadingContext";
@@ -30,25 +29,25 @@ import GestionEtat from "./routes/superadmin/Prametrages/GestionEtat";
 import GestionIndemenitee from "./routes/superadmin/Prametrages/GestionIndementee";
 import GestionCotisation from './routes/superadmin/Prametrages/Gestion_Cotisation';
 import GestionRCAR from './routes/superadmin/Prametrages/Gestion_RCAR';
-import IRGestion from "./routes/superadmin/Prametrages/GestionIR";
+import GestionIR from "./routes/superadmin/Prametrages/GestionIR";
 import GestionCredit from './routes/superadmin/Prametrages/GestionCredit'; 
 import GestionSNTL from "./routes/superadmin/Prametrages/GestionSNTL";
+import GestionAssurance from './routes/superadmin/Prametrages/GestionAssurance';
+import GestionDemandes from './routes/superadmin/Prametrages/GestionDemande';
 import Indemente from "./routes/superadmin/AffichageIndementes";
 import Cotisation from "./routes/superadmin/Cotisation";
 import RCAR from "./routes/superadmin/RCAR";
-import IRAffichage from "./routes/superadmin/IRAffichage";
+import IR from "./routes/superadmin/IRAffichage";
 import Retraite from "./routes/superadmin/Retraite";
 import SNTL from './routes/superadmin/SNTL';
-import AssuranceManagement from './routes/superadmin/AssuranceManagement';
 import Logs from "./routes/superadmin/Logs";
 import Parametres from './routes/superadmin/Parametres';
-import Demandes from './routes/superadmin/Demande';
 
 
 
 // RH Components
 import RHDashboard from './routes/Rh/Dashboard';
-import EmployeesRH from './routes/RH/Employees';
+import RHEmployees from './routes/RH/Employees';
 import RHsalary from './routes/RH/Salary';
 import RHDemande from './routes/RH/Demande';
 import RHGestionEmployes from './routes/RH/SalaryEmploye';
@@ -56,7 +55,7 @@ import RHParametre from './routes/RH/Parametre';
 
 // Employee Components
 import EmployeeDashboard from './routes/employee/Dashboard';
-import Demande from './routes/employee/Demande';
+import EmployeeDemande from './routes/employee/Demande';
 import EmployeParametres from './routes/employee/Parametre';
 
 /*
@@ -178,22 +177,7 @@ function AppContent() {
                     <Route index element={<Navigate to="/auth/login" replace />} />
                     <Route path="setup" element={isFirstRun ? <SuperAdminRegister /> : <Navigate to="/auth/login" replace />} />
                     <Route path="login" element={<PublicRoute isFirstRun={isFirstRun}><Login /></PublicRoute>} />
-                    {/* <Route path="register" element={
-                        <PublicRoute isFirstRun={isFirstRun}>
-                            <RoleSelection />
-                        </PublicRoute>
-                    } />
-                    <Route path="register/:role" element={
-                        <PublicRoute isFirstRun={isFirstRun}>
-                            <Register />
-                        </PublicRoute>
-                    } /> */}
-
-                    <Route path="forgot-password" element={
-                        <PublicRoute isFirstRun={isFirstRun}>
-                            <ForgotPassword />
-                        </PublicRoute>
-                    } />
+                    <Route path="forgot-password" element={<PublicRoute isFirstRun={isFirstRun}><ForgotPassword /></PublicRoute>} />
                     <Route path="reset-password/:token" element={<ResetPassword />} />
                     <Route path="verify-notice" element={<VerifyNotice />} />
                     <Route path="verify-email" element={<VerifyEmail />} />
@@ -206,24 +190,24 @@ function AppContent() {
                     <Route element={<Layout />}>
                         <Route path="/SuperAdmin/Dashboard" element={<SuperAdminDashboard />} />
                         <Route path="/SuperAdmin/Users" element={<Users />} />
-                        <Route path="/SuperAdmin/Parametres" element={<Parametres />} />
                         <Route path="/SuperAdmin/Parametrages" element={<Parametrages />} />
                         <Route path="/SuperAdmin/Parametrages/GestionEtat" element={<GestionEtat />} />
                         <Route path="/SuperAdmin/Parametrages/GestionIndemenitee" element={<GestionIndemenitee />} />
                         <Route path="/SuperAdmin/Parametrages/GestionCotisation" element={<GestionCotisation />} />
                         <Route path="/SuperAdmin/Parametrages/GestionRCAR" element={<GestionRCAR />} />
-                        <Route path="/SuperAdmin/Parametrages/GesionIR" element={<IRGestion />} />
+                        <Route path="/SuperAdmin/Parametrages/GesionIR" element={<GestionIR />} />
                         <Route path="/SuperAdmin/Parametrages/GestionCredit" element={<GestionCredit />} />
                         <Route path="/SuperAdmin/Parametrages/GestionSNTL" element={<GestionSNTL />} />
+                        <Route path="/SuperAdmin/Parametrages/GestionAssurance" element={<GestionAssurance />} />
+                        <Route path="/SuperAdmin/Parametrages/GestionDemande" element={<GestionDemandes />} />
                         <Route path="/SuperAdmin/AffichageIndementes" element={<Indemente />} />
                         <Route path="/SuperAdmin/Cotisation" element={<Cotisation />} />
                         <Route path="/SuperAdmin/RCAR" element={<RCAR />} />
-                        <Route path="/SuperAdmin/IRAffichage" element={<IRAffichage />} />
+                        <Route path="/SuperAdmin/IRAffichage" element={<IR />} />
                         <Route path="/SuperAdmin/Retraite" element={<Retraite />} />
                         <Route path="/SuperAdmin/SNTL" element={<SNTL />} />
-                        <Route path="/SuperAdmin/assurances" element={<AssuranceManagement />} />
                         <Route path="/SuperAdmin/Logs" element={<Logs />} />
-                        <Route path="/SuperAdmin/Demande" element={<Demandes />} />
+                        <Route path="/SuperAdmin/Parametres" element={<Parametres />} />
                     </Route>
                 </Route>
 
@@ -231,7 +215,7 @@ function AppContent() {
                 <Route element={<ProtectedRoute allowedRoles={['rh']} />}>
                     <Route element={<Layout />}>
                         <Route path="/RH/Dashboard" element={<RHDashboard />} />
-                        <Route path="/RH/Employes" element={<EmployeesRH />} />
+                        <Route path="/RH/Employes" element={<RHEmployees />} />
                         <Route path="/RH/Salary" element={<RHsalary />} />
                         <Route path="/RH/Demande" element={<RHDemande />} />
                         <Route path="RH/SalaryEmploye" element={<RHGestionEmployes/>}/>
@@ -243,7 +227,7 @@ function AppContent() {
                 <Route element={<ProtectedRoute allowedRoles={['employee']} />}>
                     <Route element={<Layout />}>
                         <Route path="/Employee/Dashboard" element={<EmployeeDashboard />} />
-                        <Route path="/Employee/Demande" element={<Demande />} />
+                        <Route path="/Employee/Demande" element={<EmployeeDemande />} />
                         <Route path="/Employee/Parametre" element={<EmployeParametres />} />
                     </Route>
                 </Route>

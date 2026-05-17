@@ -16,7 +16,7 @@ export default function Header({ sidebarOpen, setSidebarOpen, isMobile }) {
         image: null
     });
 
-    // ⭐ Redirection selon le rôle
+    //  Redirection selon le rôle
     const handleProfileClick = () => {
         const role = localStorage.getItem('role');
         const routes = {
@@ -28,7 +28,7 @@ export default function Header({ sidebarOpen, setSidebarOpen, isMobile }) {
         navigate(routes[role] || '/');
     };
 
-    // ⭐ Rôle title pour l'affichage
+    //  Rôle title pour l'affichage
     const getRoleTitle = () => {
         const role = localStorage.getItem('role');
         const titles = {
