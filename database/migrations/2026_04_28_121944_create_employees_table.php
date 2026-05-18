@@ -19,6 +19,7 @@ return new class extends Migration {
             $table->date('date_embauche')->nullable();
 
             $table->unsignedBigInteger('user_id')->nullable()->after('id');
+            $table->string('role')->nullable()->after('user_id');
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
 
             // IDs pour la classification
@@ -37,17 +38,29 @@ return new class extends Migration {
 
             $table->string('statut')->default('ACTIF');
 
-            // Cotisations
-            $table->string('cotisation_type')->nullable();
-            $table->unsignedBigInteger('cotisation_id')->nullable();
-            $table->unsignedBigInteger('cotisation_rubrique_id')->nullable();
-            $table->string('cotisation_label')->nullable();
-            $table->decimal('cotisation_taux', 5, 2)->nullable();
 
-            // RCAR
-            $table->unsignedBigInteger('rcar_type_id')->nullable();
-            $table->string('rcar_type_label')->nullable();
-            $table->decimal('rcar_taux', 5, 2)->nullable();
+            $table->unsignedBigInteger('cotisation_id')->nullable()->change();
+            $table->foreign('cotisation_id')
+                  ->references('id')
+                  ->on('organisme')
+                  ->onDelete('set null');
+            $table->string('temp_password')->nullable();
+            $table->timestamp('credentials_sent_at')->nullable();
+
+            
+            // Cotisations
+            // $table->string('cotisation_type')->nullable();
+            // $table->unsignedBigInteger('cotisation_rubrique_id')->nullable();
+            // $table->string('cotisation_label')->nullable();
+            // $table->decimal('cotisation_taux', 5, 2)->nullable();
+
+
+
+
+            // // RCAR
+            // $table->unsignedBigInteger('rcar_type_id')->nullable();
+            // $table->string('rcar_type_label')->nullable();
+            // $table->decimal('rcar_taux', 5, 2)->nullable();
 
             // Credit
             $table->unsignedBigInteger('credit_type_id')->nullable();

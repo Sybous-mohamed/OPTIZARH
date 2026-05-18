@@ -11,7 +11,6 @@ use App\Models\Auth\User;
 
 class UserProfileController extends Controller
 {
-
     public function show(Request $request)
     {
         return response()->json($request->user());
@@ -28,7 +27,7 @@ class UserProfileController extends Controller
             'sector'         => 'nullable|string|max:255',
             'employee_count' => 'nullable|integer|min:0',
             'profile_image'  => 'nullable|string',
-            'theme'    => ['required', Rule::in(['light', 'dark','system'])],
+            'theme'    => [Rule::in(['light', 'dark','system'])],
             'language' => ['required', Rule::in(['en', 'fr', 'ar'])],
         ]);
 
@@ -61,7 +60,6 @@ class UserProfileController extends Controller
                 'message' => 'The current password you entered is incorrect.'
             ], 422);
         }
-
 
         $user->update([
             'password' => Hash::make($request->new_password)

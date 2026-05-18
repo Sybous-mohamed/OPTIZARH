@@ -2,7 +2,7 @@ import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Users, Settings, Gift, PiggyBank, ShieldCheck, Percent, HandCoins, GraduationCap, 
-  Hospital, Truck, LogOut, History, FileText, Calendar, Clock
+  Hospital, Truck, LogOut, History, FileText
 } from "lucide-react";
 import axiosClient from "../../apis/axiosConfig";
 import { useTheme } from "../../../context/ThemeContext";
@@ -13,7 +13,7 @@ export default function Sidebar({ onLinkClick, isMobile }) {
     const role = localStorage.getItem('role') || 'superadmin';
     const { darkMode } = useTheme();
 
-    // ⭐ Navigation par rôle
+    // Navigation par rôle
     const navigation = {
         superadmin: {
             main: [
@@ -25,66 +25,29 @@ export default function Sidebar({ onLinkClick, isMobile }) {
                 { label: "RCAR", icon: <ShieldCheck size={20} />, path: "/SuperAdmin/RCAR" },
                 { label: "IR", icon: <Percent size={20} />, path: "/SuperAdmin/IRAffichage" },
                 { label: "Retraite & Tamdid", icon: <GraduationCap size={20} />, path: "/SuperAdmin/Retraite" },
-                { label: "Assurances", icon: <Hospital size={20} />, path: "/SuperAdmin/assurances" },
                 { label: "SNTL", icon: <Truck size={20} />, path: "/SuperAdmin/SNTL" },
-            ],
-            admin: [
-                { label: "Dashboard Admin", icon: <LayoutDashboard size={20} />, path: "/Admin/Dashboard" },
-                { label: "Employés", icon: <Users size={20} />, path: "/Admin/Employees" },
-                { label: "Présences", icon: <Calendar size={20} />, path: "/Admin/Presences" },
-                { label: "Congés", icon: <Clock size={20} />, path: "/Admin/Conges" },
-            ],
-            rh: [
-                { label: "Dashboard RH", icon: <LayoutDashboard size={20} />, path: "/RH/Dashboard" },
-                { label: "Recrutement", icon: <Users size={20} />, path: "/RH/Recrutement" },
-                { label: "Formation", icon: <GraduationCap size={20} />, path: "/RH/Formation" },
-                { label: "Évaluations", icon: <FileText size={20} />, path: "/RH/Evaluations" },
-            ],
-            employee: [
-                { label: "Mon Dashboard", icon: <LayoutDashboard size={20} />, path: "/Employee/Dashboard" },
-                { label: "Mon Profil", icon: <Users size={20} />, path: "/Employee/Profil" },
-                { label: "Mes Congés", icon: <Calendar size={20} />, path: "/Employee/Conges" },
-                { label: "Mes Documents", icon: <FileText size={20} />, path: "/Employee/Documents" },
             ]
-        },
-        admin: {
-            main: [
-                { label: "Tableau de bord", icon: <LayoutDashboard size={20} />, path: "/Admin/Dashboard" },
-                { label: "Employés", icon: <Users size={20} />, path: "/Admin/Employees" },
-                { label: "Présences", icon: <Calendar size={20} />, path: "/Admin/Presences" },
-                { label: "Congés", icon: <Clock size={20} />, path: "/Admin/Conges" },
-                { label: "Paramètres", icon: <Settings size={20} />, path: "/Admin/Parametres" },
-            ],
-            admin: []
         },
         rh: {
             main: [
                 { label: "Tableau de bord", icon: <LayoutDashboard size={20} />, path: "/RH/Dashboard" },
-                { label: "Recrutement", icon: <Users size={20} />, path: "/RH/Recrutement" },
-                { label: "Formation", icon: <GraduationCap size={20} />, path: "/RH/Formation" },
-                { label: "Évaluations", icon: <FileText size={20} />, path: "/RH/Evaluations" },
-                { label: "Paramètres", icon: <Settings size={20} />, path: "/RH/Parametres" },
-            ],
-            admin: []
+                { label: "Employés", icon: <Users size={20} />, path: "/RH/Employes" },
+                { label: "Salaire", icon: <HandCoins size={20} />, path: "/RH/Salary" },
+                { label: "Demandes", icon: <FileText size={20} />, path: "/RH/Demande" },
+                { label: "GestionEmployes", icon: <Users size={20} />, path: "/RH/SalaryEmploye" },
+            ]
         },
         employee: {
             main: [
-                { label: "Mon Dashboard", icon: <LayoutDashboard size={20} />, path: "/Employee/Dashboard" },
-                { label: "Mon Profil", icon: <Users size={20} />, path: "/Employee/Profil" },
-                { label: "Mes Congés", icon: <Calendar size={20} />, path: "/Employee/Conges" },
-                { label: "Mes Documents", icon: <FileText size={20} />, path: "/Employee/Documents" },
-                { label: "Paramètres", icon: <Settings size={20} />, path: "/Employee/Parametres" },
-            ],
-            admin: []
+                { label: "Tableau de bord", icon: <LayoutDashboard size={20} />, path: "/Employee/Dashboard" },
+                { label: "Mes Demandes", icon: <FileText size={20} />, path: "/Employee/Demande" },
+            ]
         }
     };
 
-    // ⭐ Récupérer les items selon le rôle
     const getNavItems = () => {
         if (role === 'superadmin') {
             return navigation.superadmin.main;
-        } else if (role === 'admin') {
-            return navigation.admin.main;
         } else if (role === 'rh') {
             return navigation.rh.main;
         } else if (role === 'employee') {
@@ -99,17 +62,13 @@ export default function Sidebar({ onLinkClick, isMobile }) {
                 { label: "Logs", icon: <History size={20} />, path: "/SuperAdmin/Logs" },
                 { label: "Paramètres", icon: <Settings size={20} />, path: "/SuperAdmin/Parametres" },
             ];
-        } else if (role === 'admin') {
-            return [
-                { label: "Paramètres", icon: <Settings size={20} />, path: "/Admin/Parametres" },
-            ];
         } else if (role === 'rh') {
             return [
-                { label: "Paramètres", icon: <Settings size={20} />, path: "/RH/Parametres" },
+                { label: "Paramètres", icon: <Settings size={20} />, path: "/RH/Parametre" },
             ];
         } else if (role === 'employee') {
             return [
-                { label: "Paramètres", icon: <Settings size={20} />, path: "/Employee/Parametres" },
+                { label: "Paramètres", icon: <Settings size={20} />, path: "/Employee/Parametre" },
             ];
         }
         return [];
@@ -118,8 +77,7 @@ export default function Sidebar({ onLinkClick, isMobile }) {
     const getRoleTitle = () => {
         switch(role) {
             case 'superadmin': return "SuperAdmin";
-            case 'admin': return "Administrateur";
-            case 'rh': return "Ressources Humaines";
+            case 'rh': return "RH";
             case 'employee': return "Employé";
             default: return "Utilisateur";
         }
@@ -128,25 +86,20 @@ export default function Sidebar({ onLinkClick, isMobile }) {
     const navItems = getNavItems();
     const adminItems = getAdminItems();
 
-const handleLogout = async () => {
-    try {
-        await axiosClient.post("/logout");
-    } catch (err) {
-        console.error("Logout error:", err);
-    } finally {
-        // ⭐ Sauvegarder le thème avant de tout effacer
-        const savedTheme = localStorage.getItem('theme');
-        
-        localStorage.clear();
-        
-        // ⭐ Restaurer le thème
-        if (savedTheme) {
-            localStorage.setItem('theme', savedTheme);
+    const handleLogout = async () => {
+        try {
+            await axiosClient.post("/logout");
+        } catch (err) {
+            console.error("Logout error:", err);
+        } finally {
+            const savedTheme = localStorage.getItem('theme');
+            localStorage.clear();
+            if (savedTheme) {
+                localStorage.setItem('theme', savedTheme);
+            }
+            window.location.href = "/auth/login";
         }
-        
-        window.location.href = "/auth/login";
-    }
-};
+    };
 
     const handleLinkClick = () => {
         if (onLinkClick) {
@@ -156,9 +109,7 @@ const handleLogout = async () => {
 
     return (
         <aside className={`
-            w-[280px] bg-white dark:bg-[#1A1A1A] flex flex-col shadow-xl border-r border-gray-100 dark:border-[#2A2A2A]
-            ${isMobile ? 'h-full overflow-y-auto' : 'h-screen overflow-hidden'}
-        `}>
+            w-[280px] bg-white dark:bg-[#1A1A1A] flex flex-col shadow-xl border-r border-gray-100 dark:border-[#2A2A2A] ${isMobile ? 'h-full overflow-y-auto' : 'h-screen overflow-hidden'}`}>
             {/* Logo Section */}
             <div className="flex-shrink-0 p-6 border-b border-gray-100 dark:border-[#2A2A2A]">
                 <div className="flex items-center gap-3">
@@ -219,8 +170,7 @@ const handleLogout = async () => {
             <div className="flex-shrink-0 p-4 border-t border-gray-100 dark:border-[#2A2A2A]">
                 <button 
                     onClick={handleLogout}
-                    className="flex items-center gap-3 w-full px-4 py-3 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-50 dark:hover:bg-red-950/20 rounded-xl transition-all duration-200 group cursor-pointer"
-                >
+                    className="flex items-center gap-3 w-full px-4 py-3 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-50 dark:hover:bg-red-950/20 rounded-xl transition-all duration-200 group cursor-pointer">
                     <LogOut size={20} className="group-hover:-translate-x-1 transition-transform" />
                     Déconnexion
                 </button>
@@ -228,7 +178,6 @@ const handleLogout = async () => {
         </aside>
     );
 }
-
 
 function NavItem({ item, isActive, onClick }) {
     return (

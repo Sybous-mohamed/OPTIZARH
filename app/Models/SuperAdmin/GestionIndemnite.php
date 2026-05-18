@@ -3,9 +3,11 @@
 namespace App\Models\SuperAdmin;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\RecalculatesSalaries; 
 
 class GestionIndemnite extends Model
 {
+    use RecalculatesSalaries;
     protected $table = 'gestion_indemnites';
 
     protected $fillable = [
@@ -39,5 +41,5 @@ class GestionIndemnite extends Model
     public function echelon() {
         return $this->belongsTo(Echelon::class);
     }
-
+  
 }

@@ -23,8 +23,6 @@ class User extends Authenticatable implements MustVerifyEmail
         'email',
         'password',
         'company_name',
-        'sector',
-        'employee_count',
         'role',
         'must_change_password', 
         'profile_image',
@@ -53,5 +51,9 @@ class User extends Authenticatable implements MustVerifyEmail
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function employee(){
+        return $this->hasOne(\App\Models\SuperAdmin\Employee::class, 'user_id');
     }
 }

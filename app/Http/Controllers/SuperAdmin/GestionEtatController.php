@@ -129,13 +129,62 @@ class GestionEtatController extends Controller
     public function exportPDF($year)
     {
         try {
-            $data = SalaryYear::with(['Post.grades.echelles.echelons'])
-                ->where('year', $year)
-                ->first();
+            $salaryYear = SalaryYear::where('year', $year)->first();
 
-            if (!$data) {
-                $data = (object) ['year' => $year, 'Post' => [], 'message' => 'Aucune configuration trouvée'];
+            if (!$salaryYear) {
+                $pdf = Pdf::loadView('pdf.grille_salariale', [
+                    'data' => (object) ['year' => $year, 'Post' => [], 'message' => 'Aucune configuration trouvée'],
+                    'year' => $year,
+                    'date' => now()->format('d/m/Y')
+                ]);
+                $pdf->setPaper('a4', 'landscape');
+                return $pdf->download("grille_salariale_{$year}.pdf");
             }
+            $posts = Post::where('salary_year_id', $salaryYear->id)->get();
+            
+            $formattedPosts = [];
+            foreach ($posts as $post) {
+                $grades = Grade::where('Post_id', $post->id)->get();
+                $formattedGrades = [];
+                
+                foreach ($grades as $grade) {
+                    $echelles = Echelle::where('grade_id', $grade->id)->get();
+                    $formattedEchelles = [];
+                    
+                    foreach ($echelles as $echelle) {
+                        $echelons = Echelon::where('echelle_id', $echelle->id)
+                            ->orderBy('order', 'asc')
+                            ->get();
+                        
+                        $formattedEchelles[] = [
+                            'level' => $echelle->level,
+                            'echelons' => $echelons->map(function($echelon) {
+                                return [
+                                    'order' => $echelon->order,
+                                    'index_val' => $echelon->index_val,
+                                    'salary' => $echelon->salary,
+                                ];
+                            })->toArray()
+                        ];
+                    }
+                    
+                    $formattedGrades[] = [
+                        'name' => $grade->name,
+                        'echelles' => $formattedEchelles
+                    ];
+                }
+                
+                $formattedPosts[] = [
+                    'name' => $post->name,
+                    'is_starred' => $post->is_starred,
+                    'grades' => $formattedGrades
+                ];
+            }
+
+            $data = (object) [
+                'year' => $salaryYear->year,
+                'Post' => $formattedPosts
+            ];
 
             $pdf = Pdf::loadView('pdf.grille_salariale', [
                 'data' => $data,
@@ -145,20 +194,10 @@ class GestionEtatController extends Controller
 
             $pdf->setPaper('a4', 'landscape');
 
-            $this->logActivity(
-                'Export PDF',
-                'EXPORT',
-                "Export PDF de la grille salariale pour l'année {$year}"
-            );
-
             return $pdf->download("grille_salariale_{$year}.pdf");
 
         } catch (\Exception $e) {
-            $this->logActivity(
-                'Export PDF',
-                'ERROR',
-                "Erreur lors de l'export PDF pour l'année {$year}: " . $e->getMessage()
-            );
+            \Log::error('PDF Export error: ' . $e->getMessage());
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }

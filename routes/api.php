@@ -1,14 +1,17 @@
 <?php
+
+use App\Http\Controllers\RH\AllEmployeSalaire;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-
+// Authentification
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\SuperAdmin\UserProfileController;
 
+// Superadmin
 use App\Http\Controllers\SuperAdmin\SuperAdminController;
 use App\Http\Controllers\SuperAdmin\DashboardController;
 use App\Http\Controllers\SuperAdmin\EmployeeController;
@@ -23,16 +26,18 @@ use App\Http\Controllers\SuperAdmin\RetraiteController;
 use App\Http\Controllers\SuperAdmin\AssuranceController;
 use App\Http\Controllers\SuperAdmin\ActivityLogController;
 use App\Http\Controllers\SuperAdmin\SettingsController;
+use App\Http\Controllers\SuperAdmin\LeaveConfigController;
+
+// RH
+use App\Http\Controllers\RH\DashboardRHController;
+use App\Http\Controllers\RH\EmployeeController as RHEmployeeController;
+use App\Http\Controllers\RH\salaryController;
+
+// Employe
+use App\Http\Controllers\Employe\LeaveRequestController;
+use App\Http\Controllers\RH\AllEmployeSalaire as RHAllEmployeSalaire;
 
 
-
-
-
-/*
-|--------------------------------------------------------------------------
-| Public Routes (Guest)
-|--------------------------------------------------------------------------
-*/
 Route::get('/check-setup', [SuperAdminController::class, 'checkStatus']);
 Route::post('/setup-superadmin', [SuperAdminController::class, 'setup']);
 Route::post('/login', [AuthController::class, 'login']);
@@ -44,12 +49,6 @@ Route::get('/verify-email/{id}/{hash}', VerifyEmailController::class)
     ->middleware(['signed', 'throttle:6,1'])
     ->name('verification.verify');
 
-/*
-|--------------------------------------------------------------------------
-| Protected Routes (Auth:Sanctum)
-|--------------------------------------------------------------------------
-*/
-
 Route::get('/Settings/registration-status', function () {
     $setting = \App\Models\SuperAdmin\Setting::where('key', 'registration_enabled')->first();
     return response()->json([
@@ -57,33 +56,48 @@ Route::get('/Settings/registration-status', function () {
     ]);
 });
 
-
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/activity-logs', [ActivityLogController::class, 'index']);
     Route::delete('/activity-logs/{id}', [ActivityLogController::class, 'destroy']);
-    // Account & Status
     Route::post('/logout', [AuthController::class, 'logout']);
-    Route::get('/user', function (Request $request) {
-        return $request->user();
-    });
+    Route::get('/user', function (Request $request) { return $request->user();});
     Route::post('/user/update-password-first', [AuthController::class, 'updatePasswordFirst']);
     Route::post('/user/skip-password-change', [AuthController::class, 'skipPasswordChange']);
     Route::get('/auth/user-status', [AuthController::class, 'userStatus']);
-
-    // Verification Notification
     Route::post('/email/verification-notification', [AuthController::class, 'sendVerificationEmail'])
         ->middleware(['throttle:6,1'])
         ->name('verification.send');
 
-    Route::middleware(['verified'])->group(function () {
-        Route::middleware('role:superadmin')->group(function () {
 
-            Route::get('/salary-years', function () {
-                return \App\Models\SuperAdmin\SalaryYear::orderBy('year', 'asc')->get();
+    Route::get('/salary-years', function () {
+        return \App\Models\SuperAdmin\SalaryYear::orderBy('year', 'asc')->get();
+    });
+    Route::get('/leave-types/{year}', [LeaveConfigController::class, 'getTypesByYear']);
+    Route::get('/leave-config/full/{yearId}', [LeaveConfigController::class, 'getFullConfig']);
+    Route::get('/employees/{id}/salary-dashboard', [EmployeeController::class, 'salaryDashboard']);
+    Route::get('/my-salary', [EmployeeController::class, 'mySalary']);
+
+
+    Route::middleware(['verified'])->group(function () {
+
+
+            // Route::get('/userdata', [ProfileControllerCommin::class, 'show']);
+            // Route::put('/profile/update', [ProfileControllerCommin::class, 'updateProfile']);
+            // Route::put('/profile/settings', [ProfileControllerCommin::class, 'updateSettings']);
+            // Route::put('/profile/password', [ProfileControllerCommin::class, 'updatePassword']);
+
+            Route::prefix('Settings')->group(function () {
+                Route::get('/profile', [UserProfileController::class, 'show']);
+                Route::post('/profile', [UserProfileController::class, 'updateProfile']);
+                Route::post('/password', [UserProfileController::class, 'updatePassword']);
+                Route::get('/admin/platform-data', [SettingsController::class, 'index']);
+                Route::post('/admin/settings', [SettingsController::class, 'updateRegistration']);
+                Route::patch('/admin/users/{id}/toggle-block', [SettingsController::class, 'toggleBlock']);
             });
 
+        Route::middleware('role:superadmin')->group(function () {
             Route::get('/superadmin/dashboard-stats', [DashboardController::class, 'getStats']);
-
+    
             Route::prefix('employees')->group(function () {
                 Route::get('/annees', [EmployeeController::class, 'getAnnees'])->name('employees.annees');
                 Route::get('/stats', [EmployeeController::class, 'stats'])->name('employees.stats');
@@ -95,7 +109,7 @@ Route::middleware('auth:sanctum')->group(function () {
                 Route::get('/{id}', [EmployeeController::class, 'show'])->name('employees.show');
                 Route::put('/{id}', [EmployeeController::class, 'update'])->name('employees.update');
                 Route::delete('/{id}', [EmployeeController::class, 'destroy'])->name('employees.destroy');
-                
+                // Credit 
                 Route::get('/{employeeId}/credits', [EmployeeController::class, 'getCredits']);
                 Route::post('/{employeeId}/credits', [EmployeeController::class, 'addCredit']);
                 Route::put('/credits/{creditId}', [EmployeeController::class, 'updateCredit']);
@@ -134,7 +148,6 @@ Route::middleware('auth:sanctum')->group(function () {
                 Route::delete('/gestionindemnites/{id}', [GestionIndemniteController::class, 'destroy']);
                 Route::get('/years-with-indemnites', [GestionIndemniteController::class, 'getYearsWithIndemnites']);
             });
-
             Route::prefix('cotisations')->group(function () {
                 Route::get('/', [CotisationController::class, 'index']);
                 Route::post('/save', [CotisationController::class, 'store']);
@@ -143,8 +156,6 @@ Route::middleware('auth:sanctum')->group(function () {
                 Route::post('/favorite/{id}', [CotisationController::class, 'toggleFavorite']);
                 Route::get('/years-with-data', [CotisationController::class, 'getYearsWithData']);
             });
-
-
 
             Route::prefix('rcar')->group(function () {
                 Route::get('/years-with-data', [RCARController::class, 'getYearsWithData']);
@@ -172,12 +183,12 @@ Route::middleware('auth:sanctum')->group(function () {
                 Route::get('/cached-settings/{annee}', [IrController::class, 'getCachedSettings']);
             });
 
-
             Route::prefix('retraite')->group(function () {
                 Route::get('/settings/{year}', [RetraiteController::class, 'getSettings']);
                 Route::post('/settings', [RetraiteController::class, 'storeOrUpdate']);
                 Route::get('/configs', [RetraiteController::class, 'index']);
             });
+
             Route::get('/retraite-settings/{year}', [RetraiteController::class, 'getSettings']);
             Route::post('/retraite-settings', [RetraiteController::class, 'storeOrUpdate']);
 
@@ -188,8 +199,6 @@ Route::middleware('auth:sanctum')->group(function () {
                 Route::put('/{id}', [CreditController::class, 'updateType']);
                 Route::delete('/{id}', [CreditController::class, 'destroyType']);
             });
-
-
 
             Route::prefix('assurances')->group(function () {
                 Route::get('/annees', [AssuranceController::class, 'getAnnees']);
@@ -205,19 +214,89 @@ Route::middleware('auth:sanctum')->group(function () {
                 Route::delete('/configs/{id}', [SntlSettingController::class, 'destroy']);
                 Route::get('/configs/{year}', [SntlSettingController::class, 'getByYear']);
             });
-            Route::prefix('Settings')->group(function () {
-                Route::get('/profile', [UserProfileController::class, 'show']);
-                Route::post('/profile', [UserProfileController::class, 'updateProfile']);
-                Route::post('/password', [UserProfileController::class, 'updatePassword']);
-                Route::get('/admin/platform-data', [SettingsController::class, 'index']); // Badel hada f React f fetchPlatformData
-                Route::post('/admin/settings', [SettingsController::class, 'updateRegistration']);
-                Route::patch('/admin/users/{id}/toggle-block', [SettingsController::class, 'toggleBlock']);
+
+            // Route::prefix('Settings')->group(function () {
+            //     Route::get('/profile', [UserProfileController::class, 'show']);
+            //     Route::post('/profile', [UserProfileController::class, 'updateProfile']);
+            //     Route::post('/password', [UserProfileController::class, 'updatePassword']);
+            //     Route::get('/admin/platform-data', [SettingsController::class, 'index']);
+            //     Route::post('/admin/settings', [SettingsController::class, 'updateRegistration']);
+            //     Route::patch('/admin/users/{id}/toggle-block', [SettingsController::class, 'toggleBlock']);
+            // });
+
+            //Demandes
+            Route::prefix('leave-config')->group(function () {
+                Route::post('/save-category', [LeaveConfigController::class, 'saveCategory']);
+                Route::post('/types', [LeaveConfigController::class, 'storeType']); // Hada kiy-3iyét l- storeType()
+                Route::delete('/types/{id}', [LeaveConfigController::class, 'destroyType']);
+                Route::delete('/categories/{id}', [LeaveConfigController::class, 'destroyCategory']);
+            });
+        });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        Route::middleware('role:rh')->group(function () {
+
+
+
+            Route::get('/rh/my-salary', [salaryController::class, 'mySalary']);
+
+            // ✅ Routes pour la gestion des congés RH
+            Route::prefix('hr/leaves')->group(function () {
+                Route::get('/all', [LeaveRequestController::class, 'allRequests']);
+                Route::post('/update-status/{id}', [LeaveRequestController::class, 'updateStatus']);
             });
 
+            Route::prefix('rh')->group(function (){
+                Route::get('/dashboard/stats', [DashboardRHController::class, 'getStats']);
+                Route::get('/dashboard/chart-data', [DashboardRHController::class, 'getChartData']);
+                
+                Route::get('/employees/annees', [RHEmployeeController::class, 'getAnnees']);
+                Route::get('/employees', [RHEmployeeController::class, 'index']);
+                Route::post('/employees', [RHEmployeeController::class, 'store']);
+                Route::get('/employees/{id}', [RHEmployeeController::class, 'show']);
+                Route::put('/employees/{id}', [RHEmployeeController::class, 'update']);
+                Route::delete('/employees/{id}', [RHEmployeeController::class, 'destroy']);
+                Route::get('/employees/{id}/salary-dashboard', [RHEmployeeController::class, 'salaryDashboard']);
+                Route::get('/employees/{employeeId}/credits', [RHEmployeeController::class, 'getCredits']);
+                Route::post('/employees/{employeeId}/credits', [RHEmployeeController::class, 'addCredit']);
+                Route::put('/credits/{creditId}', [RHEmployeeController::class, 'updateCredit']);
+                Route::delete('/credits/{creditId}', [RHEmployeeController::class, 'deleteCredit']);
+                Route::get('/employees/export-pdf', [RHEmployeeController::class, 'exportPDF']);
+                Route::get('/gestionEtat/get-by-year/{year}', [RHEmployeeController::class, 'getClassification']);
+                Route::get('/cotisations', [RHEmployeeController::class, 'getCotisations']);
+                Route::get('/credit-types', [RHEmployeeController::class, 'getCreditTypes']);
+                Route::get('/all-salaries', [RHAllEmployeSalaire::class, 'allEmployeesSalaries']);
+            });
         });
-        // Role: Admin
-        Route::middleware('role:admin')->group(function () { });
-        // Role: RH
-        Route::middleware('role:rh')->group(function () { });
+
+
+
+
+
+
+
+
+
+
+        
+Route::middleware('role:employee')->group(function () { 
+    Route::prefix('leave-requests')->group(function () {
+        Route::get('/my-history', [LeaveRequestController::class, 'myRequests']);
+        Route::post('/store', [LeaveRequestController::class, 'store']);
+        Route::get('/balance', [LeaveRequestController::class, 'getLeaveStats']);
+    });
+});
     });
 });

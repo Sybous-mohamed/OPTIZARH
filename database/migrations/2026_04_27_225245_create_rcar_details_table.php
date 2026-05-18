@@ -14,7 +14,8 @@ return new class extends Migration
             $table->id();
             // Foreign key pointing to rcar_types
             $table->foreignId('rcar_type_id')->constrained('rcar_types')->onDelete('cascade');
-            $table->string('designation'); // Ex: 'RG'
+            $table->string('designation'); 
+            $table->enum('type', ['salariale', 'patronale'])->default('salariale')->after('designation');
             $table->decimal('plafond', 15, 2)->nullable(); // Ex: 211.00
             $table->decimal('percentage', 5, 2); // Ex: 3.00
             $table->timestamps();

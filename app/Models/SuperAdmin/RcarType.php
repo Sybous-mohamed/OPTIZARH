@@ -3,9 +3,11 @@
 namespace App\Models\SuperAdmin;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\RecalculatesSalaries; 
 
 class RcarType extends Model
 {
+    use RecalculatesSalaries;
     protected $table = 'rcar_types';
 
     protected $fillable = ['salary_year_id', 'label', 'is_favorite'];

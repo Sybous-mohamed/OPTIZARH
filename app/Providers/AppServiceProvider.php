@@ -5,6 +5,8 @@ namespace App\Providers;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Auth\Notifications\VerifyEmail;
+use App\Models\Employe\LeaveRequest;
+use App\Observers\LeaveRequestObserver;
 use Illuminate\Support\Facades\URL;
 
 
@@ -24,6 +26,8 @@ class AppServiceProvider extends ServiceProvider
             );
             return 'http://localhost:3000/auth/verify-email?url='.urlencode($verifyUrl);
         });
+
+        LeaveRequest::observe(LeaveRequestObserver::class);
     }
 
 }

@@ -9,7 +9,7 @@ class Employee extends Model
     protected $table = 'employees';
     
     protected $fillable = [
-        'prenom', 'nom', 'email', 'telephone', 'date_naissance','user_id',
+        'prenom', 'nom', 'email', 'telephone', 'date_naissance', 'user_id',
         'situation_familiale', 'nombre_enfants', 'date_embauche',
         'annee_id', 'Post_id', 'grade_id', 'echelle_id', 'echelon_id',
         'grade', 'echelle', 'echelon', 'salaire', 'indice', 'statut',
@@ -18,7 +18,7 @@ class Employee extends Model
         'rcar_type_id', 'rcar_type_label', 'rcar_taux', 
         'credit_type_id', 'montant_credit', 'taux_credit',
         'credit_duree', 'credit_date_debut', 'credit_date_fin', 
-        'credit_mensualite', 'credit_reste_a_payer'
+        'credit_mensualite', 'credit_reste_a_payer', 'temp_password', 'credentials_sent_at',
     ];
 
     protected $casts = [
@@ -36,12 +36,11 @@ class Employee extends Model
         'credit_date_fin' => 'date',
         'credit_mensualite' => 'decimal:2',
         'credit_reste_a_payer' => 'decimal:2',
+        'credentials_sent_at' => 'datetime'
     ];
 
-    // ⭐ Appended attributes
     protected $appends = ['poste_name', 'grade_name', 'echelle_name', 'echelon_name', 'statut_display', 'full_name'];
 
-    // ⭐ Accessors
     public function getPosteNameAttribute()
     {
         return $this->post ? $this->post->name : null;
@@ -76,7 +75,7 @@ class Employee extends Model
         return $this->prenom . ' ' . $this->nom;
     }
 
-    // ⭐ Relations
+    // Relations
     public function annee()
     {
         return $this->belongsTo(SalaryYear::class, 'annee_id');
@@ -127,7 +126,12 @@ class Employee extends Model
         return $this->belongsTo(CreditType::class, 'credit_type_id');
     }
 
-    // ⭐ Scopes
+    public function user()
+    {
+        return $this->belongsTo(\App\Models\Auth\User::class, 'user_id');
+    }
+
+    // Scopes
     public function scopeActif($query)
     {
         return $query->where('statut', 'ACTIF');
@@ -137,4 +141,8 @@ class Employee extends Model
     {
         return $query->where('annee_id', $anneeId);
     }
+    public function organisme()
+{
+    return $this->belongsTo(Organisme::class, 'cotisation_id');
+}
 }

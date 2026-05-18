@@ -18,6 +18,8 @@ class NewPasswordController extends Controller
      *
      * @throws ValidationException
      */
+
+    //hi
     public function store(Request $request): JsonResponse{
         $request->validate([
             'token' => 'required',

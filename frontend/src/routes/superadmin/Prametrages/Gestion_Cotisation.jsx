@@ -1,7 +1,7 @@
-import React, { useState, useEffect ,useRef  } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Plus, Trash2, Save, Building2, Loader2, 
-  Star, Eye, EyeOff, Download, Calendar, AlertCircle ,ChevronDown , ArrowLeft
+  Star, Eye, EyeOff, Download, Calendar, AlertCircle, ChevronDown, ArrowLeft, Edit
 } from 'lucide-react';
 import api from '../../../lib/apis/axiosConfig';
 import { jsPDF } from "jspdf";
@@ -28,16 +28,18 @@ const GestionCotisation = () => {
     isOpen: false, type: null, id: null, name: '', orgId: null 
   });
   const [isYearOpen, setIsYearOpen] = useState(false);
-    const yearRef = useRef(null);
-    const navigate = useNavigate();
+  const [editMode, setEditMode] = useState({});
+  const yearRef = useRef(null);
+  const navigate = useNavigate();
 
   // Dark mode classes
-  const bgClass = darkMode ? 'bg-[#0D0D0D]' : 'bg-[#F8FAFC]';
+  const bgClass = darkMode ? 'bg-black' : 'bg-[#F8FAFC]';
   const cardClass = darkMode ? 'bg-[#1A1A1A] border-[#2A2A2A]' : 'bg-white border-gray-200';
   const textClass = darkMode ? 'text-gray-100' : 'text-gray-800';
   const textMutedClass = darkMode ? 'text-gray-500' : 'text-gray-500';
   const borderClass = darkMode ? 'border-[#2A2A2A]' : 'border-gray-200';
   const inputClass = darkMode ? 'bg-[#252525] border-[#333] text-white' : 'bg-gray-50 border-gray-200 text-gray-800';
+  const inputDisabledClass = darkMode ? 'bg-[#1A1A1A] border-[#2A2A2A] text-gray-500 cursor-not-allowed' : 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed';
   const inputErrorClass = darkMode 
     ? 'bg-[#252525] border-red-500 text-white ring-1 ring-red-500' 
     : 'bg-gray-50 border-red-500 text-gray-800 ring-1 ring-red-500';
@@ -53,7 +55,15 @@ const GestionCotisation = () => {
     };
     fetchYears();
   }, []);
-
+const checkOrganismeUsed = async (orgId) => {
+    try {
+        const response = await api.get(`/api/cotisations/check-usage/${orgId}?year=${config.year}`);
+        return response.data.used;
+    } catch (error) {
+        console.error("Erreur vérification usage:", error);
+        return false;
+    }
+};
   const fetchData = async () => {
     setFetching(true);
     try {
@@ -61,10 +71,13 @@ const GestionCotisation = () => {
       if (response.data && response.data.length > 0) {
         setConfig(prev => ({ ...prev, organismes: response.data }));
         const initialStates = {};
+        const initialEditMode = {};
         response.data.forEach(org => {
           initialStates[org.id] = { visible: true, favorite: org.is_favorite };
+          initialEditMode[org.id] = false; 
         });
         setUiStates(initialStates);
+        setEditMode(initialEditMode);
         setErrors({});
       } else {
         setConfig(prev => ({ ...prev, organismes: [] }));
@@ -80,18 +93,24 @@ const GestionCotisation = () => {
   useEffect(() => {
     fetchData();
   }, [config.year]);
+
   useEffect(() => {
-  const handleClickOutside = (event) => {
-    if (yearRef.current && !yearRef.current.contains(event.target)) {
-      setIsYearOpen(false);
-    }
-  };
-  document.addEventListener('mousedown', handleClickOutside);
-  return () => document.removeEventListener('mousedown', handleClickOutside);
-}, []);
+    const handleClickOutside = (event) => {
+      if (yearRef.current && !yearRef.current.contains(event.target)) {
+        setIsYearOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const toggleVisibility = (id) => {
     setUiStates(prev => ({ ...prev, [id]: { ...prev[id], visible: !prev[id]?.visible } }));
+  };
+
+  //  Fonction pour activer/désactiver le mode édition
+  const toggleEditMode = (orgId) => {
+    setEditMode(prev => ({ ...prev, [orgId]: !prev[orgId] }));
   };
 
   const addOrganisme = () => {
@@ -99,10 +118,16 @@ const GestionCotisation = () => {
     const newOrg = { id: newId, name: 'Nouvel Organisme', rubriques: [] };
     setConfig({ ...config, organismes: [newOrg, ...config.organismes] });
     setUiStates(prev => ({ [newId]: { visible: true, favorite: false }, ...prev }));
-    showNotification("✨ Nouvel organisme ajouté", "success");
+    setEditMode(prev => ({ ...prev, [newId]: true })); // 
+    showNotification(" Nouvel organisme ajouté", "success");
   };
 
   const addRubrique = (orgId) => {
+    //  Vérifier si le mode édition est activé
+    if (!editMode[orgId]) {
+      showNotification(" Activez le mode édition d'abord", "warning");
+      return;
+    }
     const updatedOrgs = config.organismes.map(org => {
       if (org.id === orgId) {
         return {
@@ -113,7 +138,7 @@ const GestionCotisation = () => {
       return org;
     });
     setConfig({ ...config, organismes: updatedOrgs });
-    showNotification("📋 Nouvelle rubrique ajoutée", "success");
+    showNotification(" Nouvelle rubrique ajoutée", "success");
   };
 
   const validateTaux = (taux) => {
@@ -129,6 +154,12 @@ const GestionCotisation = () => {
   };
 
   const updateRubrique = (orgId, rubId, field, val) => {
+    //  Vérifier si le mode édition est activé
+    if (!editMode[orgId]) {
+      showNotification(" Activez le mode édition pour modifier", "warning");
+      return;
+    }
+
     if (field === 'taux') {
       const numVal = parseFloat(val);
       if (val !== '' && (isNaN(numVal) || numVal < 0 || numVal > 100)) {
@@ -159,10 +190,25 @@ const GestionCotisation = () => {
     setConfig({ ...config, organismes: updatedOrgs });
   };
 
-  // ============ DELETE WITH API ============
-  const openDeleteOrganismeModal = (orgId, orgName) => {
-    setDeleteModal({ isOpen: true, type: 'organisme', id: orgId, name: orgName, orgId: null });
+  const updateOrganismeName = (orgId, newName) => {
+    //  Vérifier si le mode édition est activé
+    if (!editMode[orgId]) {
+      showNotification(" Activez le mode édition pour modifier", "warning");
+      return;
+    }
+    const updated = config.organismes.map(o => o.id === orgId ? { ...o, name: newName } : o);
+    setConfig({ ...config, organismes: updated });
   };
+
+  // ============ DELETE WITH API ============
+  const openDeleteOrganismeModal = async (orgId, orgName) => {
+    const isUsed = await checkOrganismeUsed(orgId);
+    if (isUsed) {
+        showNotification(`⚠️ L'organisme "${orgName}" est utilisé par des employés. Impossible de le supprimer.`, "error");
+        return;
+    }
+    setDeleteModal({ isOpen: true, type: 'organisme', id: orgId, name: orgName, orgId: null });
+};
 
   const openDeleteRubriqueModal = (orgId, rubId, rubLabel) => {
     setDeleteModal({ isOpen: true, type: 'rubrique', id: rubId, name: rubLabel || 'cette rubrique', orgId: orgId });
@@ -178,7 +224,7 @@ const GestionCotisation = () => {
       try {
         await api.delete(`/api/cotisations/organisme/${deleteModal.id}`);
         setConfig({...config, organismes: config.organismes.filter(o => o.id !== deleteModal.id)});
-        showNotification(`🗑️ Organisme "${deleteModal.name}" supprimé`, "success");
+        showNotification(` Organisme "${deleteModal.name}" supprimé`, "success");
       } catch (error) {
         showNotification(" Erreur lors de la suppression", "error");
       } finally {
@@ -194,7 +240,7 @@ const GestionCotisation = () => {
             : o
         );
         setConfig({...config, organismes: updated});
-        showNotification(`🗑️ Rubrique "${deleteModal.name}" supprimée`, "success");
+        showNotification(` Rubrique "${deleteModal.name}" supprimée`, "success");
       } catch (error) {
         showNotification(" Erreur lors de la suppression", "error");
       } finally {
@@ -223,9 +269,19 @@ const GestionCotisation = () => {
     
     setLoading(true);
     try {
-      await api.post('/api/cotisations/save', config);
-      await fetchData();
-      showNotification(`Configuration ${config.year} enregistrée`, "success");
+      const response = await api.post('/api/cotisations/save', config);
+      if (response.status === 200 || response.status === 201) {
+        localStorage.setItem('cotisations_updated', Date.now().toString());
+        window.dispatchEvent(new Event('storage'));
+        await fetchData();
+        showNotification(`Configuration ${config.year} enregistrée`, "success");
+        //  Désactiver tous les modes édition après sauvegarde
+        const resetEditMode = {};
+        config.organismes.forEach(org => {
+          resetEditMode[org.id] = false;
+        });
+        setEditMode(resetEditMode);
+      }
     } catch (error) {
       showNotification(" Erreur lors de l'enregistrement", "error");
     } finally {
@@ -304,46 +360,44 @@ const GestionCotisation = () => {
             
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-4">
-                
+              <button 
+                onClick={() => navigate(-1)}
+                className={`cursor-pointer p-2 rounded-xl transition-all ${darkMode ? 'bg-[#1A1A1A] border-[#2A2A2A] hover:bg-[#252525]' : 'bg-white border-gray-200 hover:bg-gray-50'} border shadow-sm`}
+              >
+                <ArrowLeft size={18} className={textClass} />
+              </button>
+              <div className="relative" ref={yearRef}>
                 <button 
-                    onClick={() => navigate(-1)}
-                    className={`cursor-pointer p-2 rounded-xl transition-all ${darkMode ? 'bg-[#1A1A1A] border-[#2A2A2A] hover:bg-[#252525]' : 'bg-white border-gray-200 hover:bg-gray-50'} border shadow-sm`}
+                  onClick={() => setIsYearOpen(!isYearOpen)}
+                  className={`h-10 px-4 rounded-xl font-medium outline-none cursor-pointer min-w-[140px] transition-all ${darkMode ? 'bg-[#252525] border-[#333] text-white' : 'bg-gray-50 border-gray-200 text-gray-800'} border ${borderClass} text-sm flex items-center justify-between gap-3 hover:border-indigo-400`}
                 >
-                    <ArrowLeft size={18} className={textClass} />
-                </button>
-                <div className="relative" ref={yearRef}>
-                <button 
-                    onClick={() => setIsYearOpen(!isYearOpen)}
-                    className={`h-10 px-4 rounded-xl font-medium outline-none cursor-pointer min-w-[140px] transition-all ${darkMode ? 'bg-[#252525] border-[#333] text-white' : 'bg-gray-50 border-gray-200 text-gray-800'} border ${borderClass} text-sm flex items-center justify-between gap-3 hover:border-indigo-400`}
-                >
-                    <span className="truncate">{config.year || 'Sélectionner année'}</span>
-                    <ChevronDown size={16} className={`text-indigo-500 transition-transform duration-200 ${isYearOpen ? 'rotate-180' : ''}`} />
+                  <span className="truncate">{config.year || 'Sélectionner année'}</span>
+                  <ChevronDown size={16} className={`text-indigo-500 transition-transform duration-200 ${isYearOpen ? 'rotate-180' : ''}`} />
                 </button>
                 
                 {isYearOpen && (
-                    <div className={`absolute top-full left-0 right-0 mt-2 rounded-xl border ${borderClass} ${darkMode ? 'bg-[#1A1A1A] border-[#2A2A2A]' : 'bg-white border-gray-200'} z-50 max-h-60 overflow-y-auto shadow-xl animate-fadeIn`}>
+                  <div className={`absolute top-full left-0 right-0 mt-2 rounded-xl border ${borderClass} ${darkMode ? 'bg-[#1A1A1A] border-[#2A2A2A]' : 'bg-white border-gray-200'} z-50 max-h-60 overflow-y-auto shadow-xl animate-fadeIn`}>
                     {availableYears.map(y => (
-                        <div 
+                      <div 
                         key={y.id}
                         onClick={() => {
-                            setConfig(prev => ({...prev, year: y.year || y.annee}));
-                            setIsYearOpen(false);
+                          setConfig(prev => ({...prev, year: y.year || y.annee}));
+                          setIsYearOpen(false);
                         }}
                         className={`px-4 py-2.5 cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-sm transition-colors ${config.year === (y.year || y.annee) ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 font-medium' : darkMode ? 'text-gray-300' : 'text-gray-700'}`}
-                        >
+                      >
                         {y.year || y.annee}
-                        </div>
+                      </div>
                     ))}
-                    </div>
+                  </div>
                 )}
-                </div>
-                <button onClick={addOrganisme} className="flex items-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-xl font-bold text-xs hover:from-emerald-700 hover:to-teal-700 transition-all shadow-lg cursor-pointer">
-                    <Plus size={16} /> Nouveau Type
-                </button>
+              </div>
+              <button onClick={addOrganisme} className="flex items-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-xl font-bold text-xs hover:bg-blue-700 transition-all shadow-lg cursor-pointer">
+                <Plus size={16} /> Nouveau Type
+              </button>
               <button onClick={exportPDF} className="flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-red-600 to-rose-600 text-white rounded-xl font-bold text-xs hover:from-red-700 hover:to-rose-700 transition-all shadow-lg cursor-pointer">
                 <Download size={16} /> Exporter PDF
               </button>
-
             </div>
             {fetching && <Loader2 className="animate-spin text-indigo-500" size={20} />}
           </div>
@@ -360,13 +414,11 @@ const GestionCotisation = () => {
                     <Building2 size={16} />
                   </div>
                   <input 
-                    className={`font-bold outline-none bg-transparent focus:border-b-2 border-indigo-400 ${textClass} text-base`}
+                    className={`font-bold outline-none bg-transparent focus:border-b-2 border-indigo-400 ${textClass} text-base ${!editMode[org.id] ? 'cursor-not-allowed opacity-70' : ''}`}
                     value={org.name}
-                    onChange={(e) => {
-                      const updated = config.organismes.map(o => o.id === org.id ? {...o, name: e.target.value} : o);
-                      setConfig({...config, organismes: updated});
-                    }}
+                    onChange={(e) => updateOrganismeName(org.id, e.target.value)}
                     placeholder="Nom de l'organisme"
+                    disabled={!editMode[org.id]}
                   />
                 </div>
                 <div className="flex items-center gap-1">
@@ -385,13 +437,15 @@ const GestionCotisation = () => {
 
               {/* Card Content */}
               {uiStates[org.id]?.visible && (
-                
                 <div className="p-5">
-                 <button onClick={() => addRubrique(org.id)} className="mb-4 text-xs font-semibold text-indigo-600 dark:text-indigo-400 flex items-center gap-1 hover:underline transition-all cursor-pointer">
+                  <button 
+                    onClick={() => addRubrique(org.id)} 
+                    className={`mb-4 text-xs font-semibold flex items-center gap-1 hover:underline transition-all cursor-pointer ${editMode[org.id] ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400 cursor-not-allowed'}`}
+                    disabled={!editMode[org.id]}
+                  >
                     <Plus size={12} /> Ajouter une Cotisation
                   </button>
                   <div className="overflow-x-auto">
-                    
                     <table className="w-full">
                       <thead>
                         <tr className={`text-left text-xs font-bold uppercase tracking-wider ${textMutedClass}`}>
@@ -409,43 +463,56 @@ const GestionCotisation = () => {
                             <tr key={rub.id} className={darkMode ? 'hover:bg-[#252525]' : 'hover:bg-gray-50'}>
                               <td className="py-3 pr-4">
                                 <input 
-                                  className={`w-full p-2 rounded-lg outline-none focus:ring-1 focus:ring-indigo-500 transition-all ${inputClass} border ${borderClass} text-sm`}
+                                  className={`w-full p-2 rounded-lg outline-none focus:ring-1 focus:ring-indigo-500 transition-all text-sm ${!editMode[org.id] ? inputDisabledClass : inputClass} border ${borderClass}`}
                                   value={rub.label}
                                   placeholder="ex:CNOPS ,..."
                                   onChange={(e) => updateRubrique(org.id, rub.id, 'label', e.target.value)}
+                                  disabled={!editMode[org.id]}
                                 />
                               </td>
                               <td className="py-3 px-3">
                                 <div>
                                   <input 
                                     type="number" min="0"
-                                    className={`w-32 mx-auto block p-2 rounded-lg outline-none focus:ring-1 focus:ring-indigo-500 text-center ${plafondError ? inputErrorClass : inputClass} border ${borderClass} text-sm`}
+                                    className={`w-32 mx-auto block p-2 rounded-lg outline-none focus:ring-1 focus:ring-indigo-500 text-center ${plafondError ? inputErrorClass : (!editMode[org.id] ? inputDisabledClass : inputClass)} border ${borderClass} text-sm`}
                                     value={rub.plafond} placeholder="0"
                                     onChange={(e) => updateRubrique(org.id, rub.id, 'plafond', e.target.value)}
+                                    disabled={!editMode[org.id]}
                                   />
                                   {plafondError && <p className="text-red-500 text-xs text-center mt-1"><AlertCircle size={10} /> {plafondError}</p>}
                                 </div>
-                               </td>
+                              </td>
                               <td className="py-3 px-3">
                                 <div>
                                   <div className="relative w-24 mx-auto">
                                     <input 
                                       type="number" step="0.1" min="0" max="100"
-                                      className={`w-full p-2 rounded-lg outline-none focus:ring-1 focus:ring-indigo-500 text-center pr-7 ${tauxError ? inputErrorClass : inputClass} border ${borderClass} text-sm font-semibold`}
+                                      className={`w-full p-2 rounded-lg outline-none focus:ring-1 focus:ring-indigo-500 text-center pr-7 ${tauxError ? inputErrorClass : (!editMode[org.id] ? inputDisabledClass : inputClass)} border ${borderClass} text-sm font-semibold`}
                                       value={rub.taux}
                                       onChange={(e) => updateRubrique(org.id, rub.id, 'taux', e.target.value)}
+                                      disabled={!editMode[org.id]}
                                     />
                                     <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">%</span>
                                   </div>
                                   {tauxError && <p className="text-red-500 text-xs text-center mt-1"><AlertCircle size={10} /> {tauxError}</p>}
                                 </div>
-                               </td>
-                              <td className="py-3 text-center">
-                                <button onClick={() => openDeleteRubriqueModal(org.id, rub.id, rub.label)} className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all cursor-pointer">
+                              </td>
+                              <td className="py-3 text-center flex">
+                                <button 
+                                    onClick={() => toggleEditMode(org.id)} 
+                                    className={`p-1.5 rounded-lg transition-all cursor-pointer ${editMode[org.id] ? 'text-green-500 bg-green-100 dark:bg-green-900/30' : 'text-indigo-500 bg-indigo-100 dark:bg-indigo-900/30'}`}
+                                >
+                                    <Edit size={16} />
+                                </button>
+                                <button 
+                                  onClick={() => openDeleteRubriqueModal(org.id, rub.id, rub.label)} 
+                                  className={`p-1.5 rounded-lg transition-all cursor-pointer ${!editMode[org.id] ? 'text-gray-400 cursor-not-allowed' : 'text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20'}`}
+                                  disabled={!editMode[org.id]}
+                                >
                                   <Trash2 size={14} />
                                 </button>
-                               </td>
-                             </tr>
+                              </td>
+                            </tr>
                           );
                         })}
                         {org.rubriques.length === 0 && (
@@ -454,7 +521,6 @@ const GestionCotisation = () => {
                       </tbody>
                     </table>
                   </div>
-
                 </div>
               )}
             </div>
@@ -472,16 +538,9 @@ const GestionCotisation = () => {
           </div>
         )}
 
-        {/* {fetching && (
-          <div className="text-center py-12">
-            <Loader2 className="animate-spin mx-auto text-indigo-500" size={32} />
-            <p className={`mt-2 ${textMutedClass}`}>Chargement...</p>
-          </div>
-        )} */}
-
         {/* Save Button */}
         <div className="fixed bottom-6 right-6 z-50">
-          <button onClick={handleSave} disabled={loading} className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl font-bold shadow-lg hover:from-indigo-700 hover:to-purple-700 transition-all disabled:opacity-50 cursor-pointer">
+          <button onClick={handleSave} disabled={loading} className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-all disabled:opacity-50 cursor-pointer">
             {loading ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
             <span className="text-sm uppercase tracking-wide">Sauvegarder</span>
           </button>

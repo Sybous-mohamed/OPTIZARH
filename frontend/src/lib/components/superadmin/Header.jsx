@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Bell, Moon, Sun, Search, Menu } from 'lucide-react';
+import { Bell, Moon, Sun, Search, Menu, Settings } from 'lucide-react';
 import { useTheme } from '../../../context/ThemeContext';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
@@ -16,19 +16,22 @@ export default function Header({ sidebarOpen, setSidebarOpen, isMobile }) {
         image: null
     });
 
-    // ⭐ Redirection selon le rôle
+    // ✅ Fonction pour rediriger vers les paramètres selon le rôle
     const handleProfileClick = () => {
         const role = localStorage.getItem('role');
         const routes = {
             superadmin: '/SuperAdmin/Parametres',
             admin: '/Admin/Parametres',
-            rh: '/RH/Parametres',
-            employee: '/Employee/Parametres'
+            rh: '/RH/Parametre',
+            employee: '/Employee/Parametre'
         };
-        navigate(routes[role] || '/');
+        
+        const targetRoute = routes[role] || '/';
+        console.log('Navigation vers:', targetRoute, 'Rôle:', role);
+        navigate(targetRoute);
     };
 
-    // ⭐ Rôle title pour l'affichage
+    // ✅ Fonction pour obtenir le titre du rôle
     const getRoleTitle = () => {
         const role = localStorage.getItem('role');
         const titles = {
@@ -40,6 +43,7 @@ export default function Header({ sidebarOpen, setSidebarOpen, isMobile }) {
         return titles[role] || 'Utilisateur';
     };
 
+    // ✅ Fonction pour obtenir les initiales
     const getInitials = (name) => {
         if (!name || name === "Chargement...") return "AD";
         const parts = name.split(' ');
@@ -49,6 +53,7 @@ export default function Header({ sidebarOpen, setSidebarOpen, isMobile }) {
         return name[0].toUpperCase();
     };
 
+    // ✅ Charger les données utilisateur
     const loadUserData = useCallback(() => {
         const savedUser = localStorage.getItem('user');
         if (savedUser) {
@@ -60,7 +65,7 @@ export default function Header({ sidebarOpen, setSidebarOpen, isMobile }) {
                     image: parsedUser.profile_image || null
                 });
             } catch (e) {
-                console.error("Erreur f parsing dyal user data");
+                console.error("Erreur parsing user data");
             }
         }
     }, []);
@@ -73,10 +78,11 @@ export default function Header({ sidebarOpen, setSidebarOpen, isMobile }) {
         };
     }, [loadUserData]);
 
+    // ✅ Gérer le thème
     const handleThemeToggle = useCallback(() => {
         const newTheme = darkMode ? 'light' : 'dark';
         updateTheme(newTheme);
-    }, [darkMode, updateTheme, showNotification]);
+    }, [darkMode, updateTheme]);
 
     return (
         <header className={`h-16 bg-white/80 dark:bg-[#1A1A1A]/80 backdrop-blur-md border-b border-gray-100 dark:border-[#2A2A2A] flex items-center justify-between px-4 md:px-6 fixed top-0 right-0 z-30 transition-all duration-300 ${isMobile ? 'left-0' : 'left-[280px]'}`}>
@@ -99,6 +105,7 @@ export default function Header({ sidebarOpen, setSidebarOpen, isMobile }) {
 
             {/* Right section */}
             <div className="flex items-center gap-2 md:gap-4">
+                {/* Theme toggle */}
                 <button 
                     onClick={handleThemeToggle}
                     className="p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#2A2A2A] rounded-full transition-all cursor-pointer group"
@@ -111,6 +118,7 @@ export default function Header({ sidebarOpen, setSidebarOpen, isMobile }) {
                     )}
                 </button>
 
+                {/* Notifications */}
                 <button className="p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#2A2A2A] rounded-full transition-colors relative">
                     <Bell size={20} />
                     <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-[#1A1A1A]"></span>
@@ -118,7 +126,7 @@ export default function Header({ sidebarOpen, setSidebarOpen, isMobile }) {
 
                 <div className="h-8 w-[1px] bg-gray-100 dark:bg-[#2A2A2A] hidden sm:block"></div>
 
-                {/* Profile Section */}
+                {/* Profile Section - Click pour aller aux paramètres */}
                 <div onClick={handleProfileClick} className="flex items-center gap-3 cursor-pointer group">
                     <div className="text-right hidden sm:block">
                         <p className="text-sm font-bold text-gray-900 dark:text-white leading-none group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">

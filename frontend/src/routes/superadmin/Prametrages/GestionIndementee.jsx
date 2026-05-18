@@ -41,7 +41,7 @@ const GestionIndemnitee = () => {
     });
 
     // Dark mode classes
-    const bgClass = darkMode ? 'bg-[#0D0D0D]' : 'bg-gradient-to-br from-gray-50 via-gray-50 to-indigo-50/20';
+    const bgClass = darkMode ? 'bg-black' : 'bg-gradient-to-br from-gray-50 via-gray-50 to-indigo-50/20';
     const cardClass = darkMode ? 'bg-[#1A1A1A] border-[#2A2A2A]' : 'bg-white border-gray-200';
     const cardHeaderClass = darkMode ? 'bg-blue-600 to-purple-800' : 'bg-blue-600  to-purple-600';
     const textClass = darkMode ? 'text-gray-100' : 'text-gray-800';

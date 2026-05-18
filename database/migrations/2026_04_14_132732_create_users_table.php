@@ -13,8 +13,6 @@ return new class extends Migration {
             $table->string('email')->unique();
             $table->string('password');
             $table->string('company_name')->nullable();
-            $table->string('sector')->nullable();
-            $table->integer('employee_count')->nullable();
             $table->string('role')->default('admin');
             $table->timestamp('email_verified_at')->nullable();
             $table->text('profile_image')->nullable();

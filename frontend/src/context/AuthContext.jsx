@@ -10,7 +10,6 @@ export const AuthProvider = ({ children }) => {
     useEffect(() => {
         const token = localStorage.getItem('token');
         if (token) {
-            // Verifier l-token m3a l-backend
             api.get('/api/user')
                 .then(res => setUser(res.data))
                 .catch(() => localStorage.clear())

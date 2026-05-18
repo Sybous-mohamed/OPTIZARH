@@ -12,6 +12,9 @@ use Illuminate\Support\Facades\Log;
 
 class AssuranceController extends Controller
 {
+    /**
+     * Retourne la liste des années disponibles.
+     */
     public function getAnnees()
     {
         try {
@@ -23,27 +26,30 @@ class AssuranceController extends Controller
         }
     }
 
+    /**
+     * Retourne les assurances pour une année donnée.
+     */
     public function getByYear($year)
     {
         try {
             $annee = SalaryYear::where('year', $year)->first();
-            
+
             if (!$annee) {
                 return response()->json([
-                    'annee' => $year,
-                    'annee_id' => null,
-                    'assurances' => []
+                    'annee'     => $year,
+                    'annee_id'  => null,
+                    'assurances' => [],
                 ]);
             }
 
             $assurances = Assurance::where('annee_id', $annee->id)
                 ->orderBy('name')
-                ->get();
+                ->get(['id', 'name', 'is_active', 'taux_salarie', 'plafond_mensuel']);
 
             return response()->json([
-                'annee' => $year,
-                'annee_id' => $annee->id,
-                'assurances' => $assurances
+                'annee'      => $year,
+                'annee_id'   => $annee->id,
+                'assurances' => $assurances,
             ]);
         } catch (\Exception $e) {
             Log::error('getByYear: ' . $e->getMessage());
@@ -51,18 +57,19 @@ class AssuranceController extends Controller
         }
     }
 
+    /**
+     * Sauvegarde (remplace) toutes les assurances d'une année.
+     */
     public function store(Request $request)
     {
         try {
-            $validated = $request->validate([
-                'annee' => 'required|integer',
-                'assurances' => 'required|array',
-                'assurances.*.name' => 'required|string',
-                'assurances.*.code' => 'required|string',
-                'assurances.*.taux_employeur' => 'nullable|numeric',
-                'assurances.*.taux_salarie' => 'nullable|numeric',
-                'assurances.*.plafond_mensuel' => 'nullable|numeric',
-                'assurances.*.is_active' => 'boolean'
+            $request->validate([
+                'annee'                        => 'required|integer',
+                'assurances'                   => 'required|array',
+                'assurances.*.name'            => 'required|string|max:255',
+                'assurances.*.taux_salarie'    => 'nullable|numeric|min:0|max:100',
+                'assurances.*.plafond_mensuel' => 'nullable|numeric|min:0',
+                'assurances.*.is_active'       => 'boolean',
             ]);
 
             return DB::transaction(function () use ($request) {
@@ -71,17 +78,16 @@ class AssuranceController extends Controller
                     ['is_active' => true]
                 );
 
+                // Remplacement complet des assurances de l'année
                 Assurance::where('annee_id', $annee->id)->delete();
 
-                foreach ($request->assurances as $assData) {
+                foreach ($request->assurances as $data) {
                     Assurance::create([
-                        'annee_id' => $annee->id,
-                        'name' => $assData['name'],
-                        'code' => $assData['code'],
-                        'is_active' => $assData['is_active'] ?? true,
-                        'taux_salarie' => $assData['taux_salarie'] ?? 0,
-                        'taux_employeur' => $assData['taux_employeur'] ?? 0,
-                        'plafond_mensuel' => $assData['plafond_mensuel'] ?? null
+                        'annee_id'        => $annee->id,
+                        'name'            => $data['name'],
+                        'is_active'       => $data['is_active']       ?? true,
+                        'taux_salarie'    => $data['taux_salarie']    ?? 0,
+                        'plafond_mensuel' => $data['plafond_mensuel'] ?? null,
                     ]);
                 }
 
@@ -89,14 +95,18 @@ class AssuranceController extends Controller
 
                 return response()->json(['message' => 'Configuration enregistrée'], 201);
             });
+
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json(['errors' => $e->errors()], 422);
         } catch (\Exception $e) {
-            Log::error('Store error: ' . $e->getMessage());
+            Log::error('AssuranceController@store: ' . $e->getMessage());
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
 
+    /**
+     * Supprime une assurance par son ID.
+     */
     public function destroyAssurance($id)
     {
         try {
@@ -104,6 +114,7 @@ class AssuranceController extends Controller
             $assurance->delete();
             return response()->json(['message' => 'Assurance supprimée']);
         } catch (\Exception $e) {
+            Log::error('AssuranceController@destroyAssurance: ' . $e->getMessage());
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }

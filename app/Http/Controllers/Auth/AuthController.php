@@ -83,20 +83,22 @@ class AuthController extends Controller{
         $request->user()->sendEmailVerificationNotification();
         return response()->json(['status' => 'verification-link-sent']);
     }
-    public function userStatus(Request $request)
-    {
-        $user = $request->user();
+public function userStatus(Request $request)
+{
+    // fresh() darouri bach i-jib l-état jdid mn database machi mn session
+    $user = $request->user();
 
-        if (!$user) {
-            return response()->json(['message' => 'Unauthenticated'], 401);
-        }
-
-        return response()->json([
-            'email_verified_at' => $user->fresh()->email_verified_at,
-            'user' => $user->fresh(),
-            'role' => $user->role
-        ]);
+    if (!$user) {
+        return response()->json(['message' => 'Unauthenticated'], 401);
     }
+
+    return response()->json([
+        'email_verified_at' => $user->fresh()->email_verified_at,
+        'user' => $user->fresh(),
+        'role' => $user->role
+    ]);
+}
+
     public function updatePasswordFirst(Request $request) {
         $request->validate([
             'password' => 'required|string|min:8|confirmed',

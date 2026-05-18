@@ -38,4 +38,8 @@ class SalaryYear extends Model
             Cache::forget('salary_years');
         });
     }
+
+    public function categories() {
+        return $this->hasMany(LeaveSetting::class, 'salary_year_id');
+    }
 }

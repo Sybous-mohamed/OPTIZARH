@@ -54,70 +54,98 @@ class CotisationController extends Controller
     }
 
     public function store(Request $request)
-    {
-        try {
-            \Log::info('Store cotisations request', $request->all());
-            
-            $year = $request->input('year');
-            $organismes = $request->input('organismes', []);
-            
-            if (!$year) {
-                return response()->json(['error' => 'Année requise'], 400);
+{
+    try {
+        \Log::info('Store cotisations request', $request->all());
+        
+        $year = $request->input('year');
+        $organismes = $request->input('organismes', []);
+        
+        if (!$year) {
+            return response()->json(['error' => 'Année requise'], 400);
+        }
+        
+        DB::beginTransaction();
+        
+        // 🔥 IMPORTANT: NE PAS SUPPRIMER !!!
+        // Au lieu de supprimer, on va récupérer les IDs existants
+        $existingOrganismes = Organisme::where('annee', $year)->get();
+        $existingIds = $existingOrganismes->pluck('id')->toArray();
+        $newIds = [];
+        
+        // Traiter chaque organisme
+        foreach ($organismes as $orgData) {
+            if (empty($orgData['name'])) {
+                continue;
             }
             
-            DB::beginTransaction();
+            // Vérifier si l'organisme existe déjà (par nom)
+            $existingOrg = $existingOrganismes->firstWhere('nom', $orgData['name']);
             
-            Organisme::where('annee', $year)->delete();
-
-            $orgCount = 0;
-
-            foreach ($organismes as $orgData) {
-                if (empty($orgData['name'])) {
-                    continue;
-                }
+            if ($existingOrg) {
+                // Mettre à jour l'existant
+                $existingOrg->update([
+                    'is_favorite' => isset($orgData['is_favorite']) ? (bool)$orgData['is_favorite'] : false,
+                ]);
+                $organisme = $existingOrg;
+                $newIds[] = $existingOrg->id;
                 
+                // Supprimer les anciennes cotisations
+                $organisme->cotisations()->delete();
+            } else {
+                // Créer un nouvel organisme
                 $organisme = Organisme::create([
                     'nom'   => $orgData['name'],
                     'is_favorite' => isset($orgData['is_favorite']) ? (bool)$orgData['is_favorite'] : false,
                     'annee' => $year,
                 ]);
-                $orgCount++;
-                
-                $rubriques = isset($orgData['rubriques']) ? $orgData['rubriques'] : [];
-                foreach ($rubriques as $rub) {
-                    $taux = isset($rub['taux']) && $rub['taux'] !== '' ? floatval($rub['taux']) : 0;
-                    $plafond = isset($rub['plafond']) && $rub['plafond'] !== '' ? floatval($rub['plafond']) : null;
-                    $label = isset($rub['label']) ? $rub['label'] : 'Sans Désignation';
-                    
-                    $organisme->cotisations()->create([
-                        'name'    => $label,
-                        'taux'    => $taux,
-                        'plafond' => $plafond,
-                    ]);
-                }
+                $newIds[] = $organisme->id;
             }
             
-            DB::commit();
-
-            $this->logActivity(
-                'Configuration cotisations',
-                'UPDATE',
-                "Mise à jour des cotisations pour l'année {$year} ({$orgCount} organisme(s))"
-            );
-            
-            return response()->json(['message' => 'Configuration enregistrée avec succès'], 201);
-            
-        } catch (\Exception $e) {
-            DB::rollBack();
-            \Log::error('Store error: ' . $e->getMessage());
-            $this->logActivity(
-                'Configuration cotisations',
-                'ERROR',
-                "Erreur lors de l'enregistrement: " . $e->getMessage()
-            );
-            return response()->json(['error' => $e->getMessage()], 500);
+            // Ajouter les nouvelles cotisations
+            $rubriques = isset($orgData['rubriques']) ? $orgData['rubriques'] : [];
+            foreach ($rubriques as $rub) {
+                $taux = isset($rub['taux']) && $rub['taux'] !== '' ? floatval($rub['taux']) : 0;
+                $plafond = isset($rub['plafond']) && $rub['plafond'] !== '' ? floatval($rub['plafond']) : null;
+                $label = isset($rub['label']) ? $rub['label'] : 'Sans Désignation';
+                
+                $organisme->cotisations()->create([
+                    'name'    => $label,
+                    'taux'    => $taux,
+                    'plafond' => $plafond,
+                ]);
+            }
         }
+        
+        // 🔥 Supprimer uniquement les organismes qui n'existent PLUS dans la nouvelle configuration
+        $idsToDelete = array_diff($existingIds, $newIds);
+        if (!empty($idsToDelete)) {
+            // Vérifier si ces organismes sont utilisés par des employés
+            $usedOrganismes = Employee::whereIn('cotisation_id', $idsToDelete)
+                ->whereHas('annee', function($q) use ($year) {
+                    $q->where('year', $year);
+                })
+                ->pluck('cotisation_id')
+                ->unique()
+                ->toArray();
+            
+            $idsToDelete = array_diff($idsToDelete, $usedOrganismes);
+            
+            if (!empty($idsToDelete)) {
+                Organisme::whereIn('id', $idsToDelete)->delete();
+            }
+        }
+        
+        DB::commit();
+        
+        return response()->json(['message' => 'Configuration enregistrée avec succès'], 201);
+        
+    } catch (\Exception $e) {
+        DB::rollBack();
+        \Log::error('Store error: ' . $e->getMessage());
+        return response()->json(['error' => $e->getMessage()], 500);
     }
+}
 
     public function destroyOrganisme($id)
     {
