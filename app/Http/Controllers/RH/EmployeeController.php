@@ -26,14 +26,12 @@ class EmployeeController extends Controller
         $this->delegate = app(SuperAdminEmployeeController::class);
     }
 
-    // 🔐 Générer mot de passe sécurisé (10 caractères)
     private function generateSecurePassword($length = 10)
     {
         $chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
         return substr(str_shuffle($chars), 0, $length);
     }
 
-    // 📧 Envoyer email avec identifiants
     private function sendCredentialsEmail($employee, $plainPassword, $isUpdate = false)
     {
         try {
@@ -49,8 +47,7 @@ class EmployeeController extends Controller
                 'year'      => date('Y'),
                 'isUpdate'  => $isUpdate
             ], function ($message) use ($employee, $subject) {
-                $message->to($employee->email)
-                        ->subject($subject);
+                $message->to($employee->email)->subject($subject);
             });
 
             $employee->update([
@@ -67,7 +64,6 @@ class EmployeeController extends Controller
         }
     }
 
-    // 📅 GET /rh/employees/annees
     public function getAnnees()
     {
         try {
@@ -83,55 +79,53 @@ class EmployeeController extends Controller
         }
     }
 
-    // 📋 GET /rh/employees
-   // 📋 GET /rh/employees
-public function index(Request $request)
-{
-    try {
-        $query = Employee::query();
+    public function index(Request $request)
+    {
+        try {
+            $query = Employee::query();
 
-        // 🔥 FILTRE: Afficher uniquement les employés avec user.role = 'employee'
-        $query->whereHas('user', function($q) {
-            $q->where('role', 'employee');
-        });
-
-        if ($request->filled('annee_id')) {
-            $query->where('annee_id', $request->annee_id);
-        }
-
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('prenom', 'like', "%{$search}%")
-                  ->orWhere('nom', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%");
+            // 🔥 FILTRE: Seulement les employés avec rôle 'employee'
+            $query->whereHas('user', function($q) {
+                $q->where('role', 'employee');
             });
+
+            if ($request->filled('annee_id')) {
+                $query->where('annee_id', $request->annee_id);
+            }
+
+            if ($request->filled('search')) {
+                $search = $request->search;
+                $query->where(function ($q) use ($search) {
+                    $q->where('prenom', 'like', "%{$search}%")
+                      ->orWhere('nom', 'like', "%{$search}%")
+                      ->orWhere('email', 'like', "%{$search}%");
+                });
+            }
+
+            if ($request->filled('statut') && $request->statut !== 'Tous') {
+                $query->where('statut', $request->statut);
+            }
+
+            $employees = $query
+                ->with(['post', 'gradeRel', 'echelleRel', 'echelonRel', 'user', 'organisme'])
+                ->orderBy('created_at', 'desc')
+                ->paginate(10);
+
+            $employees->getCollection()->transform(function ($employee) {
+                $employee->date_naissance = $employee->date_naissance
+                    ? date('Y-m-d', strtotime($employee->date_naissance)) : null;
+                $employee->date_embauche = $employee->date_embauche
+                    ? date('Y-m-d', strtotime($employee->date_embauche)) : null;
+                $employee->role = $employee->user?->role ?? 'employee';
+                return $employee;
+            });
+
+            return response()->json($employees);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
         }
-
-        if ($request->filled('statut') && $request->statut !== 'Tous') {
-            $query->where('statut', $request->statut);
-        }
-
-        $employees = $query
-            ->with(['post', 'gradeRel', 'echelleRel', 'echelonRel', 'user'])
-            ->orderBy('created_at', 'desc')
-            ->paginate(10);
-
-        $employees->getCollection()->transform(function ($employee) {
-            $employee->date_naissance = $employee->date_naissance
-                ? date('Y-m-d', strtotime($employee->date_naissance)) : null;
-            $employee->date_embauche = $employee->date_embauche
-                ? date('Y-m-d', strtotime($employee->date_embauche)) : null;
-            return $employee;
-        });
-
-        return response()->json($employees);
-    } catch (\Exception $e) {
-        return response()->json(['error' => $e->getMessage()], 500);
     }
-}
 
-    // ➕ POST /rh/employees
     public function store(Request $request)
     {
         try {
@@ -154,22 +148,17 @@ public function index(Request $request)
                 'echelon'            => 'nullable|string',
                 'salaire'            => 'nullable|numeric|min:0',
                 'indice'             => 'nullable|numeric|min:0',
-                'statut'             => 'nullable|string|in:ACTIF,CONGÉ,DÉPART',
-                'cotisation_id'      => 'nullable|integer',
+                'statut'             => 'nullable|string|in:ACTIF,CONGE,DEPART',
+                'cotisation_id'      => 'required|exists:organisme,id',
                 'credits'            => 'nullable|array',
             ]);
 
-            // Vérifier année en cours
             $this->assertCurrentYear($validated['annee_id']);
 
-            // 🔥 FORCER le rôle à 'employee' (RH ne peut ajouter que des employés)
             $role = 'employee';
-            
-            // Générer mot de passe temporaire
             $tempPassword = $this->generateSecurePassword();
 
             $employee = DB::transaction(function () use ($validated, $tempPassword, $role, $request) {
-                // Créer l'utilisateur
                 $user = User::create([
                     'full_name'            => $validated['prenom'] . ' ' . $validated['nom'],
                     'email'                => $validated['email'],
@@ -187,7 +176,6 @@ public function index(Request $request)
                 
                 $employee = Employee::create($validated);
 
-                // Ajouter les crédits
                 if ($request->has('credits') && is_array($request->credits)) {
                     foreach ($request->credits as $creditData) {
                         $clean = $this->buildCreditData($creditData);
@@ -206,16 +194,12 @@ public function index(Request $request)
                     }
                 }
 
-                // Recalculer salaire
                 $this->delegate->calculateAndStoreSalary($employee->id);
 
                 return $employee;
             });
 
-            // 🔥 ENVOYER L'EMAIL AVEC IDENTIFIANTS
             $this->sendCredentialsEmail($employee, $tempPassword, false);
-
-            $this->logActivity('Ajout employé', 'CREATE', "RH a ajouté : {$employee->prenom} {$employee->nom}");
             
             return response()->json([
                 'message' => 'Employé ajouté avec succès. Identifiants envoyés par email.',
@@ -230,11 +214,10 @@ public function index(Request $request)
         }
     }
 
-    // 👁️ GET /rh/employees/{id}
     public function show($id)
     {
         try {
-            $employee = Employee::with(['post', 'gradeRel', 'echelleRel', 'echelonRel', 'credits'])
+            $employee = Employee::with(['post', 'gradeRel', 'echelleRel', 'echelonRel', 'credits', 'organisme'])
                 ->findOrFail($id);
             return response()->json($employee);
         } catch (\Exception $e) {
@@ -242,7 +225,6 @@ public function index(Request $request)
         }
     }
 
-    // ✏️ PUT /rh/employees/{id}
     public function update(Request $request, $id)
     {
         try {
@@ -266,8 +248,8 @@ public function index(Request $request)
                 'echelon'             => 'nullable|string|max:50',
                 'salaire'             => 'nullable|numeric|min:0',
                 'indice'              => 'nullable|numeric|min:0',
-                'statut'              => 'nullable|string|in:ACTIF,CONGÉ,DÉPART',
-                'cotisation_id'       => 'nullable|integer',
+                'statut'              => 'nullable|string|in:ACTIF,CONGE,DEPART',
+                'cotisation_id'       => 'required|exists:organisme,id',
             ];
 
             if ($request->has('email') && $request->email !== $employee->email) {
@@ -286,7 +268,6 @@ public function index(Request $request)
 
             $employee->update($data);
 
-            // 🔥 Vérifier si on doit régénérer le mot de passe
             $passwordRegenerated = false;
             $newPassword = null;
             
@@ -302,32 +283,23 @@ public function index(Request $request)
                 $passwordRegenerated = true;
             }
 
-            // Sync credits
             if ($request->has('credits') && is_array($request->credits)) {
                 $this->syncCredits($employee->id, $request->credits);
             }
 
-            // Recalculer salaire
             $this->delegate->calculateAndStoreSalary($employee->id);
 
-            // 🔥 Si mot de passe régénéré, envoyer email
             if ($passwordRegenerated) {
                 $this->sendCredentialsEmail($employee, $newPassword, true);
             }
 
-            $this->logActivity('Modification employé', 'UPDATE', "RH a modifié : {$employee->prenom} {$employee->nom}");
-
-            $employee->load('credits');
+            $employee->load('credits', 'organisme');
             $salary = EmployeeSalary::where('employee_id', $employee->id)
                 ->orderBy('year', 'desc')
                 ->first();
 
-            $responseMessage = $passwordRegenerated 
-                ? 'Employé modifié avec succès. Nouveaux identifiants envoyés par email.'
-                : 'Employé modifié avec succès.';
-
             return response()->json([
-                'message' => $responseMessage,
+                'message' => 'Employé modifié avec succès.',
                 'employee' => $employee,
                 'salary_details' => $salary ? $this->formatSalaryResponse($salary) : null,
             ]);
@@ -338,7 +310,6 @@ public function index(Request $request)
         }
     }
 
-    // 🗑️ DELETE /rh/employees/{id}
     public function destroy($id)
     {
         try {
@@ -357,7 +328,6 @@ public function index(Request $request)
                 }
             });
 
-            $this->logActivity('Suppression employé', 'DELETE', "RH a supprimé : {$name}");
             return response()->json(['message' => 'Employé supprimé avec succès']);
 
         } catch (\Exception $e) {
@@ -365,13 +335,11 @@ public function index(Request $request)
         }
     }
 
-    // 💰 GET /rh/employees/{id}/salary-dashboard
     public function salaryDashboard($id)
     {
         return $this->delegate->salaryDashboard($id);
     }
 
-    // 💳 GET /rh/employees/{id}/credits
     public function getCredits($employeeId)
     {
         try {
@@ -384,7 +352,6 @@ public function index(Request $request)
         }
     }
 
-    // ➕ POST /rh/employees/{id}/credits
     public function addCredit(Request $request, $employeeId)
     {
         try {
@@ -424,7 +391,6 @@ public function index(Request $request)
             $credit = EmployeeCredit::create($validated);
             $this->delegate->calculateAndStoreSalary($employeeId);
 
-            $this->logActivity('Ajout crédit', 'CREATE', "Crédit ajouté à l'employé ID: {$employeeId}");
             return response()->json($credit->load('creditType'), 201);
 
         } catch (\Exception $e) {
@@ -432,7 +398,6 @@ public function index(Request $request)
         }
     }
 
-    // ✏️ PUT /rh/credits/{creditId}
     public function updateCredit(Request $request, $creditId)
     {
         try {
@@ -454,7 +419,6 @@ public function index(Request $request)
             $credit->update($validated);
             $this->delegate->calculateAndStoreSalary($credit->employee_id);
 
-            $this->logActivity('Modification crédit', 'UPDATE', "Crédit ID: {$creditId} modifié");
             return response()->json($credit->load('creditType'));
 
         } catch (\Exception $e) {
@@ -462,7 +426,6 @@ public function index(Request $request)
         }
     }
 
-    // 🗑️ DELETE /rh/credits/{creditId}
     public function deleteCredit($creditId)
     {
         try {
@@ -475,7 +438,6 @@ public function index(Request $request)
             $credit->delete();
             $this->delegate->calculateAndStoreSalary($employeeId);
 
-            $this->logActivity('Suppression crédit', 'DELETE', "Crédit ID: {$creditId} supprimé");
             return response()->json(['message' => 'Crédit supprimé avec succès']);
 
         } catch (\Exception $e) {
@@ -483,7 +445,6 @@ public function index(Request $request)
         }
     }
 
-    // 📄 GET /rh/employees/export-pdf
     public function exportPDF(Request $request)
     {
         try {
@@ -516,7 +477,6 @@ public function index(Request $request)
             ]);
             $pdf->setPaper('a4', 'landscape');
 
-            $this->logActivity('Export PDF', 'EXPORT', 'Export PDF liste employés (RH)');
             return $pdf->download('employes_rh_' . now()->format('Ymd_His') . '.pdf');
 
         } catch (\Exception $e) {
@@ -524,86 +484,69 @@ public function index(Request $request)
         }
     }
 
-    // 🏷️ GET /rh/gestionEtat/get-by-year/{year}
-  public function getClassification(Request $request)
-{
-    try {
-        $year = $request->year ?? $request->annee_id;
-        
-        \Log::info('getClassification called', ['year' => $year]); // Debug
-        
-        if (!$year) {
-            return response()->json(['Post' => []]);
+    public function getClassification(Request $request)
+    {
+        try {
+            $year = $request->year ?? $request->annee_id;
+            
+            if (!$year) {
+                return response()->json(['Post' => []]);
+            }
+
+            $salaryYear = SalaryYear::where('year', $year)->first();
+            
+            if (!$salaryYear) {
+                return response()->json(['Post' => []]);
+            }
+
+            $data = SalaryYear::with(['Post' => function($query) {
+                $query->orderBy('name', 'asc');
+            }, 'Post.grades.echelles.echelons'])
+                ->find($salaryYear->id);
+
+            if (!$data) {
+                return response()->json(['Post' => []]);
+            }
+
+            $response = [
+                'id' => $data->id,
+                'year' => $data->year,
+                'Post' => $data->Post->map(function($post) {
+                    return [
+                        'id' => $post->id,
+                        'name' => $post->name,
+                        'is_starred' => $post->is_starred ?? false,
+                        'grades' => $post->grades->map(function($grade) {
+                            return [
+                                'id' => $grade->id,
+                                'name' => $grade->name,
+                                'echelles' => $grade->echelles->map(function($echelle) {
+                                    return [
+                                        'id' => $echelle->id,
+                                        'level' => $echelle->level,
+                                        'echelons' => $echelle->echelons->map(function($echelon) {
+                                            return [
+                                                'id' => $echelon->id,
+                                                'order' => $echelon->order,
+                                                'salary' => $echelon->salary,
+                                                'index_val' => $echelon->index_val,
+                                            ];
+                                        })
+                                    ];
+                                })
+                            ];
+                        })
+                    ];
+                })
+            ];
+
+            return response()->json($response);
+            
+        } catch (\Exception $e) {
+            return response()->json(['Post' => [], 'error' => $e->getMessage()], 500);
         }
-
-        // 🔥 Méthode 1: Chercher SalaryYear par year
-        $salaryYear = SalaryYear::where('year', $year)->first();
-        
-        if (!$salaryYear) {
-            \Log::warning('SalaryYear not found for year: ' . $year);
-            return response()->json(['Post' => []]);
-        }
-
-        // 🔥 Méthode 2: Charger avec les relations
-        $data = SalaryYear::with(['Post' => function($query) {
-            $query->orderBy('name', 'asc');
-        }, 'Post.grades', 'Post.grades.echelles', 'Post.grades.echelles.echelons'])
-            ->find($salaryYear->id);
-
-        \Log::info('Classification data loaded', [
-            'has_data' => !is_null($data),
-            'posts_count' => $data?->Post?->count() ?? 0
-        ]);
-
-        // 🔥 Si pas de données, retourner structure vide
-        if (!$data) {
-            return response()->json(['Post' => []]);
-        }
-
-        // 🔥 Transformer les données pour le frontend
-        $response = [
-            'id' => $data->id,
-            'year' => $data->year,
-            'Post' => $data->Post->map(function($post) {
-                return [
-                    'id' => $post->id,
-                    'name' => $post->name,
-                    'is_starred' => $post->is_starred ?? false,
-                    'grades' => $post->grades->map(function($grade) {
-                        return [
-                            'id' => $grade->id,
-                            'name' => $grade->name,
-                            'echelles' => $grade->echelles->map(function($echelle) {
-                                return [
-                                    'id' => $echelle->id,
-                                    'level' => $echelle->level,
-                                    'echelons' => $echelle->echelons->map(function($echelon) {
-                                        return [
-                                            'id' => $echelon->id,
-                                            'order' => $echelon->order,
-                                            'salary' => $echelon->salary,
-                                            'index_val' => $echelon->index_val,
-                                        ];
-                                    })
-                                ];
-                            })
-                        ];
-                    })
-                ];
-            })
-        ];
-
-        return response()->json($response);
-        
-    } catch (\Exception $e) {
-        \Log::error('getClassification error: ' . $e->getMessage(), [
-            'trace' => $e->getTraceAsString()
-        ]);
-        return response()->json(['Post' => [], 'error' => $e->getMessage()], 500);
     }
-}
 
-    // 🏢 GET /rh/cotisations
     public function getCotisations(Request $request)
     {
         try {
@@ -617,7 +560,6 @@ public function index(Request $request)
         }
     }
 
-    // 💳 GET /rh/credit-types
     public function getCreditTypes()
     {
         try {
@@ -628,7 +570,6 @@ public function index(Request $request)
         }
     }
 
-    // 👤 GET /rh/my-salary (pour le RH lui-même)
     public function mySalary()
     {
         try {

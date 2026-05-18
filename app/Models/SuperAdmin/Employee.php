@@ -141,4 +141,8 @@ class Employee extends Model
     {
         return $query->where('annee_id', $anneeId);
     }
+    public function organisme()
+{
+    return $this->belongsTo(Organisme::class, 'cotisation_id');
+}
 }

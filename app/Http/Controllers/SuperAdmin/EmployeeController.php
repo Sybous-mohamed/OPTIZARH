@@ -21,7 +21,23 @@ class EmployeeController extends Controller
     // ============================================================
     // METHODES D'AUTHENTIFICATION ET EMAIL
     // ============================================================
-
+public function checkOrganismeUsage($orgId)
+{
+    try {
+        $year = request()->query('year');
+        $used = Employee::where('cotisation_id', $orgId)
+            ->when($year, function($query) use ($year) {
+                return $query->whereHas('annee', function($q) use ($year) {
+                    $q->where('year', $year);
+                });
+            })
+            ->exists();
+        
+        return response()->json(['used' => $used]);
+    } catch (\Exception $e) {
+        return response()->json(['used' => false, 'error' => $e->getMessage()]);
+    }
+}
     private function generateSecurePassword($length = 10)
     {
         $chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -96,44 +112,45 @@ class EmployeeController extends Controller
         }
     }
     
-    public function index(Request $request)
-    {
-        try {
-            $query = Employee::query();
+   public function index(Request $request)
+{
+    try {
+        $query = Employee::query();
 
-            if ($request->filled('annee_id')) {
-                $query->where('annee_id', $request->annee_id);
-            }
-
-            if ($request->filled('search')) {
-                $search = $request->search;
-                $query->where(function ($q) use ($search) {
-                    $q->where('prenom', 'like', "%$search%")
-                        ->orWhere('nom', 'like', "%$search%")
-                        ->orWhere('email', 'like', "%$search%");
-                });
-            }
-
-            if ($request->filled('statut') && $request->statut !== 'Tous') {
-                $query->where('statut', $request->statut);
-            }
-
-            $employees = $query->with(['post', 'gradeRel', 'echelleRel', 'echelonRel', 'user'])
-                ->orderBy('created_at', 'desc')
-                ->paginate(10);
-            
-            $employees->getCollection()->transform(function ($employee) {
-                $employee->date_naissance = $employee->date_naissance ? date('Y-m-d', strtotime($employee->date_naissance)) : null;
-                $employee->date_embauche = $employee->date_embauche ? date('Y-m-d', strtotime($employee->date_embauche)) : null;
-                $employee->role = $employee->user?->role ?? 'employee';
-                return $employee;
-            });
-            
-            return response()->json($employees);
-        } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 500);
+        if ($request->filled('annee_id')) {
+            $query->where('annee_id', $request->annee_id);
         }
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('prenom', 'like', "%$search%")
+                    ->orWhere('nom', 'like', "%$search%")
+                    ->orWhere('email', 'like', "%$search%");
+            });
+        }
+
+        if ($request->filled('statut') && $request->statut !== 'Tous') {
+            $query->where('statut', $request->statut);
+        }
+
+        // 🔥 Ajouter la relation avec organisme
+        $employees = $query->with(['post', 'gradeRel', 'echelleRel', 'echelonRel', 'user', 'organisme'])
+            ->orderBy('created_at', 'desc')
+            ->paginate(10);
+        
+        $employees->getCollection()->transform(function ($employee) {
+            $employee->date_naissance = $employee->date_naissance ? date('Y-m-d', strtotime($employee->date_naissance)) : null;
+            $employee->date_embauche = $employee->date_embauche ? date('Y-m-d', strtotime($employee->date_embauche)) : null;
+            $employee->role = $employee->user?->role ?? 'employee';
+            return $employee;
+        });
+        
+        return response()->json($employees);
+    } catch (\Exception $e) {
+        return response()->json(['error' => $e->getMessage()], 500);
     }
+}
     // ============================================================
     // STORE - AJOUTER UN EMPLOYE
     // ============================================================
@@ -166,7 +183,7 @@ class EmployeeController extends Controller
                 'salaire' => 'nullable|numeric|min:0',
                 'indice' => 'nullable|numeric|min:0',
                 'statut' => 'nullable|string|in:ACTIF,CONGÉ,DÉPART',
-                'cotisation_id' => 'nullable|integer',
+                'cotisation_id' => 'required|exists:organisme,id', 
                 'credits' => 'nullable|array',
                 'send_credentials_email' => 'nullable|boolean'
             ]);
@@ -299,19 +316,16 @@ class EmployeeController extends Controller
                 'salaire' => 'nullable|numeric|min:0',
                 'indice' => 'nullable|numeric|min:0',
                 'statut' => 'nullable|string|in:ACTIF,CONGÉ,DÉPART',
-                'cotisation_id' => 'nullable|integer',
+                'cotisation_id' => 'required|exists:organisme,id', 
                 'role' => 'nullable|string|in:employee,rh,admin,superadmin',
                 'regenerate_password' => 'nullable|boolean',
                 'send_email' => 'nullable|boolean'
             ];
             
-            if (empty($request->cotisation_id)) {
-                $defaultOrganisme = DB::table('organisme')->where('is_default', 1)->first();
-                if ($defaultOrganisme) {
-                    $request->merge(['cotisation_id' => $defaultOrganisme->id]);
-                }
+            if (!$request->has('cotisation_id') && $employee->cotisation_id) {
+                $request->merge(['cotisation_id' => $employee->cotisation_id]);
             }
-            
+
             if ($request->has('email') && $request->email !== $employee->email) {
                 $rules['email'] = 'required|email|unique:employees,email';
             }
@@ -1044,7 +1058,7 @@ private function syncEmployeeCredits($employeeId, array $creditsData)
         return ['total' => round($total, 2), 'appliedIndemnites' => $appliedIndemnites];
     }
 
-   private function calculateAllCotisations($brutSalary, $cotisationId, $cotisationsList)
+  private function calculateAllCotisations($brutSalary, $cotisationId, $cotisationsList)
 {
     $totalCotisations = 0.00;
     $appliedCotisations = [];
@@ -1059,7 +1073,7 @@ private function syncEmployeeCredits($employeeId, array $creditsData)
     });
     
     if (!$selectedOrganisme) {
-        \Log::warning('Organisme not found', ['cotisationId' => $cotisationId]);
+        \Log::warning('Organisme not found for employee', ['cotisationId' => $cotisationId]);
         return ['total' => 0.00, 'details' => []];
     }
     

@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('annee_id')->constrained('salary_years')->onDelete('cascade');
             $table->string('name');
-             $table->string('code')->nullable()->change();
+            $table->string('code')->nullable()->change();
             $table->boolean('is_active')->default(true);
             $table->decimal('taux_salarie', 5, 2)->default(0);
             $table->decimal('plafond_mensuel', 15, 2)->nullable();

@@ -29,6 +29,7 @@ use App\Http\Controllers\SuperAdmin\SettingsController;
 use App\Http\Controllers\SuperAdmin\LeaveConfigController;
 
 // RH
+use App\Http\Controllers\RH\DashboardRHController;
 use App\Http\Controllers\RH\EmployeeController as RHEmployeeController;
 use App\Http\Controllers\RH\salaryController;
 
@@ -147,7 +148,6 @@ Route::middleware('auth:sanctum')->group(function () {
                 Route::delete('/gestionindemnites/{id}', [GestionIndemniteController::class, 'destroy']);
                 Route::get('/years-with-indemnites', [GestionIndemniteController::class, 'getYearsWithIndemnites']);
             });
-
             Route::prefix('cotisations')->group(function () {
                 Route::get('/', [CotisationController::class, 'index']);
                 Route::post('/save', [CotisationController::class, 'store']);
@@ -247,6 +247,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
 
         Route::middleware('role:rh')->group(function () {
+
+
+
             Route::get('/rh/my-salary', [salaryController::class, 'mySalary']);
 
             // ✅ Routes pour la gestion des congés RH
@@ -256,6 +259,9 @@ Route::middleware('auth:sanctum')->group(function () {
             });
 
             Route::prefix('rh')->group(function (){
+                Route::get('/dashboard/stats', [DashboardRHController::class, 'getStats']);
+                Route::get('/dashboard/chart-data', [DashboardRHController::class, 'getChartData']);
+                
                 Route::get('/employees/annees', [RHEmployeeController::class, 'getAnnees']);
                 Route::get('/employees', [RHEmployeeController::class, 'index']);
                 Route::post('/employees', [RHEmployeeController::class, 'store']);
