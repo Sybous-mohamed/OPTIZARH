@@ -50,8 +50,8 @@ import Demandes from './routes/superadmin/Demande';
 import RHDashboard from './routes/Rh/Dashboard';
 import EmployeesRH from './routes/RH/Employees';
 import RHsalary from './routes/RH/Salary';
-import SalaryEmploye from './routes/RH/SalaryEmploye';
 import RHDemande from './routes/RH/Demande';
+import RHGestionEmployes from './routes/RH/SalaryEmploye';
 import RHParametre from './routes/RH/Parametre';
 
 // Employee Components
@@ -131,7 +131,7 @@ const PublicRoute = ({ children, isFirstRun }) => {
             superadmin: "/SuperAdmin/Dashboard",
             admin: "/Admin/Dashboard",
             rh: "/RH/Dashboard",
-            employee: "/employee/Dashboard"
+            employee: "/Employee/Dashboard"
         };
         return <Navigate to={paths[role] || "/auth/login"} replace />;
     }
@@ -233,8 +233,8 @@ function AppContent() {
                         <Route path="/RH/Dashboard" element={<RHDashboard />} />
                         <Route path="/RH/Employes" element={<EmployeesRH />} />
                         <Route path="/RH/Salary" element={<RHsalary />} />
-                        <Route path="/RH/SalaryEmploye" element={<SalaryEmploye />} />
                         <Route path="/RH/Demande" element={<RHDemande />} />
+                        <Route path="RH/SalaryEmploye" element={<RHGestionEmployes/>}/>
                         <Route path="/RH/Parametre" element={<RHParametre />} />
                     </Route>
                 </Route>

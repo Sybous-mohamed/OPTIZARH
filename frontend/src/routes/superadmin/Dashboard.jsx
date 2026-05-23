@@ -255,82 +255,81 @@ export default function Dashboard() {
             </div>
             
             {/* Graphiques Ligne 1 */}
-{/* Graphiques Ligne 1 */}
-<div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-    
-    {/* Répartition des déductions (Pie Chart) */}
-    <div className={`${darkClasses.card} rounded-lg border ${darkClasses.border} p-3`}>
-        <div className="flex items-center gap-2 mb-3">
-            <Percent size={14} className="text-purple-500" />
-            <h3 className={`text-sm font-medium ${darkClasses.text}`}>Répartition des déductions</h3>
-        </div>
-        {(
-            (stats.total_cotisations > 0 || stats.total_rcar > 0 || stats.total_credits_mensualites > 0 || stats.total_ir > 0)
-        ) ? (
-            <div className="h-[240px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                    <RePieChart>
-                        <Pie
-                            data={[
-                                { name: 'Cotisations', value: stats.total_cotisations, color: '#f59e0b' },
-                                { name: 'RCAR', value: stats.total_rcar, color: '#ef4444' },
-                                { name: 'Crédits', value: stats.total_credits_mensualites, color: '#8b5cf6' },
-                                { name: 'IR', value: stats.total_ir, color: '#10b981' }
-                            ].filter(item => item.value > 0)}
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={45}
-                            outerRadius={75}
-                            dataKey="value"
-                            label={({ percent }) => percent > 0.05 ? `${(percent * 100).toFixed(0)}%` : ''}
-                            labelLine={{ stroke: darkMode ? '#444' : '#ccc', strokeWidth: 0.5 }}
-                        >
-                            {[
-                                { name: 'Cotisations', value: stats.total_cotisations, color: '#f59e0b' },
-                                { name: 'RCAR', value: stats.total_rcar, color: '#ef4444' },
-                                { name: 'Crédits', value: stats.total_credits_mensualites, color: '#8b5cf6' },
-                                { name: 'IR', value: stats.total_ir, color: '#10b981' }
-                            ].filter(item => item.value > 0).map((entry, idx) => (
-                                <Cell key={entry.name} fill={entry.color} />
-                            ))}
-                        </Pie>
-                        <Tooltip formatter={(v) => [formatMoney(v), '']} contentStyle={{ fontSize: '11px', borderRadius: '8px' }} />
-                        <Legend wrapperStyle={{ fontSize: '10px' }} />
-                    </RePieChart>
-                </ResponsiveContainer>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                
+                {/* Répartition des déductions (Pie Chart) */}
+                <div className={`${darkClasses.card} rounded-lg border ${darkClasses.border} p-3`}>
+                    <div className="flex items-center gap-2 mb-3">
+                        <Percent size={14} className="text-purple-500" />
+                        <h3 className={`text-sm font-medium ${darkClasses.text}`}>Répartition des déductions</h3>
+                    </div>
+                    {(
+                        (stats.total_cotisations > 0 || stats.total_rcar > 0 || stats.total_credits_mensualites > 0 || stats.total_ir > 0)
+                    ) ? (
+                        <div className="h-[240px] w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <RePieChart>
+                                    <Pie
+                                        data={[
+                                            { name: 'Cotisations', value: stats.total_cotisations, color: '#f59e0b' },
+                                            { name: 'RCAR', value: stats.total_rcar, color: '#ef4444' },
+                                            { name: 'Crédits', value: stats.total_credits_mensualites, color: '#8b5cf6' },
+                                            { name: 'IR', value: stats.total_ir, color: '#10b981' }
+                                        ].filter(item => item.value > 0)}
+                                        cx="50%"
+                                        cy="50%"
+                                        innerRadius={45}
+                                        outerRadius={75}
+                                        dataKey="value"
+                                        label={({ percent }) => percent > 0.05 ? `${(percent * 100).toFixed(0)}%` : ''}
+                                        labelLine={{ stroke: darkMode ? '#444' : '#ccc', strokeWidth: 0.5 }}
+                                    >
+                                        {[
+                                            { name: 'Cotisations', value: stats.total_cotisations, color: '#f59e0b' },
+                                            { name: 'RCAR', value: stats.total_rcar, color: '#ef4444' },
+                                            { name: 'Crédits', value: stats.total_credits_mensualites, color: '#8b5cf6' },
+                                            { name: 'IR', value: stats.total_ir, color: '#10b981' }
+                                        ].filter(item => item.value > 0).map((entry, idx) => (
+                                            <Cell key={entry.name} fill={entry.color} />
+                                        ))}
+                                    </Pie>
+                                    <Tooltip formatter={(v) => [formatMoney(v), '']} contentStyle={{ fontSize: '11px', borderRadius: '8px' }} />
+                                    <Legend wrapperStyle={{ fontSize: '10px' }} />
+                                </RePieChart>
+                            </ResponsiveContainer>
+                        </div>
+                    ) : (
+                        <div className="h-[240px] flex items-center justify-center">
+                            <p className={`text-sm ${darkClasses.textMuted}`}>Aucune donnée</p>
+                        </div>
+                    )}
+                </div>
+                
+                {/* Cotisations par organisme */}
+                <div className={`${darkClasses.card} rounded-lg border ${darkClasses.border} p-3`}>
+                    <div className="flex items-center gap-2 mb-3">
+                        <Wallet size={14} className="text-emerald-500" />
+                        <h3 className={`text-sm font-medium ${darkClasses.text}`}>Cotisations par organisme</h3>
+                    </div>
+                    {cotisationsData.length > 0 ? (
+                        <div className="h-[240px] w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={cotisationsData} layout="vertical" margin={{ left: 50 }}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? '#333' : '#e5e7eb'} />
+                                    <XAxis type="number" tickFormatter={(v) => formatNumber(v)} fontSize={10} stroke={darkMode ? '#6b7280' : '#9ca3af'} />
+                                    <YAxis type="category" dataKey="name" width={50} fontSize={10} stroke={darkMode ? '#6b7280' : '#9ca3af'} />
+                                    <Tooltip formatter={(v) => [formatMoney(v), '']} contentStyle={{ fontSize: '11px' }} />
+                                    <Bar dataKey="total" fill="#10b981" radius={[0, 4, 4, 0]} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                    ) : (
+                        <div className="h-[240px] flex items-center justify-center">
+                            <p className={`text-sm ${darkClasses.textMuted}`}>Aucune donnée</p>
+                        </div>
+                    )}
+                </div>
             </div>
-        ) : (
-            <div className="h-[240px] flex items-center justify-center">
-                <p className={`text-sm ${darkClasses.textMuted}`}>Aucune donnée</p>
-            </div>
-        )}
-    </div>
-    
-    {/* Cotisations par organisme */}
-    <div className={`${darkClasses.card} rounded-lg border ${darkClasses.border} p-3`}>
-        <div className="flex items-center gap-2 mb-3">
-            <Wallet size={14} className="text-emerald-500" />
-            <h3 className={`text-sm font-medium ${darkClasses.text}`}>Cotisations par organisme</h3>
-        </div>
-        {cotisationsData.length > 0 ? (
-            <div className="h-[240px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={cotisationsData} layout="vertical" margin={{ left: 50 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? '#333' : '#e5e7eb'} />
-                        <XAxis type="number" tickFormatter={(v) => formatNumber(v)} fontSize={10} stroke={darkMode ? '#6b7280' : '#9ca3af'} />
-                        <YAxis type="category" dataKey="name" width={50} fontSize={10} stroke={darkMode ? '#6b7280' : '#9ca3af'} />
-                        <Tooltip formatter={(v) => [formatMoney(v), '']} contentStyle={{ fontSize: '11px' }} />
-                        <Bar dataKey="total" fill="#10b981" radius={[0, 4, 4, 0]} />
-                    </BarChart>
-                </ResponsiveContainer>
-            </div>
-        ) : (
-            <div className="h-[240px] flex items-center justify-center">
-                <p className={`text-sm ${darkClasses.textMuted}`}>Aucune donnée</p>
-            </div>
-        )}
-    </div>
-</div>
             
             {/* Graphiques Ligne 2 */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

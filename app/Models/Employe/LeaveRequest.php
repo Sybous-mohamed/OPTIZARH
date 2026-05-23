@@ -5,7 +5,7 @@ namespace App\Models\Employe;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\SuperAdmin\Employee;
 use App\Models\User;
-use App\Models\SuperAdmin\LeaveType; // Import mn dossier SuperAdmin
+use App\Models\SuperAdmin\LeaveType;
 
 class LeaveRequest extends Model
 {
@@ -33,14 +33,10 @@ class LeaveRequest extends Model
         return $this->belongsTo(Employee::class);
     }
 
-// LeaveRequest.php
-
     public function leaveType(){
         return $this->belongsTo(LeaveType::class, 'leave_type_id');
     }
 
-
-    // L-admin li valider had l-demande
     public function processor()
     {
         return $this->belongsTo(User::class, 'processed_by');

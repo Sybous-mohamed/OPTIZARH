@@ -175,7 +175,7 @@ public function getLeaveStats() {
     $globalSettings = LeaveSetting::where('salary_year_id', $currentYear->id)
                         ->where('category_name', 'conge')
                         ->first();
-    
+
     // LOG 2: Check Setting
     Log::info("Global Leave Setting for Year ID {$currentYear->id}: " . ($globalSettings ? $globalSettings->annual_global_max : 'NOT FOUND'));
 

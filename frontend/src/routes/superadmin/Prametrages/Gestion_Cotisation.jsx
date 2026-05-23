@@ -205,34 +205,39 @@ const GestionCotisation = () => {
   };
   // ============ END DELETE ============
 
-  const handleSave = async () => {
+ const handleSave = async () => {
     let hasError = false;
     for (const org of config.organismes) {
-      for (const rub of org.rubriques) {
-        if (!validateTaux(rub.taux)) {
-          showNotification(` Taux invalide pour "${rub.label || 'sans nom'}" (0-100%)`, "error");
-          hasError = true;
+        for (const rub of org.rubriques) {
+            if (!validateTaux(rub.taux)) {
+                showNotification(` Taux invalide pour "${rub.label || 'sans nom'}" (0-100%)`, "error");
+                hasError = true;
+            }
+            if (!validatePlafond(rub.plafond)) {
+                showNotification(` Plafond invalide pour "${rub.label || 'sans nom'}" (positif)`, "error");
+                hasError = true;
+            }
         }
-        if (!validatePlafond(rub.plafond)) {
-          showNotification(` Plafond invalide pour "${rub.label || 'sans nom'}" (positif)`, "error");
-          hasError = true;
-        }
-      }
     }
     if (hasError) return;
     
     setLoading(true);
     try {
-      await api.post('/api/cotisations/save', config);
-      await fetchData();
-      showNotification(`Configuration ${config.year} enregistrée`, "success");
+        const response = await api.post('/api/cotisations/save', config);
+        if (response.status === 200 || response.status === 201) {
+            // 🔥 DÉCOMMENTEZ CES LIGNES :
+            localStorage.setItem('cotisations_updated', Date.now().toString());
+            window.dispatchEvent(new Event('storage'));
+            
+            await fetchData();
+            showNotification(`Configuration ${config.year} enregistrée`, "success");
+        }
     } catch (error) {
-      showNotification(" Erreur lors de l'enregistrement", "error");
+        showNotification(" Erreur lors de l'enregistrement", "error");
     } finally {
-      setLoading(false);
+        setLoading(false);
     }
-  };
-
+};
   const toggleFavorite = async (id) => {
     const currentStatus = uiStates[id]?.favorite || false;
     const newStatus = !currentStatus;

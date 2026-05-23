@@ -35,8 +35,8 @@ export default function Sidebar({ onLinkClick, isMobile }) {
                 { label: "Tableau de bord", icon: <LayoutDashboard size={20} />, path: "/RH/Dashboard" },
                 { label: "Employés", icon: <Users size={20} />, path: "/RH/Employes" },
                 { label: "Salaire", icon: <Users size={20} />, path: "/RH/Salary" },
-                { label: "Salire des Employe", icon: <Users size={20} />, path: "/RH/SalaryEmploye" },
-                { label: "Demandes", icon: <History size={20} />, path: "/RH/Demande" },
+                { label: "Demandes", icon: <FileText size={20} />, path: "/RH/Demande" },
+                { label: "GestionEmployes", icon: <FileText size={20} />, path: "/RH/SalaryEmploye" },
             ]
         },
         employee: {

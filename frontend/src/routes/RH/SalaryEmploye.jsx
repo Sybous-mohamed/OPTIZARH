@@ -1,12 +1,52 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState,useCallback } from 'react';
 import api from '../../lib/apis/axiosConfig'; 
-import { DollarSign, AlertCircle, Loader2, ChevronRight, User, Phone, Mail, Calendar, Baby, Briefcase, X, Wallet, Building, FileText, CreditCard, MinusCircle } from 'lucide-react';
+import DeleteConfirmModal from '../../lib/components/DeleteConfirmModal';
+import { useNotification } from '../../context/NotificationContext';
+import { DollarSign, AlertCircle,Trash2, Loader2, ChevronRight, User, Phone, Mail, Calendar, Baby, Briefcase, X, Wallet, Building, FileText, CreditCard, MinusCircle } from 'lucide-react';
 
 const SalariesSummaryPage = () => {
+    const [deleteModal, setDeleteModal] = useState({ isOpen: false, employeeId: null, employeeName: '' });
     const [salaries, setSalaries] = useState([]);
     const [selectedEmp, setSelectedEmp] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const { showNotification } = useNotification();
+
+    const handleDeleteClick = (id, name) => {
+        setDeleteModal({ isOpen: true, employeeId: id, employeeName: name });
+    };
+
+    const confirmDelete = async () => {
+        setLoading(true);
+        try {
+            await api.delete(`/api/rh/employees/${deleteModal.employeeId}`);
+            // fetchEmployees(currentPage);
+            showNotification('Employé supprimé avec succès', 'success');
+            setDeleteModal({ isOpen: false, employeeId: null, employeeName: '' });
+        } catch { showNotification('Erreur lors de la suppression', 'error'); }
+        finally { setLoading(false); }
+    };
+
+    // const fetchEmployees = useCallback(async (page = 1) => {
+    //         setLoading(true);
+    //         try {
+    //             const res = await api.get('/api/rh/employees', { params });
+    //             const withDetails = await Promise.all(
+    //                 (res.data.data || []).map(async (emp) => {
+    //                     try {
+    //                         const [credRes, salRes] = await Promise.all([
+    //                                 api.get(`/api/rh/employees/${emp.id}/credits`),
+    //                                 api.get(`/api/rh/employees/${emp.id}/salary-dashboard`),
+    //                         ]);
+    //                         return { ...emp, credits: credRes.data || [], details: salRes.data.salary_details };
+    //                     } catch { return { ...emp, credits: [], details: null }; }
+    //                 })
+    //             );
+    //             setEmployeesList(withDetails);
+    //             setPaginationData({ ...res.data, data: withDetails });
+    //         } catch { showNotification('Erreur chargement des employés', 'error'); }
+    //         finally { setLoading(false); }
+    //     }, []);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -102,6 +142,10 @@ const SalariesSummaryPage = () => {
                                             className="p-2 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 rounded-lg text-indigo-600 transition-colors"
                                         >
                                             <ChevronRight size={20} />
+                                        </button>
+                                        <button onClick={() => handleDeleteClick(emp.id, `${emp.prenom} ${emp.nom}`)}
+                                            className="p-1.5 rounded-lg cursor-pointer"  title="Supprimer">
+                                            <Trash2 size={16} />
                                         </button>
                                     </td>
                                 </tr>
@@ -324,7 +368,9 @@ const SalariesSummaryPage = () => {
                     </div>
                 </div>
             )}
+            <DeleteConfirmModal isOpen={deleteModal.isOpen} onClose={() => setDeleteModal({ isOpen: false, employeeId: null, employeeName: '' })} onConfirm={confirmDelete} title="Confirmation de suppression" message={`Supprimer l'employé "${deleteModal.employeeName}" ? Cette action est irréversible.`}/>
         </div>
+        
     );
 };
 const InfoCard = ({ icon, label, value }) => (

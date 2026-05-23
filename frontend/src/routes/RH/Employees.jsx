@@ -21,7 +21,7 @@ const API = {
     salary:           (id) => axiosClient.get(`/api/rh/employees/${id}/salary-dashboard`),
     credits:          (id) => axiosClient.get(`/api/rh/employees/${id}/credits`),
     exportPDF:        (params) => axiosClient.get('/api/rh/employees/export-pdf', { params, responseType: 'blob' }),
-    classification: (year) => axiosClient.get(`/api/rh/gestionEtat/get-by-year/${year}`),
+    classification:   (year) => axiosClient.get(`/api/rh/gestionEtat/get-by-year/${year}`),
     cotisations:      (year) => axiosClient.get('/api/rh/cotisations', { params: { year } }),
     creditTypes:      () => axiosClient.get('/api/rh/credit-types'),
 };
@@ -57,52 +57,53 @@ const verifierAge = (dn) => {
 
 // ═══════════════════════════════════════════════════════════════
 export default function RHEmployeeManagement() {
-    const { darkMode }         = useTheme();
+    const { darkMode } = useTheme();
     const { showNotification } = useNotification();
 
     // ── Core state ─────────────────────────────────────────────
-    const [loading, setLoading]             = useState(false);
+    const [loading, setLoading] = useState(false);
     const [employeesList, setEmployeesList] = useState([]);
-    const [isEdit, setIsEdit]               = useState(false);
-    const [currentId, setCurrentId]         = useState(null);
-    const [filters, setFilters]             = useState({ statut: 'Tous', search: '' });
-    const [currentPage, setCurrentPage]     = useState(1);
+    const [isEdit, setIsEdit] = useState(false);
+    const [currentId, setCurrentId] = useState(null);
+    const [filters, setFilters] = useState({ statut: 'Tous', search: '' });
+    const [currentPage, setCurrentPage] = useState(1);
     const [paginationData, setPaginationData] = useState({});
-    const [errors, setErrors]               = useState({});
-    const [viewMode, setViewMode]           = useState('table');
+    const [errors, setErrors] = useState({});
+    const [viewMode, setViewMode] = useState('table');
 
     // ── Year ───────────────────────────────────────────────────
-    const [annees, setAnnees]               = useState([]);
+    const [annees, setAnnees] = useState([]);
     const [selectedAnnee, setSelectedAnnee] = useState('');
     const [selectedAnneeId, setSelectedAnneeId] = useState(null);
-    const [isYearOpen, setIsYearOpen]       = useState(false);
-    const yearRef                           = useRef(null);
+    const [isYearOpen, setIsYearOpen] = useState(false);
+    const yearRef = useRef(null);
 
     // ── Config ─────────────────────────────────────────────────
-    const [configData, setConfigData]       = useState(null);
-    const [selectedPost, setSelectedPost]   = useState(null);
+    const [configData, setConfigData] = useState(null);
+    const [selectedPost, setSelectedPost] = useState(null);
     const [selectedGrade, setSelectedGrade] = useState(null);
     const [selectedEchelle, setSelectedEchelle] = useState(null);
     const [cotisationsList, setCotisationsList] = useState([]);
-    const [CreditList, setCreditList]       = useState([]);
+    const [CreditList, setCreditList] = useState([]);
 
     // ── Details modal ──────────────────────────────────────────
-    const [showDetailsModal, setShowDetailsModal]           = useState(false);
+    const [showDetailsModal, setShowDetailsModal] = useState(false);
     const [selectedEmployeeDetails, setSelectedEmployeeDetails] = useState(null);
 
     // ── Credits ────────────────────────────────────────────────
     const [employeeCredits, setEmployeeCredits] = useState([]);
-    const [showCreditForm, setShowCreditForm]   = useState(false);
-    const [tempCredit, setTempCredit]           = useState({
+    const [showCreditForm, setShowCreditForm] = useState(false);
+    const [tempCredit, setTempCredit] = useState({
         credit_type_id: '', montant_credit: '', taux_credit: '',
         credit_duree: '', credit_date_debut: '', credit_date_fin: '',
     });
 
     // ── Form ───────────────────────────────────────────────────
     const [regeneratePassword, setRegeneratePassword] = useState(false);
+    const [sendCredentialsEmail, setSendCredentialsEmail] = useState(true);
     
     const emptyForm = {
-        prenom: '', nom: '', email: '', telephone: '', 
+        prenom: '', nom: '', email: '', telephone: '', role: 'employee',
         date_naissance: '', situation_familiale: '', nombre_enfants: '', date_embauche: '',
         Post_id: '', grade_id: '', echelle_id: '', echelon_id: '',
         grade: '', echelle: '', echelon: '', salaire: '', indice: '',
@@ -115,20 +116,20 @@ export default function RHEmployeeManagement() {
     const [deleteModal, setDeleteModal] = useState({ isOpen: false, employeeId: null, employeeName: '' });
 
     // ── Derived ────────────────────────────────────────────────
-    const currentYear    = new Date().getFullYear();
+    const currentYear = new Date().getFullYear();
     const isYearEditable = parseInt(selectedAnnee) === currentYear;
-    const showForm       = isYearEditable;
+    const showForm = isYearEditable;
 
     // ══════════════════════════════════════════════════════════
-    // CSS TOKENS
+    // CSS TOKENS (unifiés)
     // ══════════════════════════════════════════════════════════
-    const bg         = darkMode ? 'bg-gradient-to-br from-[#0D0D0D] to-[#1a1a2e]' : 'bg-gradient-to-br from-gray-50 to-gray-100';
-    const card       = darkMode ? 'bg-[#1A1A1A]/80 backdrop-blur-sm border-[#2A2A2A]' : 'bg-white/80 backdrop-blur-sm border-gray-200';
-    const txt        = darkMode ? 'text-white' : 'text-gray-800';
-    const txtM       = darkMode ? 'text-gray-400' : 'text-gray-500';
-    const bdr        = darkMode ? 'border-[#2A2A2A]' : 'border-gray-200';
-    const inputCls   = `w-full p-2.5 rounded-xl border ${card} ${txt} outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 text-sm ${!isYearEditable ? 'opacity-60 cursor-not-allowed' : ''}`;
-    const inputErr   = `w-full p-2.5 rounded-xl border-2 border-red-500 ${card} ${txt} outline-none focus:ring-2 focus:ring-red-500 text-sm`;
+    const bgClass = darkMode ? 'bg-[#0D0D0D]' : 'bg-gray-50';
+    const cardClass = darkMode ? 'bg-[#1A1A1A] border-[#2A2A2A]' : 'bg-white border-gray-200';
+    const textClass = darkMode ? 'text-white' : 'text-gray-800';
+    const textMutedClass = darkMode ? 'text-gray-400' : 'text-gray-500';
+    const borderClass = darkMode ? 'border-[#2A2A2A]' : 'border-gray-200';
+    const inputClass = `w-full p-2.5 rounded-lg border ${cardClass} ${textClass} outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm ${!isYearEditable ? 'bg-gray-100 dark:bg-gray-800 cursor-not-allowed opacity-70' : ''}`;
+    const inputErrorClass = `w-full p-2.5 rounded-lg border-2 border-red-500 ${cardClass} ${textClass} outline-none focus:ring-2 focus:ring-red-500 text-sm`;
 
     // ══════════════════════════════════════════════════════════
     // DATA FETCHING
@@ -166,17 +167,11 @@ export default function RHEmployeeManagement() {
         finally { setLoading(false); }
     }, [selectedAnneeId, filters]);
 
-
-
     const fetchCotisations = async (year) => {
         try {
             const res = await API.cotisations(year);
             const list = res.data || [];
             setCotisationsList(list);
-            const def = list.find(o => o.is_default === 1);
-            if (def && !formData.cotisation_id && !isEdit) {
-                setFormData(prev => ({ ...prev, cotisation_id: def.id }));
-            }
         } catch { setCotisationsList([]); }
     };
 
@@ -185,6 +180,22 @@ export default function RHEmployeeManagement() {
             const res = await API.creditTypes();
             setCreditList(res.data || []);
         } catch { setCreditList([]); }
+    };
+
+    const fetchConfig = async (year) => {
+        if (!year) return;
+        try {
+            const res = await API.classification(year);
+            if (res.data && res.data.Post) {
+                setConfigData(res.data);
+            } else {
+                setConfigData({ Post: [] });
+            }
+        } catch (err) {
+            console.error('Error fetching config:', err);
+            setConfigData({ Post: [] });
+            showNotification('Erreur chargement de la classification', 'error');
+        }
     };
 
     // ══════════════════════════════════════════════════════════
@@ -216,40 +227,6 @@ export default function RHEmployeeManagement() {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }, [currentPage]);
 
-
-const fetchConfig = async (year) => {
-    if (!year) return;
-    try {
-        console.log('📡 Calling API:', `/api/rh/gestionEtat/get-by-year/${year}`);
-        const res = await API.classification(year);
-        console.log('✅ Response:', res.data);
-        
-        // 🔥 Vérifier la structure de la réponse
-        if (res.data && res.data.Post) {
-            console.log('📋 Posts trouvés:', res.data.Post.length);
-            setConfigData(res.data);
-        } else if (res.data && res.data.posts) {
-            console.log('📋 Posts trouvés (posts):', res.data.posts.length);
-            setConfigData({ Post: res.data.posts, ...res.data });
-        } else {
-            console.warn('⚠️ Aucun post trouvé dans la réponse');
-            setConfigData({ Post: [] });
-        }
-    } catch (err) {
-        console.error('❌ Error fetching config:', err);
-        setConfigData({ Post: [] });
-        showNotification('Erreur chargement de la classification', 'error');
-    }
-};
-useEffect(() => {
-    if (selectedAnnee) {
-        console.log('🔄 Fetching config for year:', selectedAnnee);
-        console.log('🔄 selectedAnneeId:', selectedAnneeId);
-        fetchConfig(selectedAnnee);
-        fetchCotisations(selectedAnnee);
-        fetchCreditTypes();
-    }
-}, [selectedAnnee]);
     // ══════════════════════════════════════════════════════════
     // FORM HANDLERS
     // ══════════════════════════════════════════════════════════
@@ -303,17 +280,19 @@ useEffect(() => {
         }));
     };
 
-    const generatePassword = () => {
-        const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
-        const pwd = Array.from({ length: 12 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
-        setFormData(p => ({ ...p, password: pwd }));
-        showNotification('Mot de passe généré', 'success');
+    const generateRandomPassword = () => {
+        const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let password = '';
+        for (let i = 0; i < 10; i++) {
+            password += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return password;
     };
 
     const validateForm = () => {
         const e = {};
-        if (!formData.prenom?.trim())   e.prenom  = 'Prénom requis';
-        if (!formData.nom?.trim())      e.nom     = 'Nom requis';
+        if (!formData.prenom?.trim())   e.prenom = 'Prénom requis';
+        if (!formData.nom?.trim())      e.nom = 'Nom requis';
         if (!formData.email?.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email))
             e.email = 'Email invalide';
         if (!formData.password && !isEdit) e.password = 'Mot de passe requis';
@@ -323,8 +302,8 @@ useEffect(() => {
         if (!formData.date_embauche)    e.date_embauche = "Date d'embauche requise";
         else if (new Date(formData.date_embauche).getFullYear() !== parseInt(selectedAnnee))
             e.date_embauche = `La date d'embauche doit être dans l'année ${selectedAnnee}`;
-        if (!formData.Post_id)          e.Post_id    = 'Poste requis';
-        if (!formData.grade_id)         e.grade_id   = 'Grade requis';
+        if (!formData.Post_id)          e.Post_id = 'Poste requis';
+        if (!formData.grade_id)         e.grade_id = 'Grade requis';
         if (!formData.echelle_id)       e.echelle_id = 'Échelle requise';
         if (!formData.echelon_id)       e.echelon_id = 'Échelon requis';
         if (!formData.cotisation_id)    e.cotisation_id = 'Organisme requis';
@@ -343,19 +322,31 @@ useEffect(() => {
 
         setLoading(true);
         try {
+            let finalPassword = formData.password;
+            if (!isEdit && (!finalPassword || finalPassword.trim() === '')) {
+                finalPassword = generateRandomPassword();
+            }
+            
             const payload = {
-                ...formData,
-                annee_id:      selectedAnneeId,
-                Post_id:       formData.Post_id    ? parseInt(formData.Post_id)    : null,
-                grade_id:      formData.grade_id   ? parseInt(formData.grade_id)   : null,
-                echelle_id:    formData.echelle_id ? parseInt(formData.echelle_id) : null,
-                echelon_id:    formData.echelon_id ? parseInt(formData.echelon_id) : null,
-                echelon:       formData.echelon    ? String(formData.echelon)       : null,
-                salaire:       formData.salaire    ? parseFloat(formData.salaire)   : null,
-                indice:        formData.indice     ? parseFloat(formData.indice)    : null,
+                prenom: formData.prenom, nom: formData.nom, email: formData.email,
+                telephone: formData.telephone || null,
+                date_naissance: formData.date_naissance || null,
+                situation_familiale: formData.situation_familiale || null,
                 nombre_enfants: formData.nombre_enfants ? parseInt(formData.nombre_enfants) : 0,
+                date_embauche: formData.date_embauche || null,
+                annee_id: selectedAnneeId,
+                Post_id: formData.Post_id ? parseInt(formData.Post_id) : null,
+                grade_id: formData.grade_id ? parseInt(formData.grade_id) : null,
+                echelle_id: formData.echelle_id ? parseInt(formData.echelle_id) : null,
+                echelon_id: formData.echelon_id ? parseInt(formData.echelon_id) : null,
+                grade: formData.grade || null, echelle: formData.echelle || null,
+                echelon: formData.echelon ? String(formData.echelon) : null,
+                salaire: formData.salaire ? parseFloat(formData.salaire) : null,
+                indice: formData.indice ? parseFloat(formData.indice) : null,
+                statut: formData.statut,
                 cotisation_id: formData.cotisation_id ? parseInt(formData.cotisation_id) : null,
-                role: 'employee',
+                password: finalPassword, role: 'employee',
+                send_credentials_email: sendCredentialsEmail,
                 credits: employeeCredits.map(c => ({
                     ...(c.id ? { id: c.id } : {}),
                     credit_type_id: c.credit_type_id,
@@ -370,9 +361,9 @@ useEffect(() => {
             };
 
             if (isEdit) {
-                // Ajouter l'option pour régénérer le mot de passe
                 if (regeneratePassword) {
                     payload.regenerate_password = true;
+                    payload.send_email = sendCredentialsEmail;
                 }
                 const res = await API.updateEmployee(currentId, payload);
                 showNotification(res.data.message || 'Employé modifié avec succès', 'success');
@@ -405,54 +396,57 @@ useEffect(() => {
         setIsEdit(false);
         setCurrentId(null);
         setRegeneratePassword(false);
-        if (!isEdit) {
-            generatePassword();
-        }
+        setSendCredentialsEmail(true);
     };
 
     const handleEdit = (emp) => {
         if (!isYearEditable) { showNotification("L'année n'est pas modifiable", 'warning'); return; }
-        const fmt = (d) => {
-            if (!d) return '';
-            if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
-            const dt = new Date(d);
-            return isNaN(dt) ? '' : dt.toISOString().split('T')[0];
+        const formatDateForInput = (dateString) => {
+            if (!dateString) return '';
+            if (dateString.match(/^\d{4}-\d{2}-\d{2}$/)) return dateString;
+            const date = new Date(dateString);
+            return isNaN(date.getTime()) ? '' : date.toISOString().split('T')[0];
         };
 
         setFormData({
             prenom: emp.prenom || '', nom: emp.nom || '', email: emp.email || '',
             telephone: emp.telephone || '',
-            date_naissance: fmt(emp.date_naissance), situation_familiale: emp.situation_familiale || '',
-            nombre_enfants: emp.nombre_enfants || 0, date_embauche: fmt(emp.date_embauche),
+            date_naissance: formatDateForInput(emp.date_naissance),
+            situation_familiale: emp.situation_familiale || '',
+            nombre_enfants: emp.nombre_enfants || 0,
+            date_embauche: formatDateForInput(emp.date_embauche),
             Post_id: emp.Post_id || '', grade_id: emp.grade_id || '',
             echelle_id: emp.echelle_id || '', echelon_id: emp.echelon_id || '',
             grade: emp.grade || '', echelle: emp.echelle || '', echelon: emp.echelon || '',
             salaire: emp.salaire || '', indice: emp.indice || '',
             statut: emp.statut || 'ACTIF', cotisation_id: emp.cotisation_id || '',
-            password: '',
+            role: emp.role || 'employee', password: '',
         });
 
         setCurrentId(emp.id);
         setIsEdit(true);
         setErrors({});
         setRegeneratePassword(false);
+        setSendCredentialsEmail(true);
 
         if (emp.Post_id && configData?.Post) {
             const post = configData.Post.find(p => p.id === emp.Post_id);
             if (post) {
                 setSelectedPost(post);
-                const grade = post.grades?.find(g => g.id === emp.grade_id);
-                if (grade) {
-                    setSelectedGrade(grade);
-                    const echelle = grade.echelles?.find(e => e.id === emp.echelle_id);
-                    if (echelle) setSelectedEchelle(echelle);
+                if (emp.grade_id) {
+                    const grade = post.grades?.find(g => g.id === emp.grade_id);
+                    if (grade) {
+                        setSelectedGrade(grade);
+                        if (emp.echelle_id) {
+                            const echelle = grade.echelles?.find(e => e.id === emp.echelle_id);
+                            if (echelle) setSelectedEchelle(echelle);
+                        }
+                    }
                 }
             }
         }
 
-        setEmployeeCredits(
-            (emp.credits || []).map(c => ({ ...c, temp_id: c.id || Date.now() + Math.random() }))
-        );
+        setEmployeeCredits((emp.credits || []).map(c => ({ ...c, temp_id: c.id || Date.now() + Math.random() })));
         setShowCreditForm(false);
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
@@ -519,7 +513,7 @@ useEffect(() => {
         if (!tempCredit.credit_duree || parseInt(tempCredit.credit_duree) <= 0) { showNotification('Durée invalide', 'warning'); return; }
 
         const mensualite = calculerMensualite(tempCredit.montant_credit, tempCredit.taux_credit, tempCredit.credit_duree);
-        const dateFin    = tempCredit.credit_date_debut ? calculerDateFin(tempCredit.credit_date_debut, tempCredit.credit_duree) : '';
+        const dateFin = tempCredit.credit_date_debut ? calculerDateFin(tempCredit.credit_date_debut, tempCredit.credit_duree) : '';
 
         setEmployeeCredits(prev => [...prev, {
             ...tempCredit,
@@ -543,119 +537,198 @@ useEffect(() => {
     const StatusBadge = ({ statut }) => {
         const map = {
             ACTIF:  { cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400', Icon: CheckCircle },
-            CONGE:  { cls: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',        Icon: Clock },
-            DEPART: { cls: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400',             Icon: X },
+            CONGE:  { cls: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400', Icon: Clock },
+            DEPART: { cls: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400', Icon: X },
         };
         const { cls, Icon } = map[statut] || map.DEPART;
         return (
             <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${cls}`}>
-                <Icon size={10} />{statut}
+                <Icon size={10} /> {statut}
             </span>
         );
     };
 
     const SectionHeading = ({ from, to, Icon, label }) => (
         <div className="mb-3">
-            <h3 className={`text-sm font-semibold flex items-center gap-2 ${txt}`}>
+            <h3 className={`text-sm font-semibold flex items-center gap-2 ${textClass}`}>
                 <div className={`w-1 h-5 bg-gradient-to-b ${from} ${to} rounded-full`} />
-                <Icon size={16} />{label}
+                <Icon size={16} /> {label}
             </h3>
             <div className={`h-px bg-gradient-to-r ${from} to-transparent mt-2`} />
         </div>
     );
 
-    // ── Employee Details Modal ─────────────────────────────────
+    // ── Employee Details Modal ──
     const EmployeeDetailsModal = ({ employee, onClose }) => {
         const d = employee.details;
         if (!d) return (
             <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-50 p-4">
-                <div className={`${card} rounded-2xl p-8 shadow-2xl`}>
+                <div className={`${cardClass} rounded-2xl p-8 shadow-2xl`}>
                     <Loader size={40} className="animate-spin mx-auto text-indigo-500" />
                 </div>
             </div>
         );
 
-        const TotalRow = ({ label, value, color = 'text-emerald-600' }) => (
-            <div className="flex justify-between items-center py-3 border-b last:border-0">
-                <span className={`text-sm font-medium ${txt}`}>{label}</span>
-                <span className={`text-base font-bold ${color}`}>{value}</span>
-            </div>
-        );
+        const formatMoney = (amount) => (amount || 0).toLocaleString() + ' MAD';
 
         return (
-            <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-50 p-4">
-                <div className={`${card} rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl`}>
-                    <div className={`sticky top-0 z-10 bg-gradient-to-r ${darkMode ? 'from-indigo-950/95 to-purple-950/95' : 'from-indigo-50/95 to-purple-50/95'} backdrop-blur-sm px-6 py-4 border-b ${bdr} flex justify-between items-center`}>
+            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                <div className={`${cardClass} rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl`}>
+                    <div className={`sticky top-0 z-10 ${cardClass} px-6 py-4 border-b ${borderClass} flex justify-between items-center bg-opacity-95 backdrop-blur-sm`}>
                         <div className="flex items-center gap-3">
-                            <div className="p-2 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg">
+                            <div className="p-2 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600">
                                 <Users size={18} className="text-white" />
                             </div>
                             <div>
-                                <h2 className={`text-lg font-bold ${txt}`}>Détails salaire</h2>
-                                <p className={`text-xs ${txtM}`}>{employee.prenom} {employee.nom}</p>
+                                <h2 className={`text-lg font-bold ${textClass}`}>Fiche employé</h2>
+                                <p className={`text-xs ${textMutedClass}`}>Informations détaillées et calcul du salaire</p>
                             </div>
                         </div>
-                        <button onClick={onClose} className="p-2 rounded-xl hover:bg-gray-200/50 dark:hover:bg-gray-700/50 cursor-pointer">
-                            <X size={20} className={txtM} />
+                        <button onClick={onClose} className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-[#252525] transition-all cursor-pointer">
+                            <X size={20} className={textMutedClass} />
                         </button>
                     </div>
-
-                    <div className="p-5 space-y-3">
-                        <div className={`p-4 rounded-xl ${card} border ${bdr}`}>
-                            <div className="flex justify-between items-center">
-                                <span className={`text-sm font-medium ${txt}`}>Salaire de base</span>
-                                <span className="text-base font-bold text-emerald-600">{fmtMoney(d.base_salary)}</span>
+                    
+                    <div className="p-6 space-y-6">
+                        <div>
+                            <div className="mb-3">
+                                <h3 className={`text-sm font-semibold flex items-center gap-2 ${textClass}`}>
+                                    <div className="w-1 h-5 bg-emerald-500 rounded-full"></div>
+                                    <User size={16} className="text-emerald-500" /> Informations personnelles
+                                </h3>
+                                <div className="h-px bg-gradient-to-r from-emerald-500 to-transparent mt-2"></div>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                <div className={`p-3 rounded-lg ${cardClass} border ${borderClass}`}>
+                                    <p className={`text-xs ${textMutedClass}`}>Nom complet</p>
+                                    <p className={`text-sm font-medium ${textClass} mt-1`}>{employee.prenom} {employee.nom}</p>
+                                </div>
+                                <div className={`p-3 rounded-lg ${cardClass} border ${borderClass}`}>
+                                    <p className={`text-xs ${textMutedClass}`}>Email</p>
+                                    <p className={`text-sm font-medium ${textClass} mt-1 truncate`}>{employee.email}</p>
+                                </div>
+                                <div className={`p-3 rounded-lg ${cardClass} border ${borderClass}`}>
+                                    <p className={`text-xs ${textMutedClass}`}>Téléphone</p>
+                                    <p className={`text-sm font-medium ${textClass} mt-1`}>{employee.telephone || '-'}</p>
+                                </div>
+                                <div className={`p-3 rounded-lg ${cardClass} border ${borderClass}`}>
+                                    <p className={`text-xs ${textMutedClass}`}>Statut</p>
+                                    <StatusBadge statut={employee.statut} />
+                                </div>
+                                <div className={`p-3 rounded-lg ${cardClass} border ${borderClass}`}>
+                                    <p className={`text-xs ${textMutedClass}`}>Situation familiale</p>
+                                    <p className={`text-sm font-medium ${textClass} mt-1`}>{employee.situation_familiale || '-'}</p>
+                                </div>
+                                <div className={`p-3 rounded-lg ${cardClass} border ${borderClass}`}>
+                                    <p className={`text-xs ${textMutedClass}`}>Enfants à charge</p>
+                                    <p className={`text-sm font-medium ${textClass} mt-1`}>{employee.nombre_enfants || '0'}</p>
+                                </div>
+                                <div className={`p-3 rounded-lg ${cardClass} border ${borderClass}`}>
+                                    <p className={`text-xs ${textMutedClass}`}>Date de naissance</p>
+                                    <p className={`text-sm font-medium ${textClass} mt-1`}>{employee.date_naissance ? new Date(employee.date_naissance).toLocaleDateString('fr-FR') : '-'}</p>
+                                </div>
+                                <div className={`p-3 rounded-lg ${cardClass} border ${borderClass}`}>
+                                    <p className={`text-xs ${textMutedClass}`}>Date d'embauche</p>
+                                    <p className={`text-sm font-medium ${textClass} mt-1`}>{employee.date_embauche ? new Date(employee.date_embauche).toLocaleDateString('fr-FR') : '-'}</p>
+                                </div>
                             </div>
                         </div>
 
-                        <div className={`p-4 rounded-xl ${card} border ${bdr}`}>
-                            <TotalRow label="Indemnités" value={`+ ${fmtMoney(d.indemnites?.total || 0)}`} color="text-blue-600" />
-                        </div>
-
-                        <div className={`p-4 rounded-xl bg-gradient-to-r ${darkMode ? 'from-indigo-950/40 to-purple-950/40' : 'from-indigo-50 to-purple-50'} border ${bdr}`}>
-                            <TotalRow label="Salaire brut" value={fmtMoney(d.brut_salary)} color="text-purple-600" />
-                        </div>
-
-                        <div className="space-y-2">
-                            <div className={`p-4 rounded-xl ${card} border ${bdr}`}>
-                                <TotalRow label="Cotisations sociales" value={`- ${fmtMoney(d.cotisations?.total || 0)}`} color="text-rose-600" />
+                        <div>
+                            <div className="mb-3">
+                                <h3 className={`text-sm font-semibold flex items-center gap-2 ${textClass}`}>
+                                    <div className="w-1 h-5 bg-indigo-500 rounded-full"></div>
+                                    <Briefcase size={16} className="text-indigo-500" /> Classification
+                                </h3>
+                                <div className="h-px bg-gradient-to-r from-indigo-500 to-transparent mt-2"></div>
                             </div>
-                            <div className={`p-4 rounded-xl ${card} border ${bdr}`}>
-                                <TotalRow label="IR (Impôt sur le revenu)" value={`- ${fmtMoney(d.ir?.total || 0)}`} color="text-rose-600" />
-                            </div>
-                            {d.rcar?.total > 0 && (
-                                <div className={`p-4 rounded-xl ${card} border ${bdr}`}>
-                                    <TotalRow label="RCAR (Retraite)" value={`- ${fmtMoney(d.rcar?.total || 0)}`} color="text-rose-600" />
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <div className={`p-3 rounded-lg ${cardClass} border ${borderClass}`}>
+                                    <p className={`text-xs ${textMutedClass}`}>Poste</p>
+                                    <p className={`text-sm font-medium ${textClass} mt-1`}>{employee.post?.name || employee.grade || '-'}</p>
                                 </div>
-                            )}
-                            {d.sntl?.total > 0 && (
-                                <div className={`p-4 rounded-xl ${card} border ${bdr}`}>
-                                    <TotalRow label="SNTL" value={`- ${fmtMoney(d.sntl?.total || 0)}`} color="text-rose-600" />
+                                <div className={`p-3 rounded-lg ${cardClass} border ${borderClass}`}>
+                                    <p className={`text-xs ${textMutedClass}`}>Grade</p>
+                                    <p className={`text-sm font-medium ${textClass} mt-1`}>{employee.grade || '-'}</p>
                                 </div>
-                            )}
-                            {d.assurances?.salarie > 0 && (
-                                <div className={`p-4 rounded-xl ${card} border ${bdr}`}>
-                                    <TotalRow label="Assurances sociales" value={`- ${fmtMoney(d.assurances?.salarie || 0)}`} color="text-rose-600" />
+                                <div className={`p-3 rounded-lg ${cardClass} border ${borderClass}`}>
+                                    <p className={`text-xs ${textMutedClass}`}>Echelle</p>
+                                    <p className={`text-sm font-medium ${textClass} mt-1`}>{employee.echelle || '-'}</p>
                                 </div>
-                            )}
-                            {d.credits?.total > 0 && (
-                                <div className={`p-4 rounded-xl ${card} border ${bdr}`}>
-                                    <TotalRow label="Crédits en cours" value={`- ${fmtMoney(d.credits?.total || 0)}`} color="text-rose-600" />
+                                <div className={`p-3 rounded-lg ${cardClass} border ${borderClass}`}>
+                                    <p className={`text-xs ${textMutedClass}`}>Echelon</p>
+                                    <p className={`text-sm font-medium ${textClass} mt-1`}>{employee.echelon || '-'}</p>
                                 </div>
-                            )}
-
-                            <div className={`p-4 rounded-xl ${card} border ${bdr} ${darkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
-                                <TotalRow label="Total déductions" value={`- ${fmtMoney(d.total_deductions)}`} color="text-rose-600" />
                             </div>
                         </div>
 
-                        <div className={`p-5 rounded-xl border-2 ${darkMode ? 'from-emerald-950/40 to-green-950/40 border-emerald-800' : 'from-emerald-50 to-green-50 border-emerald-200'} bg-gradient-to-r`}>
-                            <div className="flex justify-between items-center">
-                                <div>
-                                    <span className={`text-base font-bold ${txt}`}>Salaire net</span>
-                                    <p className={`text-xs ${txtM}`}>À payer</p>
+                        <div>
+                            <div className="mb-3">
+                                <h3 className={`text-sm font-semibold flex items-center gap-2 ${textClass}`}>
+                                    <div className="w-1 h-5 bg-blue-500 rounded-full"></div>
+                                    <TrendingUp size={16} className="text-blue-500" /> Salaire de base et indemnités
+                                </h3>
+                                <div className="h-px bg-gradient-to-r from-blue-500 to-transparent mt-2"></div>
+                            </div>
+                            <div className={`p-4 rounded-lg ${cardClass} border ${borderClass}`}>
+                                <div className="flex justify-between items-center pb-2 border-b ${borderClass}">
+                                    <span className={`text-sm font-medium ${textClass}`}>Salaire de base</span>
+                                    <span className="text-sm font-semibold text-emerald-600">{formatMoney(d.base_salary)}</span>
                                 </div>
-                                <span className={`text-2xl font-bold ${darkMode ? 'text-emerald-400' : 'text-emerald-700'}`}>{fmtMoney(d.net_salary)}</span>
+                                {d.indemnites?.details?.length > 0 && (
+                                    <div className="mt-3">
+                                        <p className={`text-xs ${textMutedClass} mb-2`}>Indemnités appliquées :</p>
+                                        {d.indemnites.details.map((ind, idx) => (
+                                            <div key={idx} className="flex justify-between items-center py-1">
+                                                <div>
+                                                    <span className={`text-sm ${textClass}`}>{ind.libelle}</span>
+                                                    <span className={`text-xs ml-2 ${textMutedClass}`}>
+                                                        ({ind.type === 'Fixe' ? 'Fixe' : `${ind.valeur}%`})
+                                                    </span>
+                                                </div>
+                                                <span className="text-sm text-blue-600">+{formatMoney(ind.montant)}</span>
+                                            </div>
+                                        ))}
+                                        <div className="flex justify-between items-center mt-2 pt-2 border-t ${borderClass}">
+                                            <span className={`text-sm font-semibold ${textClass}`}>Total indemnités</span>
+                                            <span className="text-sm font-bold text-blue-600">+{formatMoney(d.indemnites.total)}</span>
+                                        </div>
+                                    </div>
+                                )}
+                                <div className="flex justify-between items-center mt-3 pt-2 border-t ${borderClass}">
+                                    <span className={`text-base font-bold ${textClass}`}>Salaire brut</span>
+                                    <span className="text-base font-bold text-purple-600">{formatMoney(d.brut_salary)}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div className="mb-3">
+                                <h3 className={`text-sm font-semibold flex items-center gap-2 ${textClass}`}>
+                                    <div className="w-1 h-5 bg-rose-500 rounded-full"></div>
+                                    <Shield size={16} className="text-rose-500" /> Déductions
+                                </h3>
+                                <div className="h-px bg-gradient-to-r from-rose-500 to-transparent mt-2"></div>
+                            </div>
+                            <div className="space-y-4">
+                                <div className={`p-4 rounded-lg ${cardClass} border ${borderClass}`}>
+                                    <div className="flex justify-between items-center">
+                                        <span className={`text-sm font-medium ${textClass}`}>Total déductions</span>
+                                        <span className="text-sm font-bold text-rose-600">- {formatMoney(d.total_deductions)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div className={`p-5 rounded-xl border-2 ${darkMode ? 'border-indigo-800 bg-indigo-950/20' : 'border-indigo-200 bg-indigo-50'}`}>
+                                <div className="flex justify-between items-center">
+                                    <div>
+                                        <span className={`text-lg font-bold ${textClass}`}>Salaire net à payer</span>
+                                        <p className={`text-xs ${textMutedClass} mt-0.5`}>Après toutes déductions</p>
+                                    </div>
+                                    <span className={`text-2xl font-bold ${darkMode ? 'text-indigo-400' : 'text-indigo-700'}`}>{formatMoney(d.net_salary)}</span>
+                                </div>
                             </div>
                         </div>
 
@@ -671,56 +744,49 @@ useEffect(() => {
     // ══════════════════════════════════════════════════════════
     // DERIVED FORM DATA
     // ══════════════════════════════════════════════════════════
-    const posts    = configData?.Post || [];
-    const grades   = selectedPost?.grades || [];
+    const posts = configData?.Post || [];
+    const grades = selectedPost?.grades || [];
     const echelles = selectedGrade?.echelles || [];
     const echelons = selectedEchelle?.echelons || [];
-
-    useEffect(() => {
-        if (showForm && !isEdit && !formData.password) {
-            generatePassword();
-        }
-    }, [showForm, isEdit]);
 
     // ══════════════════════════════════════════════════════════
     // RENDER
     // ══════════════════════════════════════════════════════════
     return (
-        <div className={`min-h-screen transition-all duration-300 ${bg}`}>
-            <div className="max-w-7xl mx-auto p-1 md:p-3">
-
+        <div className={`min-h-screen transition-all duration-300 ${bgClass}`}>
+            <div className="max-w-7xl mx-auto p-4 md:p-6">
                 {/* Header */}
                 <div className="mb-6">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                         <div>
-                            <h1 className={`text-2xl md:text-3xl font-bold ${txt} flex items-center gap-3`}>
+                            <h1 className={`text-2xl md:text-3xl font-bold ${textClass} flex items-center gap-3`}>
                                 <div className="p-2 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 shadow-lg">
                                     <Users size={22} className="text-white" />
                                 </div>
                                 Gestion des Employés <span className="text-sm font-normal text-indigo-400 ml-1">(RH)</span>
                             </h1>
-                            <p className={`text-sm ${txtM} mt-2`}>
-                                Année: <span className={`font-semibold ${txt} bg-indigo-100 dark:bg-indigo-900/50 px-2 py-0.5 rounded-md`}>{selectedAnnee}</span>
-                                {' '}• Total: <span className={`font-semibold ${txt}`}>{paginationData.total || 0}</span> employés
+                            <p className={`text-sm ${textMutedClass} mt-2`}>
+                                Année: <span className={`font-semibold ${textClass} bg-indigo-100 dark:bg-indigo-900/50 px-2 py-0.5 rounded-md`}>{selectedAnnee}</span>
+                                {' '}• Total: <span className={`font-semibold ${textClass}`}>{paginationData.total || 0}</span> employés
                             </p>
                         </div>
 
                         <div className="flex gap-2 items-center">
                             <div className="relative" ref={yearRef}>
                                 <button onClick={() => setIsYearOpen(o => !o)}
-                                    className={`flex items-center gap-2 px-4 py-2 rounded-xl border ${card} ${txt} cursor-pointer text-sm`}>
-                                    <Calendar size={16} className={txtM} />
+                                    className={`flex items-center gap-2 px-4 py-2 rounded-xl border ${cardClass} ${textClass} cursor-pointer text-sm`}>
+                                    <Calendar size={16} className={textMutedClass} />
                                     {selectedAnnee || 'Sélectionner'}
                                     <ChevronDown size={14} className={`transition-transform ${isYearOpen ? 'rotate-180' : ''}`} />
                                 </button>
                                 {isYearOpen && (
-                                    <div className={`absolute top-full right-0 mt-2 rounded-xl border ${card} z-50 min-w-[160px] shadow-xl`}>
+                                    <div className={`absolute top-full right-0 mt-2 rounded-xl border ${cardClass} z-50 min-w-[160px] shadow-xl overflow-hidden`}>
                                         {annees.map(y => (
                                             <div key={y.id} onClick={() => handleYearChange(y.year, y.id)}
-                                                className={`px-4 py-2.5 cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-sm flex justify-between items-center ${selectedAnnee == y.year ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600' : txt}`}>
+                                                className={`px-4 py-2.5 cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-sm flex justify-between items-center ${selectedAnnee == y.year ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600' : textClass}`}>
                                                 <span>{y.year}</span>
                                                 {y.year < currentYear
-                                                    ? <span className={`text-xs flex items-center gap-1 ${txtM}`}><Lock size={10} /> Lecture</span>
+                                                    ? <span className={`text-xs flex items-center gap-1 ${textMutedClass}`}><Lock size={10} /> Lecture</span>
                                                     : <span className="text-xs text-green-500 flex items-center gap-1"><Edit2 size={10} /> Actif</span>
                                                 }
                                             </div>
@@ -737,60 +803,41 @@ useEffect(() => {
                     </div>
                 </div>
 
-                {/* Filters */}
-                <div className={`${card} rounded-xl p-4 mb-4 border flex flex-wrap gap-3 items-center`}>
-                    <div className="relative flex-1 min-w-[180px]">
-                        <Search size={14} className={`absolute left-3 top-1/2 -translate-y-1/2 ${txtM}`} />
-                        <input type="text" placeholder="Rechercher..."
-                            className={`w-full pl-9 pr-3 py-2 rounded-lg border ${card} ${txt} outline-none text-sm`}
-                            onChange={e => setFilters(f => ({ ...f, search: e.target.value }))} />
-                    </div>
-                    <select value={filters.statut} onChange={e => setFilters(f => ({ ...f, statut: e.target.value }))}
-                        className={`px-3 py-2 rounded-lg border ${card} ${txt} outline-none text-sm cursor-pointer`}>
-                        <option value="Tous">Tous statuts</option>
-                        <option value="ACTIF">Actif</option>
-                        <option value="CONGE">Congé</option>
-                        <option value="DEPART">Départ</option>
-                    </select>
-                    {(filters.statut !== 'Tous' || filters.search) && (
-                        <button onClick={() => setFilters({ statut: 'Tous', search: '' })}
-                            className="text-xs text-red-500 hover:text-red-700">Réinitialiser</button>
-                    )}
-                </div>
-
                 {/* Add/Edit form */}
                 {showForm && (
-                    <div className={`${card} rounded-xl p-5 mb-6 border shadow-xl`}>
+                    <div className={`${cardClass} rounded-xl p-5 mb-6 border shadow-xl`}>
                         <div className="flex justify-between items-center mb-5">
-                            <h2 className={`text-xl font-bold ${txt} flex items-center gap-2`}>
+                            <h2 className={`text-xl font-bold ${textClass} flex items-center gap-2`}>
                                 {isEdit ? <Edit2 size={20} className="text-indigo-500" /> : <UserPlus size={20} className="text-indigo-500" />}
                                 {isEdit ? `Modifier l'employé — ${selectedAnnee}` : `Ajouter un employé — ${selectedAnnee}`}
                             </h2>
-                            {isEdit && (
-                                <button onClick={resetForm} className="text-sm text-red-500 hover:text-red-700 flex items-center gap-1 cursor-pointer">
-                                    <X size={14} /> Annuler
-                                </button>
-                            )}
+                            {isEdit && (<button onClick={resetForm} className="text-sm text-red-500 hover:text-red-700 flex items-center gap-1 cursor-pointer"><X size={14} /> Annuler</button>)}
                         </div>
 
                         <form onSubmit={handleSubmit} className="space-y-6">
-
                             {/* Personal Info */}
                             <div>
                                 <SectionHeading from="from-emerald-500" to="to-green-600" Icon={User} label="Information Personnelle" />
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                     {[
-                                        { name: 'prenom', label: 'Prénom', type: 'text' },
-                                        { name: 'nom', label: 'Nom', type: 'text' },
-                                        { name: 'email', label: 'Email', type: 'email' },
-                                        { name: 'telephone', label: 'Téléphone', type: 'text' },
+                                        { name: 'prenom', label: 'Prénom', type: 'text', placeholder: 'Mohamed' },
+                                        { name: 'nom', label: 'Nom', type: 'text', placeholder: 'Alaoui' },
+                                        { name: 'email', label: 'Email', type: 'email', placeholder: 'optizarh@exemple.com' },
+                                        { name: 'telephone', label: 'Téléphone', type: 'text', placeholder: '0612121212' },
                                         { name: 'date_naissance', label: 'Date de naissance', type: 'date' },
                                         { name: 'date_embauche', label: "Date d'embauche", type: 'date' },
-                                    ].map(({ name, label, type }) => (
+                                    ].map(({ name, label, type, placeholder }) => (
                                         <div key={name}>
-                                            <label className={`text-xs font-medium ${txtM} mb-1 block`}>{label}</label>
-                                            <input name={name} type={type} value={formData[name] || ''} onChange={handleChange}
-                                                className={errors[name] ? inputErr : inputCls} disabled={!isYearEditable} />
+                                            <label className={`text-xs font-medium ${textMutedClass} mb-1 block`}>{label}</label>
+                                            <input 
+                                                name={name} 
+                                                type={type} 
+                                                placeholder={placeholder} 
+                                                value={formData[name] || ''} 
+                                                onChange={handleChange}
+                                                className={errors[name] ? inputErrorClass : inputClass} 
+                                                disabled={!isYearEditable} 
+                                            />
                                             {errors[name] && <p className="text-red-500 text-xs mt-1 flex items-center gap-1"><AlertCircle size={12} />{errors[name]}</p>}
                                         </div>
                                     ))}
@@ -798,25 +845,20 @@ useEffect(() => {
 
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
                                     <div>
-                                        <label className={`text-xs font-medium ${txtM} mb-1 block`}>Situation familiale</label>
-                                        <select name="situation_familiale" value={formData.situation_familiale} onChange={handleChange}
-                                            className={inputCls} disabled={!isYearEditable}>
+                                        <label className={`text-xs font-medium ${textMutedClass} mb-1 block`}>Situation familiale</label>
+                                        <select name="situation_familiale" value={formData.situation_familiale} onChange={handleChange} className={inputClass} disabled={!isYearEditable}>
                                             <option value="">Sélectionner</option>
                                             <option value="Celibataire">Célibataire</option>
                                             <option value="Marie(e)">Marié(e)</option>
                                         </select>
                                     </div>
                                     <div>
-                                        <label className={`text-xs font-medium ${txtM} mb-1 block`}>Nombre d'enfants</label>
-                                        <input type="number" name="nombre_enfants" value={formData.nombre_enfants || ''}
-                                            onChange={handleChange} min="0" max="20" step="1"
-                                            className={inputCls}
-                                            disabled={!isYearEditable || formData.situation_familiale !== 'Marie(e)'} />
+                                        <label className={`text-xs font-medium ${textMutedClass} mb-1 block`}>Nombre d'enfants</label>
+                                        <input type="number" name="nombre_enfants" value={formData.nombre_enfants || ''} onChange={handleChange} min="0" max="20" step="1" className={inputClass} disabled={!isYearEditable || formData.situation_familiale !== 'Marie(e)'} />
                                     </div>
                                     <div>
-                                        <label className={`text-xs font-medium ${txtM} mb-1 block`}>Statut</label>
-                                        <select name="statut" value={formData.statut} onChange={handleChange}
-                                            className={inputCls} disabled={!isYearEditable}>
+                                        <label className={`text-xs font-medium ${textMutedClass} mb-1 block`}>Statut</label>
+                                        <select name="statut" value={formData.statut} onChange={handleChange} className={inputClass} disabled={!isYearEditable}>
                                             <option value="ACTIF">Actif</option>
                                             <option value="CONGE">Congé</option>
                                             <option value="DEPART">Départ</option>
@@ -831,38 +873,34 @@ useEffect(() => {
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                                     <div>
-                                        <label className={`text-xs font-medium ${txtM} mb-1 block`}>Poste</label>
-                                        <select value={formData.Post_id || ''} onChange={e => handlePostChange(e.target.value)}
-                                            className={errors.Post_id ? inputErr : inputCls} disabled={!isYearEditable}>
+                                        <label className={`text-xs font-medium ${textMutedClass} mb-1 block`}>Poste</label>
+                                        <select value={formData.Post_id || ''} onChange={e => handlePostChange(e.target.value)} className={errors.Post_id ? inputErrorClass : inputClass} disabled={!isYearEditable} required>
                                             <option value="">Sélectionner un poste</option>
-                                            {posts.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                            {posts.map(p => <option key={p.id} value={p.id}>{p.name} {p.is_starred && '⭐'}</option>)}
                                         </select>
                                         {errors.Post_id && <p className="text-red-500 text-xs mt-1">{errors.Post_id}</p>}
                                     </div>
                                     <div>
-                                        <label className={`text-xs font-medium ${txtM} mb-1 block`}>Grade</label>
-                                        <select value={formData.grade_id || ''} onChange={e => handleGradeChange(e.target.value)}
-                                            className={inputCls} disabled={!isYearEditable || !selectedPost}>
+                                        <label className={`text-xs font-medium ${textMutedClass} mb-1 block`}>Grade</label>
+                                        <select value={formData.grade_id || ''} onChange={e => handleGradeChange(e.target.value)} className={inputClass} disabled={!isYearEditable || !selectedPost} required>
                                             <option value="">Sélectionner un grade</option>
                                             {grades.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
                                         </select>
                                         {errors.grade_id && <p className="text-red-500 text-xs mt-1">{errors.grade_id}</p>}
                                     </div>
                                     <div>
-                                        <label className={`text-xs font-medium ${txtM} mb-1 block`}>Échelle</label>
-                                        <select value={formData.echelle_id || ''} onChange={e => handleEchelleChange(e.target.value)}
-                                            className={inputCls} disabled={!isYearEditable || !selectedGrade}>
+                                        <label className={`text-xs font-medium ${textMutedClass} mb-1 block`}>Échelle</label>
+                                        <select value={formData.echelle_id || ''} onChange={e => handleEchelleChange(e.target.value)} className={inputClass} disabled={!isYearEditable || !selectedGrade} required>
                                             <option value="">Sélectionner une échelle</option>
                                             {echelles.map(e => <option key={e.id} value={e.id}>Échelle {e.level}</option>)}
                                         </select>
                                         {errors.echelle_id && <p className="text-red-500 text-xs mt-1">{errors.echelle_id}</p>}
                                     </div>
                                     <div>
-                                        <label className={`text-xs font-medium ${txtM} mb-1 block`}>Échelon</label>
-                                        <select value={formData.echelon_id || ''} onChange={e => handleEchelonChange(e.target.value)}
-                                            className={inputCls} disabled={!isYearEditable || !selectedEchelle}>
+                                        <label className={`text-xs font-medium ${textMutedClass} mb-1 block`}>Échelon</label>
+                                        <select value={formData.echelon_id || ''} onChange={e => handleEchelonChange(e.target.value)} className={inputClass} disabled={!isYearEditable || !selectedEchelle} required>
                                             <option value="">Sélectionner un échelon</option>
-                                            {echelons.map(e => <option key={e.id} value={e.id}>Éch. {e.order} — {Number(e.salary).toLocaleString()} MAD</option>)}
+                                            {echelons.map(e => <option key={e.id} value={e.id}>Éch. {e.order} - {Number(e.salary).toLocaleString()} MAD</option>)}
                                         </select>
                                         {errors.echelon_id && <p className="text-red-500 text-xs mt-1">{errors.echelon_id}</p>}
                                     </div>
@@ -870,33 +908,28 @@ useEffect(() => {
 
                                 {formData.salaire > 0 && (
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                                        <div className="p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl">
-                                            <label className={`text-xs font-medium ${txtM} mb-1 block`}>Salaire de base</label>
-                                            <input readOnly value={Number(formData.salaire).toLocaleString() + ' MAD'}
-                                                className={`w-full p-2 rounded-lg border ${card} ${txt} bg-gray-100 dark:bg-gray-800 cursor-not-allowed font-bold`} />
+                                        <div className={`p-4 rounded-xl border ${borderClass} ${darkMode ? 'bg-emerald-950/20' : 'bg-emerald-50'}`}>
+                                            <label className={`text-xs font-medium ${textMutedClass} flex items-center gap-1`}><DollarSign size={12} className="text-emerald-500" /> Salaire de base</label>
+                                            <p className={`text-lg md:text-xl font-bold mt-1 ${darkMode ? 'text-emerald-400' : 'text-emerald-700'}`}>{Number(formData.salaire).toLocaleString()} MAD</p>
                                         </div>
-                                        <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
-                                            <label className={`text-xs font-medium ${txtM} mb-1 block`}>Indice</label>
-                                            <input readOnly value={formData.indice || '0'}
-                                                className={`w-full p-2 rounded-lg border ${card} ${txt} bg-gray-100 dark:bg-gray-800 cursor-not-allowed`} />
+                                        <div className={`p-4 rounded-xl border ${borderClass} ${darkMode ? 'bg-blue-950/20' : 'bg-blue-50'}`}>
+                                            <label className={`text-xs font-medium ${textMutedClass} flex items-center gap-1`}><TrendingUp size={12} className="text-blue-500" /> Indice</label>
+                                            <p className={`text-lg md:text-xl font-bold mt-1 ${darkMode ? 'text-blue-400' : 'text-blue-700'}`}>{formData.indice || '0'}</p>
                                         </div>
                                     </div>
                                 )}
 
-                                {/* Cotisation + Credits */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                                     <div>
-                                        <label className={`text-xs font-medium ${txtM} mb-1 block`}>Organisme (Cotisation)</label>
-                                        <select value={formData.cotisation_id || ''} onChange={e => setFormData(p => ({ ...p, cotisation_id: e.target.value }))}
-                                            className={errors.cotisation_id ? inputErr : inputCls} disabled={!isYearEditable}>
-                                            <option value="">— Sélectionner —</option>
-                                            {cotisationsList.map(o => <option key={o.id} value={o.id}>{o.nom || o.name}</option>)}
+                                        <label className={`text-xs font-medium ${textMutedClass} mb-1 block`}>Organisme (Cotisation)</label>
+                                        <select value={formData.cotisation_id || ''} onChange={e => setFormData(p => ({ ...p, cotisation_id: e.target.value }))} className={errors.cotisation_id ? inputErrorClass : inputClass} disabled={!isYearEditable}>
+                                            <option value="">-- Sélectionner un organisme --</option>
+                                            {cotisationsList.map(o => <option key={o.id} value={o.id}>{o.nom || o.name} {o.is_favorite && '⭐'}</option>)}
                                         </select>
                                         {errors.cotisation_id && <p className="text-red-500 text-xs mt-1">{errors.cotisation_id}</p>}
                                     </div>
                                     <div className="flex items-end">
-                                        <button type="button" onClick={() => setShowCreditForm(s => !s)}
-                                            className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 transition-all cursor-pointer shadow-md">
+                                        <button type="button" onClick={() => setShowCreditForm(s => !s)} className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 transition-all cursor-pointer shadow-md w-full justify-center">
                                             <Plus size={14} /> Ajouter un crédit
                                         </button>
                                     </div>
@@ -906,16 +939,15 @@ useEffect(() => {
                                 <div className="mt-3">
                                     {employeeCredits.length > 0 && (
                                         <div className="space-y-2 mb-3">
-                                            <p className={`text-xs font-medium ${txtM}`}>Crédits en cours :</p>
+                                            <p className={`text-xs font-medium ${textMutedClass}`}>Crédits à ajouter</p>
                                             {employeeCredits.map(credit => (
-                                                <div key={credit.temp_id} className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                                                <div key={credit.temp_id} className="flex justify-between items-center p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50">
                                                     <div>
                                                         <p className="text-sm font-medium">{CreditList.find(c => c.id === parseInt(credit.credit_type_id))?.name || 'Crédit'}</p>
-                                                        <p className={`text-xs ${txtM}`}>{Number(credit.montant_credit).toLocaleString()} MAD • {credit.taux_credit}% • {credit.credit_duree} mois</p>
+                                                        <p className={`text-xs ${textMutedClass}`}>{Number(credit.montant_credit).toLocaleString()} MAD • {credit.taux_credit}% • {credit.credit_duree} mois</p>
                                                         <p className="text-xs text-indigo-600">Mensualité : {Number(credit.credit_mensualite).toLocaleString()} MAD</p>
                                                     </div>
-                                                    <button type="button" onClick={() => removeTempCredit(credit.temp_id)}
-                                                        className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg transition-all cursor-pointer">
+                                                    <button type="button" onClick={() => removeTempCredit(credit.temp_id)} className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg transition-all cursor-pointer">
                                                         <Trash2 size={14} />
                                                     </button>
                                                 </div>
@@ -925,236 +957,206 @@ useEffect(() => {
 
                                     {showCreditForm && (
                                         <div className="p-4 rounded-xl border-2 border-indigo-200 dark:border-indigo-800 bg-indigo-50/50 dark:bg-indigo-950/20">
+                                            <div className="flex justify-between items-center mb-4 pb-2 border-b border-indigo-200 dark:border-indigo-800">
+                                                <h4 className={`text-sm font-semibold ${textClass}`}>Ajouter un crédit</h4>
+                                            </div>
                                             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                                                 <div>
-                                                    <label className={`text-xs font-medium ${txtM} mb-1 block`}>Type de crédit</label>
-                                                    <select value={tempCredit.credit_type_id}
-                                                        onChange={e => setTempCredit(p => ({ ...p, credit_type_id: e.target.value }))}
-                                                        className={inputCls}>
-                                                        <option value="">— Sélectionner —</option>
+                                                    <label className={`text-xs font-medium ${textMutedClass} mb-1 block`}>Type de crédit</label>
+                                                    <select value={tempCredit.credit_type_id} onChange={e => setTempCredit(p => ({ ...p, credit_type_id: e.target.value }))} className={inputClass}>
+                                                        <option value="">-- Sélectionner --</option>
                                                         {CreditList.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                                     </select>
                                                 </div>
-                                                {[
-                                                    { field: 'montant_credit', label: 'Montant (MAD)', placeholder: '100000', type: 'number' },
-                                                    { field: 'taux_credit', label: 'Taux (%)', placeholder: '6', type: 'number', step: '0.1' },
-                                                    { field: 'credit_duree', label: 'Durée (mois)', placeholder: '60', type: 'number' },
-                                                    { field: 'credit_date_debut', label: 'Date début', placeholder: '', type: 'date' },
-                                                ].map(({ field, label, placeholder, type, step }) => (
-                                                    <div key={field}>
-                                                        <label className={`text-xs font-medium ${txtM} mb-1 block`}>{label}</label>
-                                                        <input type={type} step={step} placeholder={placeholder}
-                                                            className={inputCls} value={tempCredit[field]}
-                                                            onChange={e => {
-                                                                const val = e.target.value;
-                                                                setTempCredit(p => {
-                                                                    const next = { ...p, [field]: val };
-                                                                    if (field === 'credit_date_debut' && p.credit_duree && val)
-                                                                        next.credit_date_fin = calculerDateFin(val, p.credit_duree);
-                                                                    return next;
-                                                                });
-                                                            }} />
-                                                    </div>
-                                                ))}
                                                 <div>
-                                                    <label className={`text-xs font-medium ${txtM} mb-1 block`}>Date fin</label>
-                                                    <input type="date" readOnly value={tempCredit.credit_date_fin}
-                                                        className={`${inputCls} cursor-not-allowed bg-gray-100 dark:bg-gray-800`} />
+                                                    <label className={`text-xs font-medium ${textMutedClass} mb-1 block`}>Montant (MAD)</label>
+                                                    <input type="number" placeholder="100000" className={inputClass} value={tempCredit.montant_credit} onChange={e => setTempCredit(p => ({ ...p, montant_credit: e.target.value }))} />
+                                                </div>
+                                                <div>
+                                                    <label className={`text-xs font-medium ${textMutedClass} mb-1 block`}>Taux (%)</label>
+                                                    <input type="number" step="0.1" placeholder="6" className={inputClass} value={tempCredit.taux_credit} onChange={e => setTempCredit(p => ({ ...p, taux_credit: e.target.value }))} />
+                                                </div>
+                                                <div>
+                                                    <label className={`text-xs font-medium ${textMutedClass} mb-1 block`}>Durée (mois)</label>
+                                                    <input type="number" placeholder="60" className={inputClass} value={tempCredit.credit_duree} onChange={e => setTempCredit(p => ({ ...p, credit_duree: e.target.value }))} />
+                                                </div>
+                                                <div>
+                                                    <label className={`text-xs font-medium ${textMutedClass} mb-1 block`}>Date début</label>
+                                                    <input type="date" className={inputClass} value={tempCredit.credit_date_debut} onChange={e => setTempCredit(p => ({ ...p, credit_date_debut: e.target.value }))} />
+                                                </div>
+                                                <div>
+                                                    <label className={`text-xs font-medium ${textMutedClass} mb-1 block`}>Date fin</label>
+                                                    <input type="date" readOnly value={tempCredit.credit_date_fin} className={`${inputClass} cursor-not-allowed bg-gray-100 dark:bg-gray-800`} />
                                                 </div>
                                             </div>
 
                                             {tempCredit.montant_credit && tempCredit.taux_credit && tempCredit.credit_duree && (
                                                 <div className="mt-3 p-2 rounded-lg bg-indigo-100 dark:bg-indigo-900/30">
-                                                    <p className="text-sm text-indigo-600 dark:text-indigo-400">
-                                                        Mensualité estimée : <strong>
-                                                            {calculerMensualite(tempCredit.montant_credit, tempCredit.taux_credit, tempCredit.credit_duree).toLocaleString()} MAD
-                                                        </strong>
-                                                    </p>
+                                                    <p className="text-sm text-indigo-600 dark:text-indigo-400">Mensualité estimée: <strong>{calculerMensualite(tempCredit.montant_credit, tempCredit.taux_credit, tempCredit.credit_duree).toLocaleString()} MAD</strong></p>
                                                 </div>
                                             )}
 
                                             <div className="flex justify-end gap-3 mt-4">
-                                                <button type="button" onClick={() => setShowCreditForm(false)}
-                                                    className="px-4 py-1.5 text-sm text-white bg-red-500 rounded-lg hover:bg-red-600 cursor-pointer">Annuler</button>
-                                                <button type="button" onClick={addTempCredit}
-                                                    className="px-4 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 cursor-pointer">Ajouter</button>
+                                                <button type="button" onClick={() => setShowCreditForm(false)} className="px-4 py-1.5 text-sm text-white bg-red-500 rounded-lg hover:bg-red-600 cursor-pointer">Annuler</button>
+                                                <button type="button" onClick={addTempCredit} className="px-4 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 cursor-pointer">Ajouter</button>
                                             </div>
                                         </div>
                                     )}
                                 </div>
                             </div>
-
-                            {/* 🔥 SECTION RÉGÉNÉRATION MOT DE PASSE (seulement en édition) */}
-                            {isEdit && (
-                                <div className={`p-4 rounded-xl border ${darkMode ? 'border-amber-800 bg-amber-950/20' : 'border-amber-200 bg-amber-50'}`}>
-                                    <div className="flex items-center gap-3">
-                                        <input
-                                            type="checkbox"
-                                            id="regenerate_password"
-                                            checked={regeneratePassword}
-                                            onChange={(e) => setRegeneratePassword(e.target.checked)}
-                                            className="w-5 h-5 rounded border-gray-300 text-amber-600 focus:ring-amber-500 cursor-pointer"
-                                        />
-                                        <label htmlFor="regenerate_password" className={`text-sm font-medium cursor-pointer ${txt}`}>
-                                            <RefreshCw size={16} className="inline mr-2 text-amber-500" />
-                                            Régénérer le mot de passe et envoyer par email
-                                        </label>
-                                    </div>
-                                    {regeneratePassword && (
-                                        <p className={`text-xs ${txtM} mt-2 ml-8`}>
-                                            Un nouveau mot de passe sera généré et envoyé à l'employé par email.
-                                            L'employé devra le changer à la première connexion.
-                                        </p>
-                                    )}
-                                </div>
-                            )}
-
-                            <button type="submit" disabled={loading}
-                                className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all font-medium disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg cursor-pointer">
+                            <button type="submit" disabled={loading} className={`w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all font-medium disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg cursor-pointer`}>
                                 {loading ? <Loader size={18} className="animate-spin" /> : <Save size={18} />}
-                                {loading ? 'Enregistrement...' : isEdit ? 'Mettre à jour' : 'Enregistrer'}
+                                {loading ? "Enregistrement..." : isEdit ? "Mettre à jour" : "Enregistrer"}
                             </button>
                         </form>
                     </div>
                 )}
 
-                {/* View toggle */}
-                <div className="flex justify-end mb-4 gap-2">
-                    {[['table', List], ['grid', Grid3x3]].map(([mode, Icon]) => (
-                        <button key={mode} onClick={() => setViewMode(mode)}
-                            className={`p-2 rounded-lg transition-all ${viewMode === mode ? 'bg-indigo-600 text-white' : `${card} ${txt}`}`}>
-                            <Icon size={18} />
-                        </button>
-                    ))}
+                {/* Filters */}
+                <div className={`${cardClass} rounded-xl p-4 mb-4 border flex flex-wrap gap-3 items-center`}>
+                    <div className="relative flex-1 min-w-[180px]">
+                        <Search size={14} className={`absolute left-3 top-1/2 -translate-y-1/2 ${textMutedClass}`} />
+                        <input type="text" placeholder="Rechercher..." className={`w-full pl-9 pr-3 py-2 rounded-lg border ${cardClass} ${textClass} outline-none text-sm`} onChange={e => setFilters(f => ({ ...f, search: e.target.value }))} />
+                    </div>
+                    <select value={filters.statut} onChange={e => setFilters(f => ({ ...f, statut: e.target.value }))} className={`px-3 py-2 rounded-lg border ${cardClass} ${textClass} outline-none text-sm cursor-pointer`}>
+                        <option value="Tous">Tous statuts</option>
+                        <option value="ACTIF">Actif</option>
+                        <option value="CONGE">Congé</option>
+                        <option value="DEPART">Départ</option>
+                    </select>
+                    {(filters.statut !== 'Tous' || filters.search) && (
+                        <button onClick={() => setFilters({ statut: 'Tous', search: '' })} className="text-xs text-red-500 hover:text-red-700">Réinitialiser</button>
+                    )}
+                    <div className="flex justify-end gap-2">
+                        <button onClick={() => setViewMode('table')} className={`cursor-pointer p-2 rounded-lg transition-all ${viewMode === 'table' ? 'bg-indigo-600 text-white' : `${cardClass} ${textClass}`}`}><List size={18} /></button>
+                        <button onClick={() => setViewMode('grid')} className={`cursor-pointer p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-indigo-600 text-white' : `${cardClass} ${textClass}`}`}><Grid3x3 size={18} /></button>
+                    </div>
                 </div>
 
                 {/* Table view */}
-                {viewMode === 'table' ? (
-                    <div className={`${card} rounded-xl border overflow-hidden shadow-xl`}>
-                        <div className="overflow-x-auto">
-                            <table className="w-full min-w-[800px]">
-                                <thead className={darkMode ? 'bg-gradient-to-r from-gray-800 to-gray-900' : 'bg-gradient-to-r from-gray-100 to-gray-200'}>
-                                    <tr className={`text-left text-xs font-semibold uppercase tracking-wider ${txtM}`}>
-                                        {['Employé', 'Poste', 'Grade', 'Brut', 'Net', 'Statut', 'Actions'].map(h => (
-                                            <th key={h} className="p-4">{h}</th>
-                                        ))}
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {loading && !employeesList.length ? (
-                                        <tr>
-                                            <td colSpan="7" className="p-12 text-center">
-                                                <Loader size={32} className="animate-spin mx-auto text-indigo-500" />
-                                            </td>
-                                        </tr>
-                                    ) : !employeesList.length ? (
-                                        <tr>
-                                            <td colSpan="7" className={`p-12 text-center ${txtM}`}>
-                                                <Users size={48} className="mx-auto mb-3 opacity-30" />
-                                                <p>Aucun employé trouvé</p>
-                                            </td>
-                                        </tr>
-                                    ) : (
-                                        employeesList.map((emp, idx) => (
-                                            <tr key={emp.id}
-                                                className={`border-t ${bdr} hover:bg-gray-50/50 dark:hover:bg-white/5 transition-all duration-150 ${idx % 2 === 0 ? (darkMode ? 'bg-black/20' : 'bg-gray-50/30') : ''}`}>
-                                                <td className="p-4">
-                                                    <div className={`font-semibold text-sm ${txt}`}>{emp.prenom} {emp.nom}</div>
-                                                    <div className={`text-xs ${txtM} truncate max-w-[180px]`}>{emp.email}</div>
-                                                </td>
-                                                <td className={`p-4 text-sm ${txt}`}>{emp.post?.name || '-'}</td>
-                                                <td className={`p-4 text-sm ${txt}`}>{emp.grade || '-'}</td>
-                                                <td className="p-4 font-semibold text-purple-600 text-sm whitespace-nowrap">
-                                                    {emp.details ? Math.round(emp.details.brut_salary).toLocaleString() + ' MAD' : '…'}
-                                                </td>
-                                                <td className="p-4 font-semibold text-emerald-600 text-sm whitespace-nowrap">
-                                                    {emp.details ? Math.round(emp.details.net_salary).toLocaleString() + ' MAD' : '…'}
-                                                </td>
-                                                <td className="p-4"><StatusBadge statut={emp.statut} /></td>
-                                                <td className="p-4">
-                                                    <div className="flex items-center gap-1">
-                                                        <button onClick={() => handleViewEmployee(emp)}
-                                                            className="p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg cursor-pointer" title="Voir">
-                                                            <Eye size={16} />
-                                                        </button>
-                                                        <button onClick={() => handleEdit(emp)} disabled={!isYearEditable}
-                                                            className={`p-1.5 rounded-lg cursor-pointer ${!isYearEditable ? 'text-gray-400' : 'text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30'}`} title="Modifier">
-                                                            <Edit2 size={16} />
-                                                        </button>
-                                                        <button onClick={() => handleDeleteClick(emp.id, `${emp.prenom} ${emp.nom}`)} disabled={!isYearEditable}
-                                                            className={`p-1.5 rounded-lg cursor-pointer ${!isYearEditable ? 'text-gray-400' : 'text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30'}`} title="Supprimer">
-                                                            <Trash2 size={16} />
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                        
-                        {/* Pagination */}
-                        {paginationData.last_page > 1 && (
-                            <div className={`flex flex-col sm:flex-row justify-between items-center gap-3 p-4 border-t ${bdr}`}>
-                                <span className={`text-sm ${txtM}`}>
-                                    {paginationData.from || 0} – {paginationData.to || 0} sur {paginationData.total || 0}
-                                </span>
-                                <div className="flex gap-2">
-                                    <button onClick={() => setCurrentPage(p => Math.max(p - 1, 1))} disabled={currentPage === 1}
-                                        className="px-3 py-1.5 rounded-lg border disabled:opacity-50 text-sm hover:bg-indigo-50 dark:hover:bg-indigo-900/30 cursor-pointer">←</button>
-                                    <span className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm min-w-[40px] text-center">{currentPage}</span>
-                                    <button onClick={() => setCurrentPage(p => Math.min(p + 1, paginationData.last_page))} disabled={currentPage === paginationData.last_page}
-                                        className="px-3 py-1.5 rounded-lg border disabled:opacity-50 text-sm hover:bg-indigo-50 dark:hover:bg-indigo-900/30 cursor-pointer">→</button>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                ) : (
-                    // Card view
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                        {employeesList.map(emp => (
-                            <div key={emp.id} className={`${card} rounded-xl border p-4 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1`}>
-                                <div className="flex justify-between items-start mb-3">
-                                    <div className="flex items-center gap-3">
-                                        <div className="p-2 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-md">
-                                            <User size={16} className="text-white" />
-                                        </div>
-                                        <div>
-                                            <h3 className={`font-semibold ${txt}`}>{emp.prenom} {emp.nom}</h3>
-                                            <p className={`text-xs ${txtM}`}>{emp.email}</p>
-                                        </div>
-                                    </div>
-                                    <StatusBadge statut={emp.statut} />
-                                </div>
-                                <div className="grid grid-cols-2 gap-2 mb-4 p-3 rounded-lg bg-gray-50/50 dark:bg-gray-800/30">
-                                    <div><p className={`text-xs ${txtM}`}>Poste</p><p className={`text-sm font-medium ${txt}`}>{emp.post?.name || '-'}</p></div>
-                                    <div><p className={`text-xs ${txtM}`}>Grade</p><p className={`text-sm font-medium ${txt}`}>{emp.grade || '-'}</p></div>
-                                    <div><p className={`text-xs ${txtM}`}>Brut</p><p className="text-sm font-semibold text-purple-600">{emp.details ? Math.round(emp.details.brut_salary).toLocaleString() + ' MAD' : '…'}</p></div>
-                                    <div><p className={`text-xs ${txtM}`}>Net</p><p className="text-sm font-semibold text-emerald-600">{emp.details ? Math.round(emp.details.net_salary).toLocaleString() + ' MAD' : '…'}</p></div>
-                                </div>
-                                <div className="flex justify-end gap-2 pt-2 border-t">
-                                    <button onClick={() => handleViewEmployee(emp)} className="p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg cursor-pointer"><Eye size={14} /></button>
-                                    <button onClick={() => handleEdit(emp)} disabled={!isYearEditable} className={`p-1.5 rounded-lg cursor-pointer ${!isYearEditable ? 'text-gray-400' : 'text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30'}`}><Edit2 size={14} /></button>
-                                    <button onClick={() => handleDeleteClick(emp.id, `${emp.prenom} ${emp.nom}`)} disabled={!isYearEditable} className={`p-1.5 rounded-lg cursor-pointer ${!isYearEditable ? 'text-gray-400' : 'text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30'}`}><Trash2 size={14} /></button>
-                                </div>
-                            </div>
+                {/* Table view */}
+{viewMode === 'table' ? (
+    <div className={`${cardClass} rounded-xl border overflow-hidden shadow-xl`}>
+        <div className="overflow-x-auto">
+            <table className="w-full min-w-[900px]">
+                <thead className={darkMode ? 'bg-gradient-to-r from-gray-800 to-gray-900' : 'bg-gradient-to-r from-gray-100 to-gray-200'}>
+                    <tr className={`text-left text-xs font-semibold uppercase tracking-wider ${textMutedClass}`}>
+                        {['Employé', 'Poste', 'Grade', 'Brut', 'Net', 'Statut', 'Actions'].map(h => (
+                            <th key={h} className="p-4">{h}</th>
                         ))}
+                    </tr>
+                </thead>
+                <tbody>
+                    {loading && !employeesList.length ? (
+                        <tr>
+                            <td colSpan="7" className="p-12 text-center">
+                                <Loader size={32} className="animate-spin mx-auto text-indigo-500" />
+                            </td>
+                        </tr>
+                    ) : !employeesList.length ? (
+                        <tr>
+                            <td colSpan="7" className={`p-12 text-center ${textMutedClass}`}>
+                                <Users size={48} className="mx-auto mb-3 opacity-30" />
+                                <p>Aucun employé trouvé</p>
+                            </td>
+                        </tr>
+                    ) : (
+                        employeesList.map((emp, idx) => (
+                            <tr key={emp.id} className={`border-t ${borderClass} hover:bg-gray-50/50 dark:hover:bg-white/5 transition-all duration-150 ${idx % 2 === 0 ? (darkMode ? 'bg-black/20' : 'bg-gray-50/30') : ''}`}>
+                                <td className="p-4">
+                                    <div className={`font-semibold text-sm ${textClass}`}>{emp.prenom} {emp.nom}</div>
+                                    <div className={`text-xs ${textMutedClass} truncate max-w-[180px]`}>{emp.email}</div>
+                                </td>
+                                <td className={`p-4 text-sm ${textClass}`}>{emp.post?.name || '-'}</td>
+                                <td className={`p-4 text-sm ${textClass}`}>{emp.grade || '-'}</td>
+                                <td className="p-4 font-semibold text-purple-600 dark:text-purple-400 text-sm whitespace-nowrap">
+                                    {emp.details ? Math.round(emp.details.brut_salary).toLocaleString() + ' MAD' : '…'}
+                                </td>
+                                <td className="p-4 font-semibold text-emerald-600 dark:text-emerald-400 text-sm whitespace-nowrap">
+                                    {emp.details ? Math.round(emp.details.net_salary).toLocaleString() + ' MAD' : '…'}
+                                </td>
+                                <td className="p-4">
+                                    <StatusBadge statut={emp.statut} />
+                                </td>
+                                <td className="p-4">
+                                    <div className="flex items-center gap-1">
+                                        <button onClick={() => handleViewEmployee(emp)} className="p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg cursor-pointer" title="Voir">
+                                            <Eye size={16} />
+                                        </button>
+                                        <button onClick={() => handleEdit(emp)} disabled={!isYearEditable} 
+                                            className={`p-1.5 rounded-lg cursor-pointer ${!isYearEditable ? 'text-gray-400' : 'text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30'}`} title="Modifier">
+                                            <Edit2 size={16} />
+                                        </button>
+                                        <button onClick={() => handleDeleteClick(emp.id, `${emp.prenom} ${emp.nom}`)} disabled={!isYearEditable}
+                                            className={`p-1.5 rounded-lg cursor-pointer ${!isYearEditable ? 'text-gray-400' : 'text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30'}`} title="Supprimer">
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        ))
+                    )}
+                </tbody>
+            </table>
+        </div>
+        {paginationData.last_page > 1 && (
+            <div className={`flex flex-col sm:flex-row justify-between items-center gap-3 p-4 border-t ${borderClass}`}>
+                <span className={`text-sm ${textMutedClass}`}>
+                    {paginationData.from || 0} – {paginationData.to || 0} sur {paginationData.total || 0}
+                </span>
+                <div className="flex gap-2">
+                    <button onClick={() => setCurrentPage(p => Math.max(p - 1, 1))} disabled={currentPage === 1} 
+                        className="px-3 py-1.5 rounded-lg border disabled:opacity-50 text-sm hover:bg-indigo-50 dark:hover:bg-indigo-900/30 cursor-pointer">←</button>
+                    <span className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm min-w-[40px] text-center">{currentPage}</span>
+                    <button onClick={() => setCurrentPage(p => Math.min(p + 1, paginationData.last_page))} disabled={currentPage === paginationData.last_page}
+                        className="px-3 py-1.5 rounded-lg border disabled:opacity-50 text-sm hover:bg-indigo-50 dark:hover:bg-indigo-900/30 cursor-pointer">→</button>
+                </div>
+            </div>
+        )}
+    </div>
+) : (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        {employeesList.map(emp => (
+            <div key={emp.id} className={`${cardClass} rounded-xl border p-4 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1`}>
+                <div className="flex justify-between items-start mb-3">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-md">
+                            <User size={16} className="text-white" />
+                        </div>
+                        <div>
+                            <h3 className={`font-semibold ${textClass}`}>{emp.prenom} {emp.nom}</h3>
+                            <p className={`text-xs ${textMutedClass}`}>{emp.email}</p>
+                        </div>
                     </div>
-                )}
+                    <StatusBadge statut={emp.statut} />
+                </div>
+                <div className="grid grid-cols-2 gap-2 mb-4 p-3 rounded-lg bg-gray-50/50 dark:bg-gray-800/30">
+                    <div><p className={`text-xs ${textMutedClass}`}>Poste</p><p className={`text-sm font-medium ${textClass}`}>{emp.post?.name || '-'}</p></div>
+                    <div><p className={`text-xs ${textMutedClass}`}>Grade</p><p className={`text-sm font-medium ${textClass}`}>{emp.grade || '-'}</p></div>
+                    <div><p className={`text-xs ${textMutedClass}`}>Brut</p><p className="text-sm font-semibold text-purple-600">{emp.details ? Math.round(emp.details.brut_salary).toLocaleString() + ' MAD' : '…'}</p></div>
+                    <div><p className={`text-xs ${textMutedClass}`}>Net</p><p className="text-sm font-semibold text-emerald-600">{emp.details ? Math.round(emp.details.net_salary).toLocaleString() + ' MAD' : '…'}</p></div>
+                </div>
+                <div className="flex justify-end gap-2 pt-2 border-t">
+                    <button onClick={() => handleViewEmployee(emp)} className="p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg cursor-pointer">
+                        <Eye size={14} />
+                    </button>
+                    <button onClick={() => handleEdit(emp)} disabled={!isYearEditable} 
+                        className={`p-1.5 rounded-lg cursor-pointer ${!isYearEditable ? 'text-gray-400' : 'text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30'}`}>
+                        <Edit2 size={14} />
+                    </button>
+                    <button onClick={() => handleDeleteClick(emp.id, `${emp.prenom} ${emp.nom}`)} disabled={!isYearEditable}
+                        className={`p-1.5 rounded-lg cursor-pointer ${!isYearEditable ? 'text-gray-400' : 'text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30'}`}>
+                        <Trash2 size={14} />
+                    </button>
+                </div>
+            </div>
+        ))}
+    </div>
+)}
 
                 {/* Modals */}
-                {showDetailsModal && selectedEmployeeDetails && (
-                    <EmployeeDetailsModal employee={selectedEmployeeDetails} onClose={() => setShowDetailsModal(false)} />
-                )}
-                <DeleteConfirmModal
-                    isOpen={deleteModal.isOpen}
-                    onClose={() => setDeleteModal({ isOpen: false, employeeId: null, employeeName: '' })}
-                    onConfirm={confirmDelete}
-                    title="Confirmer la suppression"
-                    message={`Supprimer l'employé "${deleteModal.employeeName}" ? Cette action est irréversible.`}
-                    darkMode={darkMode}
-                />
+                {showDetailsModal && selectedEmployeeDetails && <EmployeeDetailsModal employee={selectedEmployeeDetails} onClose={() => setShowDetailsModal(false)} />}
+                <DeleteConfirmModal isOpen={deleteModal.isOpen} onClose={() => setDeleteModal({ isOpen: false, employeeId: null, employeeName: '' })} onConfirm={confirmDelete} title="Confirmation de suppression" message={`Supprimer l'employé "${deleteModal.employeeName}" ? Cette action est irréversible.`} darkMode={darkMode} />
             </div>
         </div>
     );

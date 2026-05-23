@@ -4,8 +4,7 @@ import {
     TrendingUp, TrendingDown, Shield, Percent,
     CreditCard, Banknote, ArrowLeft, Loader,
     ChevronRight, Calendar, DollarSign, Award,
-    BarChart3, Info, Wallet, Building2,
-    Clock, CheckCircle
+    BarChart3, Info, Wallet, Building2,Clock, CheckCircle
 } from 'lucide-react';
 import api from '../../lib/apis/axiosConfig';
 import { useTheme } from '../../context/ThemeContext';
@@ -60,6 +59,8 @@ function useTokens(dark) {
     };
 }
 
+
+
 /* ─────────────────────────────────────────────
    Sub-components
 ───────────────────────────────────────────── */
@@ -68,6 +69,7 @@ function useTokens(dark) {
 function AccentBar({ color }) {
     return <div className={`h-[3px] w-full rounded-t-2xl ${color}`} />;
 }
+
 
 /** Section header inside a card */
 function SectionHeader({ icon: Icon, label, value, valueColor, tokens }) {
@@ -101,9 +103,6 @@ function Bar({ pct, color = 'bg-emerald-500' }) {
     );
 }
 
-/* ─────────────────────────────────────────────
-   Leave Balance Card Component
-───────────────────────────────────────────── */
 const LeaveBalanceCard = () => {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -200,8 +199,10 @@ const LeaveBalanceCard = () => {
 };
 
 
+
+
 /* ─────────────────────────────────────────────
-   Main component - Employee Salary Dashboard
+   Main component
 ───────────────────────────────────────────── */
 export default function EmployeeSalaryDashboard() {
     const { user } = useAuth();
@@ -213,9 +214,8 @@ export default function EmployeeSalaryDashboard() {
     const [data, setData]       = useState(null);
     const [employee, setEmployee] = useState(null);
 
-    // balance is not strictly needed here since LeaveBalanceCard fetches its own,
-    // but kept as in the original code
     const [balance, setBalance] = useState(null);
+
 
     useEffect(() => {
         if (user?.id) fetchSalaryData();
@@ -261,7 +261,6 @@ export default function EmployeeSalaryDashboard() {
             maximumFractionDigits: 2 
         }) + ' MAD';
     };
-    
     const totalRetained = (data?.ir?.total || 0) + 
                       (data?.cotisations?.total || 0) + 
                       (data?.rcar?.total || 0) + 
@@ -311,6 +310,7 @@ export default function EmployeeSalaryDashboard() {
         },
     ];
 
+
     return (
         <div className={`min-h-screen ${T.page} font-sans`}>
 
@@ -340,9 +340,8 @@ export default function EmployeeSalaryDashboard() {
 
             <main className="max-w-6xl mx-auto px-5 py-7 space-y-7">
 
-                {/* ── LEAVE BALANCE CARD ── */}
+            
                 <LeaveBalanceCard />
-
                 {/* ── KPI GRID ── */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     {kpis.map((k) => {
@@ -431,6 +430,7 @@ export default function EmployeeSalaryDashboard() {
                         </div>
                     </div>
                 </div>
+
 
                 {/* ── DETAIL GRID ── */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

@@ -3,29 +3,33 @@ import api from '../../lib/apis/axiosConfig';
 import { 
   Calendar, FileText, Paperclip, Send, Clock, 
   CheckCircle2, AlertCircle, Loader2, ChevronRight, Folder, ListTree, X,
-  LayoutDashboard, Info, Moon, Sun
+  LayoutDashboard, Info, User, Eye
 } from 'lucide-react';
-
-// Contexts requested
 import { useNotification } from '../../context/NotificationContext';
 import { useTheme } from '../../context/ThemeContext';
 
 const EmployeeLeave = () => {
-  // Context Hooks
   const { showNotification } = useNotification();
-  const { theme } = useTheme();
+  const { darkMode } = useTheme();
 
   const [years, setYears] = useState([]);
   const [selectedYear, setSelectedYear] = useState('');
   const [displayYear, setDisplayYear] = useState(''); 
   const [detailModal, setDetailModal] = useState({ show: false, req: null });
-  
   const [categories, setCategories] = useState([]); 
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  
   const fileInputRef = useRef(null);
+
+  // Styles pour le thème noir élégant
+  const bgClass = darkMode ? 'bg-[#0D0D0D]' : 'bg-gray-50';
+  const cardClass = darkMode ? 'bg-[#1A1A1A] border-[#2A2A2A]' : 'bg-white border-gray-200';
+  const textClass = darkMode ? 'text-white' : 'text-gray-800';
+  const textMutedClass = darkMode ? 'text-gray-400' : 'text-gray-500';
+  const borderClass = darkMode ? 'border-[#2A2A2A]' : 'border-gray-200';
+  const inputClass = darkMode ? 'bg-[#1A1A1A] border-[#2A2A2A] text-white placeholder-gray-500' : 'bg-white border-gray-200 text-gray-800';
+  const hoverClass = darkMode ? 'hover:bg-[#252525]' : 'hover:bg-gray-50';
 
   const tomorrowStr = useMemo(() => {
     const today = new Date();
@@ -43,7 +47,6 @@ const EmployeeLeave = () => {
     attachment: null 
   });
 
-  // 1. Fetch l-years
   useEffect(() => {
     const fetchAndSetCurrentYear = async () => {
       try {
@@ -60,13 +63,12 @@ const EmployeeLeave = () => {
           setDisplayYear(res.data[0].year);
         }
       } catch (err) {
-        addNotification({ type: 'error', message: "Erreur lors de la récupération de l'année" });
+        showNotification("Erreur lors de la récupération de l'année", 'error');
       }
     };
     fetchAndSetCurrentYear();
   }, []);
 
-  // 2. Fetch data melli t-settat selectedYear
   useEffect(() => {
     if (selectedYear) fetchData();
   }, [selectedYear]);
@@ -81,7 +83,7 @@ const EmployeeLeave = () => {
       setCategories(configRes.data);
       setRequests(historyRes.data);
     } catch (err) {
-      addNotification({ type: 'error', message: "Mouchkil f chargement d data" });
+      showNotification("Erreur chargement des données", 'error');
     } finally {
       setLoading(false);
     }
@@ -91,7 +93,6 @@ const EmployeeLeave = () => {
   const selectedType = selectedCategoryTypes.find(t => t.id.toString() === formData.leave_type_id);
   const isDateRequired = selectedType && selectedType.max_days_per_request > 0;
 
-  // Calcul de durée
   useEffect(() => {
     if (isDateRequired && formData.start_date && formData.end_date) {
       const start = new Date(formData.start_date);
@@ -103,128 +104,148 @@ const EmployeeLeave = () => {
     }
   }, [formData.start_date, formData.end_date, isDateRequired]);
 
+  const getStatusStyles = (status) => {
+    switch(status) {
+      case 'APPROVED': 
+        return { bg: 'bg-emerald-500', text: 'text-white', label: 'Approuvé' };
+      case 'REJECTED': 
+        return { bg: 'bg-rose-500', text: 'text-white', label: 'Refusé' };
+      default: 
+        return { bg: 'bg-amber-500', text: 'text-white', label: 'En Attente' };
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Validation Logic: Start Date >= Tomorrow
-    if (isDateRequired && formData.start_date < tomorrowStr) {
-        showNotification("La date de début doit être à partir de demain." ,'success');
+    if (!selectedYear) {
+      showNotification("Veuillez sélectionner une année", 'error');
+      return;
+    }
+    if (!formData.leave_type_id) {
+      showNotification("Veuillez sélectionner un type de congé", 'error');
+      return;
+    }
+    
+    if (isDateRequired) {
+      if (!formData.start_date) {
+        showNotification("Veuillez sélectionner une date de début", 'error');
         return;
+      }
+      if (!formData.end_date) {
+        showNotification("Veuillez sélectionner une date de fin", 'error');
+        return;
+      }
+      if (formData.start_date < tomorrowStr) {
+        showNotification("La date de début doit être à partir de demain", 'error');
+        return;
+      }
+      if (formData.end_date < formData.start_date) {
+        showNotification("La date de fin doit être après la date de début", 'error');
+        return;
+      }
     }
 
-    if (!selectedYear) return;
     setSubmitting(true);
-
     const data = new FormData();
     data.append('leave_type_id', formData.leave_type_id);
     data.append('salary_year_id', selectedYear);
+    
     if (isDateRequired) {
       data.append('start_date', formData.start_date);
       data.append('end_date', formData.end_date);
       data.append('duration', formData.duration);
     } else {
       data.append('duration', 0);
+      data.append('start_date', '');
+      data.append('end_date', '');
     }
+    
     data.append('comments', formData.comments || '');
     if (formData.attachment) data.append('attachment', formData.attachment);
 
     try {
-      await api.post('/api/leave-requests/store', data, {
+      const response = await api.post('/api/leave-requests/store', data, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      showNotification('Demande envoyée avec succès !' ,'success');
-      setFormData({ category_id: '', leave_type_id: '', start_date: '', end_date: '', duration: 0, comments: '', attachment: null });
-      if (fileInputRef.current) fileInputRef.current.value = ""; 
-      fetchData(); 
+      
+      showNotification(response.data.message || 'Demande envoyée avec succès!', 'success');
+      
+      setFormData({ 
+        category_id: '', leave_type_id: '', start_date: '', end_date: '', 
+        duration: 0, comments: '', attachment: null 
+      });
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      await fetchData();
+      
     } catch (err) {
-      showNotification( "Une erreur est survenue lors de l'envoi." ,'error');
+      if (err.response?.data?.errors) {
+        const errors = err.response.data.errors;
+        const firstError = Object.values(errors)[0];
+        showNotification(firstError[0] || 'Erreur de validation', 'error');
+      } else if (err.response?.data?.error) {
+        showNotification(err.response.data.error, 'error');
+      } else {
+        showNotification("Une erreur est survenue lors de l'envoi", 'error');
+      }
     } finally {
       setSubmitting(false);
     }
   };
 
-  const getStatusStyles = (status) => {
-    switch(status) {
-      case 'APPROVED': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-      case 'REJECTED': return 'bg-rose-50 text-rose-700 border-rose-200';
-      default: return 'bg-amber-50 text-amber-700 border-amber-200';
-    }
-  };
-
-  // Theme integration classes
-  const isDark = theme === 'dark';
-  const containerBg = isDark ? 'bg-slate-950' : 'bg-slate-50/50';
-  const cardBg = isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-white';
-  const textMain = isDark ? 'text-white' : 'text-slate-900';
-  const textMuted = isDark ? 'text-slate-400' : 'text-slate-500';
-
   return (
-    <div className={`min-h-screen ${containerBg} p-4 md:p-10 transition-colors duration-300`}>
-      <div className="max-w-7xl mx-auto space-y-10">
+    <div className={`min-h-screen transition-colors duration-300 ${bgClass}`}>
+      <div className="max-w-7xl mx-auto p-2 md:p-3 space-y-6">
         
-        {/* --- HEADER --- */}
-        <header className={`${cardBg} backdrop-blur-md border p-8 rounded-[2.5rem] shadow-sm relative overflow-hidden`}>
-          <div className="relative flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-            <div className="flex items-center gap-5">
-              <div className="p-4 bg-indigo-600 rounded-2xl shadow-lg shadow-indigo-200 text-white">
-                <LayoutDashboard size={28} />
+        {/* Header */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h1 className={`text-2xl md:text-3xl font-bold ${textClass} flex items-center gap-3`}>
+              <div className="p-2 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 shadow-lg">
+                <LayoutDashboard size={22} className="text-white" />
               </div>
-              <div>
-                <h1 className={`text-4xl font-black tracking-tight ${textMain}`}>Espace Congés</h1>
-                <p className={`${textMuted} font-semibold uppercase text-[11px] mt-1 tracking-widest`}>Gestion des Absences</p>
-              </div>
-            </div>
-            
-            <div className={`flex items-center gap-4 ${isDark ? 'bg-slate-800' : 'bg-white'} border border-slate-200 p-2 pl-5 rounded-2xl`}>
-              <div className="flex items-center gap-2">
-                <Calendar className="text-indigo-500" size={18} />
-                <span className={`font-bold text-sm ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Session :</span>
-              </div>
-              <div className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-black">
-                {displayYear || '...'}
-              </div>
-            </div>
+              Espace Congés
+            </h1>
+            <p className={`text-sm ${textMutedClass} mt-2`}>
+              Gestion des demandes d'absence • Année: <span className={`font-semibold ${textClass} bg-indigo-100 dark:bg-indigo-900/50 px-2 py-0.5 rounded-md`}>{displayYear || '...'}</span>
+            </p>
           </div>
-        </header>
+          <div className={`flex items-center gap-2 px-4 py-2 rounded-xl ${cardClass} border ${borderClass}`}>
+            <Calendar size={16} className="text-indigo-500" />
+            <span className={`text-sm font-medium ${textClass}`}>Session: {displayYear || '...'}</span>
+          </div>
+        </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           
-          {/* --- FORM SECTION --- */}
-          <section className="lg:col-span-5">
-            <div className={`${cardBg} rounded-[3rem] p-10 shadow-2xl border`}>
-              <div className="flex items-center gap-4 mb-10">
-                <div className="w-1.5 h-8 bg-indigo-600 rounded-full"></div>
-                <h2 className={`text-2xl font-black ${textMain}`}>Nouvelle Demande</h2>
-              </div>
+          {/* Formulaire */}
+          <div className="lg:col-span-5">
+            <div className={`${cardClass} rounded-xl border ${borderClass} p-6 shadow-xl`}>
+              <h2 className={`text-lg font-bold ${textClass} mb-4 flex items-center gap-2`}>
+                <div className="w-1 h-6 bg-indigo-500 rounded-full"></div>
+                Nouvelle Demande
+              </h2>
 
-              <form onSubmit={handleSubmit} className="space-y-8">
-                <div className="space-y-3">
-                  <label className="text-[13px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 ml-1">
-                    <Folder size={14} /> Catégorie
-                  </label>
-                  <select 
-                    required
-                    className={`w-full ${isDark ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-100'} border-2 rounded-2xl px-5 py-4 focus:border-indigo-500 outline-none transition-all font-bold`}
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <label className={`text-xs font-medium ${textMutedClass} block mb-1`}>Catégorie</label>
+                  <select required
+                    className={`w-full p-2.5 rounded-lg border ${borderClass} ${inputClass} outline-none focus:ring-2 focus:ring-indigo-500`}
                     value={formData.category_id}
-                    onChange={e => setFormData({ ...formData, category_id: e.target.value, leave_type_id: '' })}
-                  >
+                    onChange={e => setFormData({ ...formData, category_id: e.target.value, leave_type_id: '' })}>
                     <option value="">Sélectionnez la catégorie</option>
                     {categories.map(c => <option key={c.id} value={c.id}>{c.category_name}</option>)}
                   </select>
                 </div>
 
                 {formData.category_id && (
-                  <div className="space-y-3 animate-in fade-in slide-in-from-top-2">
-                    <label className="text-[13px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 ml-1">
-                      <ListTree size={14} /> Type d'absence
-                    </label>
-                    <select 
-                      required
-                      className={`w-full ${isDark ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-100'} border-2 rounded-2xl px-5 py-4 focus:border-indigo-500 outline-none transition-all font-bold`}
+                  <div>
+                    <label className={`text-xs font-medium ${textMutedClass} block mb-1`}>Type d'absence</label>
+                    <select required
+                      className={`w-full p-2.5 rounded-lg border ${borderClass} ${inputClass} outline-none focus:ring-2 focus:ring-indigo-500`}
                       value={formData.leave_type_id}
-                      onChange={e => setFormData({...formData, leave_type_id: e.target.value})}
-                    >
-                      <option value="">Choisissez le type exact</option>
+                      onChange={e => setFormData({...formData, leave_type_id: e.target.value})}>
+                      <option value="">Choisissez le type</option>
                       {selectedCategoryTypes.map(t => (
                         <option key={t.id} value={t.id}>{t.name} (Max {t.max_days_per_request}j)</option>
                       ))}
@@ -233,185 +254,182 @@ const EmployeeLeave = () => {
                 )}
 
                 {formData.leave_type_id && (
-                  <div className="space-y-8 animate-in fade-in zoom-in-95">
+                  <div className="space-y-4">
                     {isDateRequired ? (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                        <div className="space-y-3">
-                          <label className="text-[13px] font-black text-slate-400 uppercase tracking-widest ml-1">Début</label>
-                          <input 
-                            type="date" 
-                            required 
-                            min={tomorrowStr}
-                            className={`w-full ${isDark ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-100'} border-2 rounded-2xl px-5 py-4 outline-none focus:border-indigo-500 font-bold`}
-                            value={formData.start_date} 
-                            onChange={e => setFormData({...formData, start_date: e.target.value})} 
-                          />
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className={`text-xs font-medium ${textMutedClass} block mb-1`}>Date début</label>
+                          <input type="date" required min={tomorrowStr}
+                            className={`w-full p-2.5 rounded-lg border ${borderClass} ${inputClass} outline-none focus:ring-2 focus:ring-indigo-500`}
+                            value={formData.start_date} onChange={e => setFormData({...formData, start_date: e.target.value})} />
                         </div>
-                        <div className="space-y-3">
-                          <label className="text-[13px] font-black text-slate-400 uppercase tracking-widest ml-1">Fin</label>
-                          <input 
-                            type="date" 
-                            required 
-                            min={formData.start_date || tomorrowStr}
-                            className={`w-full ${isDark ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-100'} border-2 rounded-2xl px-5 py-4 outline-none focus:border-indigo-500 font-bold`}
-                            value={formData.end_date} 
-                            onChange={e => setFormData({...formData, end_date: e.target.value})} 
-                          />
+                        <div>
+                          <label className={`text-xs font-medium ${textMutedClass} block mb-1`}>Date fin</label>
+                          <input type="date" required min={formData.start_date || tomorrowStr}
+                            className={`w-full p-2.5 rounded-lg border ${borderClass} ${inputClass} outline-none focus:ring-2 focus:ring-indigo-500`}
+                            value={formData.end_date} onChange={e => setFormData({...formData, end_date: e.target.value})} />
                         </div>
-                        <div className="sm:col-span-2 bg-slate-900 rounded-[2rem] p-6 flex justify-between items-center text-white">
-                          <span className="font-bold opacity-70">Période calculée</span>
-                          <span className="text-3xl font-black">{formData.duration} Jours</span>
-                        </div>
+                        {formData.duration > 0 && (
+                          <div className="col-span-2 p-3 rounded-lg bg-indigo-50 dark:bg-indigo-950/20 text-center">
+                            <span className={`text-sm font-bold text-indigo-600 dark:text-indigo-400`}>
+                              {formData.duration} jour{formData.duration > 1 ? 's' : ''}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     ) : (
-                      <div className="bg-indigo-50 border-2 border-dashed border-indigo-200 rounded-3xl p-6 flex items-start gap-4">
-                        <Info size={20} className="text-indigo-600 mt-1" />
-                        <p className="text-indigo-800 text-sm font-bold">Un justificatif officiel est nécessaire pour ce type de demande.</p>
+                      <div className={`p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 flex items-start gap-2`}>
+                        <Info size={16} className="text-amber-600 flex-shrink-0 mt-0.5" />
+                        <p className="text-xs text-amber-700 dark:text-amber-400">
+                          Un justificatif officiel est nécessaire pour ce type de demande
+                        </p>
                       </div>
                     )}
 
-                    <div className="space-y-3">
-                      <label className="text-[13px] font-black text-slate-400 uppercase tracking-widest ml-1">Pièce jointe</label>
-                      <input type="file" ref={fileInputRef} className="hidden" id="file-upload" onChange={e => setFormData({...formData, attachment: e.target.files[0]})} />
-                      <label htmlFor="file-upload" className={`group flex flex-col items-center justify-center gap-3 w-full ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-200'} border-2 border-dashed rounded-[2rem] py-10 cursor-pointer hover:border-indigo-500 transition-all`}>
-                        <div className="p-4 bg-white rounded-2xl shadow-sm group-hover:scale-110 transition-transform"><Paperclip size={24} className="text-indigo-500" /></div>
-                        <span className={`font-black text-sm ${isDark ? 'text-slate-300' : 'text-slate-500'}`}>
-                            {formData.attachment ? formData.attachment.name : "Cliquez pour uploader"}
+                    <div>
+                      <label className={`text-xs font-medium ${textMutedClass} block mb-1`}>Pièce jointe</label>
+                      <input type="file" ref={fileInputRef} className="hidden" id="file-upload" 
+                        onChange={e => setFormData({...formData, attachment: e.target.files[0]})} />
+                      <label htmlFor="file-upload" 
+                        className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 border-dashed ${borderClass} ${inputClass} cursor-pointer hover:border-indigo-500 transition-all`}>
+                        <Paperclip size={16} className="text-indigo-500" />
+                        <span className={`text-sm ${textMutedClass}`}>
+                          {formData.attachment ? formData.attachment.name : "Cliquez pour ajouter un fichier"}
                         </span>
                       </label>
                     </div>
 
-                    <div className="space-y-3">
-                      <label className="text-[13px] font-black text-slate-400 uppercase tracking-widest ml-1">Commentaires</label>
-                      <textarea 
-                        className={`w-full ${isDark ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-100'} border-2 rounded-2xl px-5 py-4 outline-none focus:border-indigo-500 h-32 resize-none font-bold`} 
-                        value={formData.comments} 
-                        onChange={e => setFormData({...formData, comments: e.target.value})} 
-                      />
+                    <div>
+                      <label className={`text-xs font-medium ${textMutedClass} block mb-1`}>Commentaires</label>
+                      <textarea rows={3}
+                        className={`w-full p-2.5 rounded-lg border ${borderClass} ${inputClass} outline-none focus:ring-2 focus:ring-indigo-500 resize-none`}
+                        value={formData.comments} onChange={e => setFormData({...formData, comments: e.target.value})} />
                     </div>
                   </div>
                 )}
 
-                <button 
-                  type="submit" 
-                  disabled={submitting || !formData.leave_type_id}
-                  className="group w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-6 rounded-2xl shadow-xl transition-all flex justify-center items-center gap-4 disabled:bg-slate-300"
-                >
-                  {submitting ? <Loader2 className="animate-spin" /> : <><Send size={20} /> Envoyer la demande</>}
+                <button type="submit" disabled={submitting || !formData.leave_type_id}
+                  className="w-full py-2.5 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-medium hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer">
+                  {submitting ? <Loader2 size={18} className="animate-spin" /> : <><Send size={18} /> Envoyer la demande</>}
                 </button>
               </form>
             </div>
-          </section>
+          </div>
 
-          {/* --- HISTORY SECTION --- */}
-          <section className="lg:col-span-7 space-y-8">
-            <div className={`${cardBg} rounded-[3rem] shadow-sm border overflow-hidden`}>
-              <div className="p-10 border-b border-slate-50 flex justify-between items-center">
-                <h2 className={`text-2xl font-black ${textMain}`}>Historique</h2>
-                <div className="p-3 bg-slate-50 rounded-2xl text-slate-400"><Clock size={24}/></div>
+          {/* Historique */}
+          <div className="lg:col-span-7">
+            <div className={`${cardClass} rounded-xl border ${borderClass} overflow-hidden shadow-xl`}>
+              <div className={`p-4 border-b ${borderClass} flex justify-between items-center`}>
+                <h2 className={`font-bold ${textClass}`}>Historique des demandes</h2>
+                <Clock size={18} className={textMutedClass} />
               </div>
 
-              <div className="divide-y divide-slate-50">
+              <div className="divide-y divide-gray-200 dark:divide-gray-800">
                 {loading ? (
-                  <div className="p-32 flex flex-col items-center gap-4">
-                    <Loader2 className="animate-spin text-indigo-600" size={40} />
+                  <div className="p-12 text-center"><Loader2 className="animate-spin mx-auto text-indigo-500" size={28} /></div>
+                ) : requests.length === 0 ? (
+                  <div className={`p-12 text-center ${textMutedClass}`}>
+                    <Calendar size={48} className="mx-auto mb-3 opacity-30" />
+                    <p>Aucune demande effectuée</p>
                   </div>
                 ) : (
-                  requests.map(req => (
-                    <div 
-                      key={req.id} 
-                      onClick={() => setDetailModal({ show: true, req })}
-                      className={`p-8 hover:bg-indigo-50/30 transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between group cursor-pointer`}
-                    >
-                      <div className="flex items-center gap-6">
-                        <div className={`w-16 h-16 flex items-center justify-center rounded-[1.5rem] font-black text-lg border-2 ${getStatusStyles(req.status)}`}>
-                          {req.duration}j
+                  requests.map((req, idx) => {
+                    const status = getStatusStyles(req.status);
+                    return (
+                      <div key={req.id} onClick={() => setDetailModal({ show: true, req })}
+                        className={`p-4 flex items-center justify-between cursor-pointer transition-colors ${hoverClass} ${idx % 2 === 0 ? (darkMode ? 'bg-black/20' : 'bg-gray-50/30') : ''}`}>
+                        <div className="flex items-center gap-4">
+                          <div className={`w-10 h-10 rounded-lg ${status.bg} flex items-center justify-center text-white shadow-md`}>
+                            {req.duration}
+                          </div>
+                          <div>
+                            <p className={`font-medium ${textClass}`}>{req.leave_type?.name}</p>
+                            <p className={`text-xs ${textMutedClass}`}>
+                            {req.start_date ? (
+                            <>
+                                {new Date(req.start_date).toLocaleDateString('fr-FR')} → {new Date(req.end_date).toLocaleDateString('fr-FR')}
+                            </>
+                            ) : 'Document seul'}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <h4 className={`font-black uppercase text-sm tracking-widest ${textMain}`}>{req.leave_type?.name}</h4>
-                          <p className="text-xs text-slate-400 font-bold mt-1 uppercase">
-                            {req.start_date ? `${req.start_date} → ${req.end_date}` : 'Document'}
-                          </p>
+                        <div className="flex items-center gap-3">
+                          <span className={`px-2 py-1 rounded-full text-[10px] font-medium ${status.bg} text-white`}>
+                            {status.label}
+                          </span>
+                          <ChevronRight size={16} className={textMutedClass} />
                         </div>
                       </div>
-
-                      <div className="mt-4 sm:mt-0 flex items-center gap-4">
-                         <span className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] border-2 ${getStatusStyles(req.status)}`}>
-                            {req.status}
-                         </span>
-                         <ChevronRight size={18} className="text-slate-300 group-hover:text-indigo-500 transition-all" />
-                      </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </div>
-          </section>
+          </div>
         </div>
 
+        {/* Detail Modal */}
         {detailModal.show && detailModal.req && (
-          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-[2.5rem] w-full max-w-lg overflow-hidden shadow-2xl animate-in fade-in zoom-in-95">
-              <div className="bg-slate-900 p-8 text-white flex justify-between items-center">
-                <div className="flex items-center gap-4">
-                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg ${
-                    detailModal.req.status === 'APPROVED' ? 'bg-emerald-500' : 
-                    detailModal.req.status === 'REJECTED' ? 'bg-rose-500' : 'bg-amber-500'
-                  }`}>
-                    <Clock size={24} />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-black">Suivi de Demande</h2>
-                    <p className="text-slate-400 text-sm font-medium">Référence: #REQ-{detailModal.req.id}</p>
-                  </div>
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-50 p-4">
+            <div className={`${cardClass} rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl`}>
+              <div className={`sticky top-0 p-4 border-b ${borderClass} flex justify-between items-center ${cardClass}`}>
+                <div className="flex items-center gap-2">
+                  <FileText size={18} className="text-indigo-500" />
+                  <h3 className={`font-bold ${textClass}`}>Détails de la demande</h3>
                 </div>
-                <button onClick={() => setDetailModal({ show: false, req: null })} className="p-2 hover:bg-white/10 rounded-full transition-all">
-                  <X size={24} />
+                <button onClick={() => setDetailModal({ show: false, req: null })} 
+                  className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-[#252525] transition-all cursor-pointer">
+                  <X size={18} />
                 </button>
               </div>
-
-              <div className="p-8 space-y-6">
-                <div className={`p-6 rounded-[2rem] border-2 ${
-                  detailModal.req.status === 'APPROVED' ? 'bg-emerald-50 border-emerald-100' : 
-                  detailModal.req.status === 'REJECTED' ? 'bg-rose-50 border-rose-100' : 'bg-amber-50 border-amber-100'
-                }`}>
-                  <p className="text-[10px] font-black uppercase tracking-widest mb-2 opacity-60">Réponse des Ressources Humaines</p>
-                  <p className="text-sm font-bold text-slate-800 italic">
-                    {detailModal.req.hr_note ? `"${detailModal.req.hr_note}"` : "Aucun commentaire de la part du RH."}
-                  </p>
-                  {detailModal.req.status !== 'PENDING' && (
-                     <p className="mt-3 text-[10px] font-bold opacity-50">
-                        Traité le: {new Date(detailModal.req.updated_at).toLocaleDateString()}
-                     </p>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-2 gap-6">
-                  <div>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Type d'absence</p>
-                    <p className="font-bold text-slate-800">{detailModal.req.leave_type?.name}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Durée</p>
-                    <p className="font-black text-blue-600">{detailModal.req.duration} JOURS</p>
-                  </div>
-                </div>
-
+              <div className="p-4 space-y-4">
                 <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Votre Commentaire</p>
-                  <p className="text-sm text-slate-600 bg-slate-50 p-4 rounded-xl border border-slate-100">
-                    {detailModal.req.comments || "Aucun commentaire."}
-                  </p>
+                  <p className={`text-xs uppercase ${textMutedClass}`}>Type d'absence</p>
+                  <p className={`font-medium ${textClass}`}>{detailModal.req.leave_type?.name}</p>
                 </div>
-              </div>
-
-              <div className="p-8 bg-slate-50 border-t border-slate-100">
-                <button 
-                  onClick={() => setDetailModal({ show: false, req: null })}
-                  className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-sm hover:bg-black transition-all"
-                >
-                  Fermer
-                </button>
+                {detailModal.req.start_date && (
+                  <div>
+                    <p className={`text-xs uppercase ${textMutedClass}`}>Période</p>
+                    <p className={`font-medium ${textClass}`}>{detailModal.req.start_date ? (
+                            <>
+                                {new Date(detailModal.req.start_date).toLocaleDateString('fr-FR')} → {new Date(detailModal.req.end_date).toLocaleDateString('fr-FR')}
+                            </>
+                            ) : 'Document seul'}</p>
+                  </div>
+                )}
+                <div>
+                  <p className={`text-xs uppercase ${textMutedClass}`}>Durée</p>
+                  <p className={`font-medium ${textClass}`}>{detailModal.req.duration} jours</p>
+                </div>
+                {detailModal.req.comments && (
+                  <div>
+                    <p className={`text-xs uppercase ${textMutedClass}`}>Commentaires</p>
+                    <p className={`text-sm ${textMutedClass}`}>{detailModal.req.comments}</p>
+                  </div>
+                )}
+                <div className="pt-2">
+                  <div className={`p-3 rounded-lg ${
+                    detailModal.req.status === 'APPROVED' ? 'bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800' : 
+                    detailModal.req.status === 'REJECTED' ? 'bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-800' : 
+                    'bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800'
+                  }`}>
+                    <div className="flex items-center gap-2">
+                      {detailModal.req.status === 'APPROVED' && <CheckCircle2 size={16} className="text-emerald-600" />}
+                      {detailModal.req.status === 'REJECTED' && <X size={16} className="text-rose-600" />}
+                      {detailModal.req.status === 'PENDING' && <Clock size={16} className="text-amber-600" />}
+                      <span className={`text-sm font-medium ${
+                        detailModal.req.status === 'APPROVED' ? 'text-emerald-700 dark:text-emerald-400' : 
+                        detailModal.req.status === 'REJECTED' ? 'text-rose-700 dark:text-rose-400' : 
+                        'text-amber-700 dark:text-amber-400'
+                      }`}>
+                        {detailModal.req.status === 'APPROVED' ? 'Approuvé' : detailModal.req.status === 'REJECTED' ? 'Refusé' : 'En attente'}
+                      </span>
+                    </div>
+                    {detailModal.req.hr_note && (
+                      <p className={`text-xs mt-2 ${textMutedClass}`}>Note RH: {detailModal.req.hr_note}</p>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
